@@ -13,6 +13,7 @@ enum EventStatus {
   COMPLETED
   POSTPONED
   CANCELLED
+  UNKNOWN
 }
 
 enum MarketStatus {

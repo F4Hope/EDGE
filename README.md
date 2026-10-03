@@ -8,6 +8,8 @@ Phase 1 established the Next.js 16 App Router application, TypeScript, Tailwind 
 
 Phase 2 adds the PostgreSQL + Prisma data layer for the long-term sports intelligence pipeline. The initial schema covers users, sports, leagues, teams, players, events, markets, odds snapshots, features, model runs, predictions, selections, combos, combo selections, and results without coupling the application to one sports-data provider.
 
+Phase 3 adds the first real sports/event ingestion path. A provider abstraction normalizes API-Sports and The Odds API event data into the EDGE database, supports Football, Basketball, and Tennis, exposes read-only normalized events through `GET /api/events`, and keeps provider credentials server-side. No live events are fabricated when a provider is unavailable.
+
 ## Local development
 
 ```bash
@@ -23,6 +25,7 @@ Open `http://localhost:3000`.
 npm run lint
 npm run build
 npm run db:validate
+npm run test:providers
 ```
 
 ## Database setup
@@ -49,6 +52,47 @@ npm run db:studio
 ```
 
 The seed only creates the three initial reference sports: Football, Basketball, and Tennis. It does not create fabricated events, odds, predictions, results, or performance statistics.
+
+## Sports/event ingestion
+
+Provider secrets belong only in `.env.local`. EDGE never sends them to the browser.
+
+```bash
+SPORTS_DATA_PROVIDER="auto"
+API_SPORTS_KEY="your-local-key"
+ODDS_API_KEY="your-local-key"
+```
+
+Do not paste real keys into source files or commit them to Git.
+
+Sync the next 48 hours using the configured provider strategy:
+
+```bash
+npm run data:sync
+```
+
+Or use an explicit date window and sports list:
+
+```bash
+npm run data:sync -- --sports=football,basketball,tennis --from=2026-10-04 --to=2026-10-05
+```
+
+To force a provider:
+
+```bash
+npm run data:sync -- --provider=api-sports --sports=football,basketball
+npm run data:sync -- --provider=odds-api --sports=football,basketball,tennis
+```
+
+API-Sports is used for Football/Basketball in the initial adapter. The Odds API provides event discovery for Football, Basketball, and Tennis. The Odds API event endpoint is used only for event metadata in Phase 3; odds ingestion remains a later phase.
+
+Once data has been synchronized, the application can read normalized events from:
+
+```text
+GET /api/events
+GET /api/events?sport=football
+GET /api/events?sport=tennis&limit=50
+```
 
 ## Environment
 
