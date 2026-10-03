@@ -1347,3 +1347,149 @@ button {
     font-size: 16px;
   }
 }
+
+
+/* Phase 5 odds surfaces */
+
+.filter-field select {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid rgba(244, 240, 231, 0.07);
+  border-radius: 12px;
+  background: #111316;
+  color: #aaa79f;
+  padding: 0 12px;
+  font: inherit;
+  font-size: 11px;
+}
+
+.filter-duo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.filter-submit {
+  min-height: 46px;
+  border: 1px solid rgba(200, 169, 107, 0.28);
+  border-radius: 12px;
+  background: rgba(200, 169, 107, 0.09);
+  color: var(--champagne);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.13em;
+  cursor: pointer;
+}
+
+.filter-footnote {
+  margin: 0;
+  color: #6f6d68;
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+.odds-market-list {
+  margin-top: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.odds-market-card {
+  overflow: hidden;
+  border: 1px solid rgba(244, 240, 231, 0.075);
+  border-radius: 20px;
+  background:
+    linear-gradient(135deg, rgba(13, 92, 74, 0.05), transparent 42%),
+    rgba(21, 23, 27, 0.72);
+}
+
+.odds-market-head {
+  min-height: 67px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border-bottom: 1px solid rgba(244, 240, 231, 0.055);
+}
+
+.odds-market-head h3 {
+  margin: 6px 0 0;
+  color: var(--ivory);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  font-weight: 400;
+}
+
+.odds-quote-list {
+  padding: 0 16px;
+}
+
+.odds-quote-row {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border-top: 1px solid rgba(244, 240, 231, 0.05);
+}
+
+.odds-quote-row:first-child {
+  border-top: 0;
+}
+
+.odds-quote-row strong,
+.odds-quote-row span {
+  display: block;
+}
+
+.odds-quote-row strong {
+  color: #c7c2b8;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.odds-quote-row span {
+  margin-top: 4px;
+  color: #73716b;
+  font-size: 8px;
+}
+
+.odds-quote-row b {
+  flex: 0 0 auto;
+  color: var(--champagne);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 24px;
+  font-weight: 400;
+}
+
+.odds-market-foot {
+  min-height: 38px;
+  padding: 0 16px;
+  border-top: 1px solid rgba(244, 240, 231, 0.055);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #696762;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.odds-empty {
+  margin: 0;
+  padding: 18px 0;
+  color: #77756f;
+  font-size: 10px;
+}
+
+.metric-note.ready {
+  color: #8fc5b6;
+}
+
+@media (max-width: 380px) {
+  .filter-duo {
+    grid-template-columns: 1fr;
+  }
+}

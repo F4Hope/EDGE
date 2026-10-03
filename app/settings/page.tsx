@@ -43,7 +43,7 @@ export default function SettingsPage() {
       <section className="settings-card">
         <ConfigRow label="PostgreSQL" configured={databaseConfigured} note="Event and intelligence database" />
         <ConfigRow label="API-Sports" configured={apiSportsConfigured} note="Football / basketball event source" />
-        <ConfigRow label="The Odds API" configured={oddsApiConfigured} note="Multi-sport event source; odds phase next" />
+        <ConfigRow label="The Odds API" configured={oddsApiConfigured} note="Multi-sport event and featured-market odds source" />
 
         <div className="setting-row">
           <div>

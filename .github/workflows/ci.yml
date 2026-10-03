@@ -30,6 +30,9 @@ jobs:
       - name: Test provider normalization
         run: npm run test:providers
 
+      - name: Test odds normalization
+        run: npm run test:odds
+
       - name: Test mobile routes
         run: npm run test:ui
 

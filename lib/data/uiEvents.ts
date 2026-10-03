@@ -66,11 +66,22 @@ export async function getUiEvents(options?: {
   sport?: SupportedSport;
   hours?: number;
   limit?: number;
+  league?: string;
+  country?: string;
+  market?: "h2h" | "spreads" | "totals";
+  minOdds?: number;
+  maxOdds?: number;
 }): Promise<UiEventCollection> {
   const now = new Date();
   const hours = Math.min(24 * 14, Math.max(1, options?.hours ?? 168));
   const limit = Math.min(200, Math.max(1, options?.limit ?? 60));
   const to = new Date(now.getTime() + hours * 60 * 60 * 1000);
+
+  const hasLeagueFilter = Boolean(options?.league || options?.country);
+  const hasOddsFilter =
+    Boolean(options?.market) ||
+    options?.minOdds !== undefined ||
+    options?.maxOdds !== undefined;
 
   try {
     const db = getDb();
@@ -78,6 +89,54 @@ export async function getUiEvents(options?: {
       where: {
         startTime: { gte: now, lte: to },
         ...(options?.sport ? { sport: { key: options.sport } } : {}),
+        ...(hasLeagueFilter
+          ? {
+              league: {
+                ...(options?.league
+                  ? {
+                      name: {
+                        contains: options.league,
+                        mode: "insensitive" as const,
+                      },
+                    }
+                  : {}),
+                ...(options?.country
+                  ? {
+                      country: {
+                        contains: options.country,
+                        mode: "insensitive" as const,
+                      },
+                    }
+                  : {}),
+              },
+            }
+          : {}),
+        ...(hasOddsFilter
+          ? {
+              markets: {
+                some: {
+                  ...(options?.market ? { key: options.market } : {}),
+                  ...(options?.minOdds !== undefined ||
+                  options?.maxOdds !== undefined
+                    ? {
+                        oddsSnapshots: {
+                          some: {
+                            decimalOdds: {
+                              ...(options?.minOdds !== undefined
+                                ? { gte: options.minOdds }
+                                : {}),
+                              ...(options?.maxOdds !== undefined
+                                ? { lte: options.maxOdds }
+                                : {}),
+                            },
+                          },
+                        },
+                      }
+                    : {}),
+                },
+              },
+            }
+          : {}),
       },
       orderBy: { startTime: "asc" },
       take: limit,
@@ -93,7 +152,7 @@ export async function getUiEvents(options?: {
       available: true,
       message:
         events.length === 0
-          ? "No normalized upcoming events are stored for this window yet."
+          ? "No normalized upcoming events match this filter window."
           : null,
     };
   } catch (error) {
@@ -133,7 +192,8 @@ export async function getUiEventById(eventId: string): Promise<{
       return {
         event: null,
         available: true,
-        message: "This event uses a sport that is not enabled in the Phase 4 interface.",
+        message:
+          "This event uses a sport that is not enabled in the current interface.",
       };
     }
 

@@ -185,7 +185,7 @@ export async function syncProviderEvents(
             })
           : null;
 
-      await tx.event.upsert({
+      const savedEvent = await tx.event.upsert({
         where: {
           provider_externalId: {
             provider: provider.name,
@@ -213,6 +213,25 @@ export async function syncProviderEvents(
           awayPlayerId: awayPlayer?.id ?? null,
           startTime,
           status: statusMap[event.status],
+        },
+      });
+
+      await tx.eventSource.upsert({
+        where: {
+          provider_externalId: {
+            provider: provider.name,
+            externalId: event.providerId,
+          },
+        },
+        update: {
+          eventId: savedEvent.id,
+          sourceSportKey: event.sourceSportKey ?? null,
+        },
+        create: {
+          eventId: savedEvent.id,
+          provider: provider.name,
+          externalId: event.providerId,
+          sourceSportKey: event.sourceSportKey ?? null,
         },
       });
     });

@@ -169,6 +169,7 @@ model Event {
   homePlayer Player? @relation("HomePlayer", fields: [homePlayerId], references: [id], onDelete: SetNull)
   awayPlayer Player? @relation("AwayPlayer", fields: [awayPlayerId], references: [id], onDelete: SetNull)
 
+  sources     EventSource[]
   markets     Market[]
   features    Feature[]
   predictions Prediction[]
@@ -179,6 +180,21 @@ model Event {
   @@index([sportId, startTime])
   @@index([leagueId, startTime])
   @@index([status, startTime])
+}
+
+model EventSource {
+  id             String   @id @default(cuid())
+  eventId        String
+  provider       String
+  externalId     String
+  sourceSportKey String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, externalId])
+  @@index([eventId, provider])
 }
 
 model Market {
@@ -203,17 +219,23 @@ model Market {
 }
 
 model OddsSnapshot {
-  id            String   @id @default(cuid())
-  marketId      String
-  provider      String
-  selectionKey  String
-  selectionName String
-  decimalOdds   Decimal  @db.Decimal(12, 4)
-  capturedAt    DateTime @default(now())
+  id                String    @id @default(cuid())
+  marketId          String
+  provider          String
+  bookmakerKey      String?
+  bookmakerName     String?
+  selectionKey      String
+  selectionName     String
+  point             Decimal?  @db.Decimal(12, 4)
+  decimalOdds       Decimal   @db.Decimal(12, 4)
+  providerUpdatedAt DateTime?
+  fingerprint       String?   @unique
+  capturedAt        DateTime  @default(now())
 
   market Market @relation(fields: [marketId], references: [id], onDelete: Cascade)
 
   @@index([marketId, capturedAt])
+  @@index([marketId, bookmakerKey, selectionKey, capturedAt])
   @@index([provider, capturedAt])
 }
 
