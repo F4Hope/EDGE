@@ -1,0 +1,340 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum EventStatus {
+  SCHEDULED
+  LIVE
+  COMPLETED
+  POSTPONED
+  CANCELLED
+}
+
+enum MarketStatus {
+  OPEN
+  SUSPENDED
+  CLOSED
+}
+
+enum ModelRunStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum PredictionStatus {
+  BETTABLE
+  WATCH
+  HIGH_RISK
+  NO_BET
+}
+
+enum SelectionStatus {
+  ACTIVE
+  REMOVED
+  SETTLED
+}
+
+enum ComboRiskMode {
+  LOW
+  BALANCED
+  AGGRESSIVE
+}
+
+enum ComboStatus {
+  DRAFT
+  READY
+  REJECTED
+  SETTLED
+}
+
+enum ResultStatus {
+  PENDING
+  FINAL
+  VOID
+}
+
+model User {
+  id          String      @id @default(cuid())
+  email       String?     @unique
+  displayName String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  selections Selection[]
+  combos     Combo[]
+}
+
+model Sport {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  name      String   @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  leagues   League[]
+  teams     Team[]
+  players   Player[]
+  events    Event[]
+  modelRuns ModelRun[]
+}
+
+model League {
+  id         String   @id @default(cuid())
+  externalId String?
+  provider   String?
+  name       String
+  country    String?
+  sportId    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  sport Sport   @relation(fields: [sportId], references: [id], onDelete: Restrict)
+  events Event[]
+
+  @@unique([sportId, provider, externalId])
+  @@index([sportId])
+  @@index([country])
+}
+
+model Team {
+  id         String   @id @default(cuid())
+  externalId String?
+  provider   String?
+  name       String
+  shortName  String?
+  country    String?
+  sportId    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  sport      Sport   @relation(fields: [sportId], references: [id], onDelete: Restrict)
+  homeEvents Event[] @relation("HomeTeam")
+  awayEvents Event[] @relation("AwayTeam")
+
+  @@unique([sportId, provider, externalId])
+  @@index([sportId, name])
+}
+
+model Player {
+  id         String   @id @default(cuid())
+  externalId String?
+  provider   String?
+  fullName   String
+  country    String?
+  sportId    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  sport      Sport   @relation(fields: [sportId], references: [id], onDelete: Restrict)
+  homeEvents Event[] @relation("HomePlayer")
+  awayEvents Event[] @relation("AwayPlayer")
+
+  @@unique([sportId, provider, externalId])
+  @@index([sportId, fullName])
+}
+
+model Event {
+  id           String      @id @default(cuid())
+  externalId   String
+  provider     String
+  sportId      String
+  leagueId     String
+  homeTeamId   String?
+  awayTeamId   String?
+  homePlayerId String?
+  awayPlayerId String?
+  startTime    DateTime
+  status       EventStatus @default(SCHEDULED)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  sport      Sport   @relation(fields: [sportId], references: [id], onDelete: Restrict)
+  league     League  @relation(fields: [leagueId], references: [id], onDelete: Restrict)
+  homeTeam   Team?   @relation("HomeTeam", fields: [homeTeamId], references: [id], onDelete: SetNull)
+  awayTeam   Team?   @relation("AwayTeam", fields: [awayTeamId], references: [id], onDelete: SetNull)
+  homePlayer Player? @relation("HomePlayer", fields: [homePlayerId], references: [id], onDelete: SetNull)
+  awayPlayer Player? @relation("AwayPlayer", fields: [awayPlayerId], references: [id], onDelete: SetNull)
+
+  markets     Market[]
+  features    Feature[]
+  predictions Prediction[]
+  result      Result?
+
+  @@unique([provider, externalId])
+  @@index([startTime])
+  @@index([sportId, startTime])
+  @@index([leagueId, startTime])
+  @@index([status, startTime])
+}
+
+model Market {
+  id         String       @id @default(cuid())
+  eventId    String
+  externalId String?
+  provider   String
+  key        String
+  name       String
+  line       Decimal?     @db.Decimal(10, 4)
+  status     MarketStatus @default(OPEN)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  event         Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  oddsSnapshots OddsSnapshot[]
+  predictions   Prediction[]
+
+  @@index([eventId, status])
+  @@index([eventId, provider, key])
+  @@index([provider, externalId])
+}
+
+model OddsSnapshot {
+  id            String   @id @default(cuid())
+  marketId      String
+  provider      String
+  selectionKey  String
+  selectionName String
+  decimalOdds   Decimal  @db.Decimal(12, 4)
+  capturedAt    DateTime @default(now())
+
+  market Market @relation(fields: [marketId], references: [id], onDelete: Cascade)
+
+  @@index([marketId, capturedAt])
+  @@index([provider, capturedAt])
+}
+
+model Feature {
+  id          String   @id @default(cuid())
+  eventId     String
+  modelVersion String
+  values      Json
+  dataQuality Decimal? @db.Decimal(6, 5)
+  computedAt  DateTime @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId, computedAt])
+  @@index([modelVersion, computedAt])
+}
+
+model ModelRun {
+  id           String         @id @default(cuid())
+  sportId      String
+  modelVersion String
+  status       ModelRunStatus @default(RUNNING)
+  parameters   Json?
+  startedAt    DateTime       @default(now())
+  completedAt  DateTime?
+
+  sport       Sport       @relation(fields: [sportId], references: [id], onDelete: Restrict)
+  predictions Prediction[]
+
+  @@index([sportId, startedAt])
+  @@index([modelVersion, startedAt])
+}
+
+model Prediction {
+  id                 String           @id @default(cuid())
+  eventId            String
+  marketId           String
+  modelRunId         String
+  selectionKey       String
+  modelProbability   Decimal          @db.Decimal(7, 6)
+  impliedProbability Decimal?         @db.Decimal(7, 6)
+  estimatedEdge      Decimal?         @db.Decimal(8, 6)
+  estimatedValue     Decimal?         @db.Decimal(8, 6)
+  edgeScore          Int?
+  risk               RiskLevel        @default(MEDIUM)
+  status             PredictionStatus @default(WATCH)
+  dataQuality        Decimal?         @db.Decimal(6, 5)
+  modelAgreement     Decimal?         @db.Decimal(6, 5)
+  explanation        Json?
+  createdAt          DateTime         @default(now())
+
+  event      Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  market     Market     @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  modelRun   ModelRun   @relation(fields: [modelRunId], references: [id], onDelete: Cascade)
+  selections Selection[]
+
+  @@index([eventId, createdAt])
+  @@index([marketId, createdAt])
+  @@index([modelRunId])
+  @@index([status, edgeScore])
+}
+
+model Selection {
+  id              String          @id @default(cuid())
+  userId          String?
+  predictionId    String
+  oddsAtSelection Decimal?        @db.Decimal(12, 4)
+  status          SelectionStatus @default(ACTIVE)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  user            User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  prediction      Prediction       @relation(fields: [predictionId], references: [id], onDelete: Restrict)
+  comboSelections ComboSelection[]
+
+  @@index([userId, createdAt])
+  @@index([predictionId])
+}
+
+model Combo {
+  id                   String        @id @default(cuid())
+  userId               String?
+  targetOdds           Decimal?      @db.Decimal(12, 4)
+  actualOdds           Decimal?      @db.Decimal(12, 4)
+  estimatedProbability Decimal?      @db.Decimal(7, 6)
+  estimatedValue       Decimal?      @db.Decimal(8, 6)
+  edgeScore            Int?
+  correlationScore     Decimal?      @db.Decimal(6, 5)
+  riskMode             ComboRiskMode @default(BALANCED)
+  status               ComboStatus   @default(DRAFT)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  user       User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  selections ComboSelection[]
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+}
+
+model ComboSelection {
+  comboId     String
+  selectionId String
+  position    Int
+  createdAt   DateTime @default(now())
+
+  combo     Combo     @relation(fields: [comboId], references: [id], onDelete: Cascade)
+  selection Selection @relation(fields: [selectionId], references: [id], onDelete: Restrict)
+
+  @@id([comboId, selectionId])
+  @@unique([comboId, position])
+  @@index([selectionId])
+}
+
+model Result {
+  id          String       @id @default(cuid())
+  eventId     String       @unique
+  status      ResultStatus @default(PENDING)
+  payload     Json?
+  completedAt DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}

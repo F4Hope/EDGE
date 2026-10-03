@@ -13,6 +13,9 @@
 # production
 /build
 
+# generated database client
+/generated/prisma
+
 # local files
 .DS_Store
 *.pem
