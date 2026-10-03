@@ -1,7 +1,10 @@
 import dotenv from "dotenv";
-import { defineConfig, env } from "prisma/config";
+import { defineConfig } from "prisma/config";
 
 dotenv.config({ path: [".env.local", ".env"], quiet: true });
+
+const databaseUrl =
+  process.env.DATABASE_URL ?? "postgresql://edge:edge@localhost:5432/edge?schema=public";
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
@@ -10,6 +13,6 @@ export default defineConfig({
     seed: "tsx prisma/seed.ts",
   },
   datasource: {
-    url: env("DATABASE_URL"),
+    url: databaseUrl,
   },
 });
