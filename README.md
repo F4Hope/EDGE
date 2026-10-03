@@ -8,7 +8,7 @@ Phase 1 established the Next.js 16 App Router application, TypeScript, Tailwind 
 
 Phase 2 adds the PostgreSQL + Prisma data layer for the long-term sports intelligence pipeline. The initial schema covers users, sports, leagues, teams, players, events, markets, odds snapshots, features, model runs, predictions, selections, combos, combo selections, and results without coupling the application to one sports-data provider.
 
-Phase 3 adds the first real sports/event ingestion path. A provider abstraction normalizes API-Sports and The Odds API event data into the EDGE database, supports Football, Basketball, and Tennis, exposes read-only normalized events through `GET /api/events`, and keeps provider credentials server-side. No live events are fabricated when a provider is unavailable.
+Phase 3 adds the first real sports/event ingestion path. A provider abstraction normalizes API-Sports and The Odds API event data into the EDGE database, supports Football, Basketball, and Tennis, exposes read-only normalized events through `GET /api/events`, and keeps provider credentials server-side. No live events are fabricated when a provider is unavailable.\n\nPhase 4 expands the premium mobile-first interface into the full application shell. The required Events, Analysis, Picks, Combo Builder, History, Model Performance, and Settings screens now exist, with a fifth More navigation surface for secondary tools. Events and event basics use real normalized database records when available; odds, model metrics, EDGE SCORE, risk, performance, and BetPawa status remain explicitly unavailable until their later phases are implemented.
 
 ## Local development
 
