@@ -16,7 +16,45 @@ type ApiSportsEnvelope<T> = {
   results?: number;
 };
 
-type UnknownRecord = Record<string, any>;
+type ApiSportsEntity = {
+  id?: string | number;
+  name?: string;
+  code?: string;
+};
+
+type FootballFixtureRow = {
+  fixture?: {
+    id?: string | number;
+    date?: string;
+    status?: { short?: string };
+  };
+  league?: {
+    id?: string | number;
+    name?: string;
+    country?: string;
+  };
+  teams?: {
+    home?: ApiSportsEntity;
+    away?: ApiSportsEntity;
+  };
+};
+
+type BasketballGameRow = {
+  id?: string | number;
+  date?: string;
+  status?: { short?: string };
+  league?: {
+    id?: string | number;
+    name?: string;
+  };
+  country?: {
+    name?: string;
+  };
+  teams?: {
+    home?: ApiSportsEntity;
+    away?: ApiSportsEntity;
+  };
+};
 
 function formatUtcDate(date: Date): string {
   return date.toISOString().slice(0, 10);
@@ -34,7 +72,7 @@ function assertRange(from: Date, to: Date): void {
 function hasApiErrors(errors: unknown): boolean {
   if (!errors) return false;
   if (Array.isArray(errors)) return errors.length > 0;
-  if (typeof errors === "object") return Object.keys(errors as object).length > 0;
+  if (typeof errors === "object") return Object.keys(errors).length > 0;
   return Boolean(errors);
 }
 
@@ -64,7 +102,7 @@ function requireText(value: unknown, field: string): string {
   return text;
 }
 
-export function normalizeFootballFixture(item: UnknownRecord): ProviderEvent {
+export function normalizeFootballFixture(item: FootballFixtureRow): ProviderEvent {
   const fixture = item.fixture ?? {};
   const league = item.league ?? {};
   const home = item.teams?.home ?? {};
@@ -97,7 +135,7 @@ export function normalizeFootballFixture(item: UnknownRecord): ProviderEvent {
   };
 }
 
-export function normalizeBasketballGame(item: UnknownRecord): ProviderEvent {
+export function normalizeBasketballGame(item: BasketballGameRow): ProviderEvent {
   const league = item.league ?? {};
   const country = item.country ?? {};
   const home = item.teams?.home ?? {};
@@ -149,7 +187,7 @@ export class ApiSportsProvider implements DataProvider {
     }
 
     if (query.sport === "football") {
-      const rows = await this.request<UnknownRecord>(FOOTBALL_BASE_URL, "/fixtures", {
+      const rows = await this.request<FootballFixtureRow>(FOOTBALL_BASE_URL, "/fixtures", {
         from: formatUtcDate(query.from),
         to: formatUtcDate(query.to),
         timezone: "UTC",
@@ -166,7 +204,7 @@ export class ApiSportsProvider implements DataProvider {
 
     const events: ProviderEvent[] = [];
     for (const day of days) {
-      const rows = await this.request<UnknownRecord>(BASKETBALL_BASE_URL, "/games", {
+      const rows = await this.request<BasketballGameRow>(BASKETBALL_BASE_URL, "/games", {
         date: day,
         timezone: "UTC",
       });

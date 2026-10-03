@@ -94,8 +94,8 @@ export class OddsApiProvider implements DataProvider {
     }
   }
 
-  supports(_sport: SupportedSport): boolean {
-    return true;
+  supports(sport: SupportedSport): boolean {
+    return sport === "football" || sport === "basketball" || sport === "tennis";
   }
 
   async getEvents(query: EventQuery): Promise<ProviderEvent[]> {
