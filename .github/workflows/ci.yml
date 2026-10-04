@@ -54,6 +54,9 @@ jobs:
       - name: Test result provider normalization
         run: npm run test:results-provider
 
+      - name: Test safe data refresh orchestration
+        run: npm run test:data-refresh
+
       - name: Test mobile routes
         run: npm run test:ui
 

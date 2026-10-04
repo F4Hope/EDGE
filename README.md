@@ -112,6 +112,24 @@ npm run db:studio
 
 The seed only creates the three initial reference sports: Football, Basketball, and Tennis. It does not create fabricated events, odds, predictions, results, or performance statistics.
 
+## Safe data refresh
+
+After the local database is ready, refresh configured evidence sources with:
+
+```bash
+npm run data:refresh
+```
+
+This command refreshes event metadata from whichever provider keys are configured, refreshes API-Sports final results when available, recalculates transparent features, and runs the readiness doctor.
+
+Bookmaker odds are deliberately excluded from the default refresh because those calls can consume provider quota. Include them only when explicitly intended:
+
+```bash
+npm run data:refresh -- --include-odds
+```
+
+If `--include-odds` is requested without `ODDS_API_KEY`, the refresh stops with a clear configuration error instead of making assumptions.
+
 ## Automatic result synchronization
 
 When `API_SPORTS_KEY` is configured, EDGE can refresh final Football and Basketball results for events already known to the database:
