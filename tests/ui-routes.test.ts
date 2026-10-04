@@ -85,3 +85,20 @@ test("event cards expose canonical odds roles, source and freshness", async () =
   assert.match(card, /quote\.provider/);
   assert.match(data, /provider: snapshot\.provider/);
 });
+
+
+test("analysis page leads with a guarded decision summary", async () => {
+  const [analysis, summary] = await Promise.all([
+    readFile("app/analysis/[eventId]/page.tsx", "utf8"),
+    readFile("components/PredictionDecisionSummary.tsx", "utf8"),
+  ]);
+
+  assert.match(analysis, /DECISION SUMMARY/);
+  assert.match(analysis, /pickPrimaryPrediction/);
+  assert.match(analysis, /HOME FORM/);
+  assert.match(analysis, /HEAD TO HEAD/);
+  assert.match(summary, /LEADING MODEL VIEW/);
+  assert.match(summary, /not a bet recommendation or guarantee of outcome/);
+  assert.match(summary, /ESTIMATED VALUE/);
+  assert.match(summary, /MARKET PROBABILITY/);
+});

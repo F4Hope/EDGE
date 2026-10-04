@@ -6,13 +6,17 @@ import { MovementPanel } from "@/components/MovementPanel";
 import { MetricPlaceholder } from "@/components/MetricPlaceholder";
 import { MobileShell } from "@/components/MobileShell";
 import { OddsTable } from "@/components/OddsTable";
+import { PredictionDecisionSummary } from "@/components/PredictionDecisionSummary";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { getUiEventById } from "@/lib/data/uiEvents";
 import { getUiOddsForEvent } from "@/lib/data/uiOdds";
 import { getUiFeatureForEvent } from "@/lib/data/uiFeatures";
 import { getUiIntelligenceForEvent } from "@/lib/data/uiIntelligence";
 import { getUiMovementForEvent } from "@/lib/data/uiMovement";
-import { getUiPredictionsForEvent } from "@/lib/data/uiPredictions";
+import {
+  getUiPredictionsForEvent,
+  pickPrimaryPrediction,
+} from "@/lib/data/uiPredictions";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +29,18 @@ function formatStartTime(iso: string): string {
     minute: "2-digit",
     timeZoneName: "short",
   }).format(new Date(iso));
+}
+
+function formContext(
+  sampleSize: number,
+  winRate: number | null,
+): string {
+  if (sampleSize === 0 || winRate === null) return "Insufficient sample";
+  return `${sampleSize} matches · ${Math.round(winRate * 100)}% wins`;
+}
+
+function restContext(value: number | null): string {
+  return value === null ? "Unknown" : `${value.toFixed(1)} days`;
 }
 
 export default async function AnalysisPage({
@@ -72,7 +88,7 @@ export default async function AnalysisPage({
     (total, market) => total + market.quotes.length,
     0,
   );
-  const primaryPrediction = predictionState.predictions[0] ?? null;
+  const primaryPrediction = pickPrimaryPrediction(predictionState.predictions);
 
   return (
     <MobileShell>
@@ -88,6 +104,37 @@ export default async function AnalysisPage({
         <div className="overview-row"><span>START</span><strong>{formatStartTime(event.startsAt)}</strong></div>
         <div className="overview-row"><span>SOURCE</span><strong>{event.provider}</strong></div>
         <div className="overview-row"><span>BETPAWA</span><strong>AVAILABILITY UNCONFIRMED</strong></div>
+      </section>
+
+      <section className="analysis-block analysis-decision-block">
+        <div className="section-heading compact-heading">
+          <div>
+            <p className="eyebrow">DECISION SUMMARY</p>
+            <h2>Model view</h2>
+          </div>
+          <span className="count-badge">
+            {primaryPrediction ? "ANALYZED" : "PENDING"}
+          </span>
+        </div>
+
+        {primaryPrediction ? (
+          <PredictionDecisionSummary prediction={primaryPrediction} />
+        ) : (
+          <EmptyState
+            status={predictionState.available ? "ANALYSIS PENDING" : "DATA OFFLINE"}
+            title={
+              oddsState.markets.length > 0
+                ? featureState.feature
+                  ? "Prediction generation is pending."
+                  : "Odds are ready; features are pending."
+                : "Market evidence is not ready."
+            }
+            description={
+              predictionState.message ??
+              "EDGE needs a pre-event feature vector and stored H2H odds before it can produce a model view."
+            }
+          />
+        )}
       </section>
 
       <section className="analysis-block">
@@ -255,6 +302,12 @@ export default async function AnalysisPage({
                 <span>{prediction.selectionName}</span>
                 <strong>
                   {(prediction.modelProbability * 100).toFixed(1)}% ·{" "}
+                  {prediction.bestDecimalOdds
+                    ? `${prediction.bestDecimalOdds.toFixed(2)} odds · `
+                    : ""}
+                  {prediction.estimatedValue === null
+                    ? ""
+                    : `${(prediction.estimatedValue * 100).toFixed(1)}% EV · `}
                   {prediction.status.replaceAll("_", " ")}
                 </strong>
               </div>
@@ -335,8 +388,46 @@ export default async function AnalysisPage({
       <section className="analysis-block">
         <p className="eyebrow">CONTEXT</p>
         <div className="analysis-list">
-          <div><span>FORM</span><strong>Not calculated</strong></div>
-          <div><span>STATISTICS</span><strong>Not calculated</strong></div>
+          <div>
+            <span>HOME FORM</span>
+            <strong>
+              {featureState.feature
+                ? formContext(
+                    featureState.feature.form.home.sampleSize,
+                    featureState.feature.form.home.winRate,
+                  )
+                : "Not calculated"}
+            </strong>
+          </div>
+          <div>
+            <span>AWAY FORM</span>
+            <strong>
+              {featureState.feature
+                ? formContext(
+                    featureState.feature.form.away.sampleSize,
+                    featureState.feature.form.away.winRate,
+                  )
+                : "Not calculated"}
+            </strong>
+          </div>
+          <div>
+            <span>HEAD TO HEAD</span>
+            <strong>
+              {featureState.feature
+                ? featureState.feature.headToHead.sampleSize > 0
+                  ? `${featureState.feature.headToHead.sampleSize} settled meetings`
+                  : "No settled sample"
+                : "Not calculated"}
+            </strong>
+          </div>
+          <div>
+            <span>REST</span>
+            <strong>
+              {featureState.feature
+                ? `${restContext(featureState.feature.temporal.home.restDays)} / ${restContext(featureState.feature.temporal.away.restDays)}`
+                : "Not calculated"}
+            </strong>
+          </div>
           <div>
             <span>INJURIES / NEWS</span>
             <strong>
@@ -361,13 +452,13 @@ export default async function AnalysisPage({
           <span className="empty-status">WHY</span>
           <h2>
             {primaryPrediction
-              ? "Baseline probability generated."
-              : "No recommendation generated."}
+              ? "Leading model view generated."
+              : "No model view generated."}
           </h2>
           <p>
             {primaryPrediction
-              ? "EDGE now generates a transparent market-anchored probability using pre-event odds plus bounded form, head-to-head, and rest evidence. The baseline remains WATCH/NO BET until settled forward performance supports a stronger decision gate."
-              : "Real market odds can now be stored and displayed, but a prediction must be generated before downstream validation can begin."}
+              ? "EDGE ranks the current market selections using pre-event odds plus bounded form, head-to-head and rest evidence. The displayed leading view is chosen by decision quality and estimated value rather than raw favorite probability alone."
+              : "Real market odds can be displayed before model output exists, but a pre-event feature vector and prediction are required for the decision summary."}
           </p>
         </article>
         <article>
