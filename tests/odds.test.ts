@@ -5,6 +5,7 @@ import {
   makeSelectionKey,
   makeSnapshotFingerprint,
 } from "../lib/data/syncOdds";
+import { providerParticipantNamesEquivalent } from "../lib/data/eventIdentity";
 
 test("normalizes featured decimal odds and ignores unsupported markets", () => {
   const event = normalizeOddsPayload(
@@ -191,4 +192,38 @@ test("Odds API timestamps omit milliseconds for odds queries", async () => {
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+
+test("cross-provider identity matches conservative football naming variants", () => {
+  assert.equal(
+    providerParticipantNamesEquivalent("Talleres", "Talleres Cordoba"),
+    true,
+  );
+  assert.equal(
+    providerParticipantNamesEquivalent(
+      "Belgrano de Cordoba",
+      "Belgrano Cordoba",
+    ),
+    true,
+  );
+  assert.equal(
+    providerParticipantNamesEquivalent("Argentinos JRS", "Argentinos Juniors"),
+    true,
+  );
+  assert.equal(
+    providerParticipantNamesEquivalent("Tigre", "CA Tigre BA"),
+    true,
+  );
+});
+
+test("cross-provider identity still rejects materially different clubs", () => {
+  assert.equal(
+    providerParticipantNamesEquivalent("Manchester United", "Manchester City"),
+    false,
+  );
+  assert.equal(
+    providerParticipantNamesEquivalent("Real Madrid", "Atletico Madrid"),
+    false,
+  );
 });
