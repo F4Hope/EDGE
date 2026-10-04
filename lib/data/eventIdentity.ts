@@ -21,11 +21,67 @@ export type AliasResolution = {
   unmatched: ProviderEvent[];
 };
 
-function normalizeName(value: string): string {
-  return value
+const providerNameStopTokens = new Set([
+  "fc",
+  "cf",
+  "sc",
+  "ca",
+  "ac",
+  "afc",
+  "club",
+  "de",
+  "del",
+  "da",
+  "do",
+  "ba",
+]);
+
+const providerNameAliases = new Map([
+  ["jrs", "juniors"],
+  ["jr", "junior"],
+]);
+
+function normalizedNameTokens(value: string): string[] {
+  const rawTokens = value
     .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "");
+    .split(/[^a-z0-9]+/)
+    .map((token) => token.trim())
+    .filter(Boolean);
+
+  const normalized = rawTokens
+    .map((token) => providerNameAliases.get(token) ?? token)
+    .filter((token) => !providerNameStopTokens.has(token));
+
+  return normalized.length > 0 ? normalized : rawTokens;
+}
+
+function isSubset(shorter: string[], longer: string[]): boolean {
+  const longerSet = new Set(longer);
+  return shorter.every((token) => longerSet.has(token));
+}
+
+export function providerParticipantNamesEquivalent(
+  left: string,
+  right: string,
+): boolean {
+  const leftTokens = normalizedNameTokens(left);
+  const rightTokens = normalizedNameTokens(right);
+
+  if (leftTokens.length === 0 || rightTokens.length === 0) return false;
+
+  if (leftTokens.join("|") === rightTokens.join("|")) return true;
+
+  const shorter =
+    leftTokens.length <= rightTokens.length ? leftTokens : rightTokens;
+  const longer =
+    leftTokens.length <= rightTokens.length ? rightTokens : leftTokens;
+
+  if (longer.length - shorter.length > 1) return false;
+  if (!isSubset(shorter, longer)) return false;
+
+  return shorter.some((token) => token.length >= 5);
 }
 
 function candidateNames(candidate: CandidateEvent): {
@@ -43,24 +99,23 @@ function participantMatch(
   event: ProviderEvent,
   candidate: CandidateEvent,
 ): boolean {
-  const incomingHome = normalizeName(event.home.name);
-  const incomingAway = normalizeName(event.away.name);
   const names = candidateNames(candidate);
-  const candidateHome = normalizeName(names.home);
-  const candidateAway = normalizeName(names.away);
 
-  if (!incomingHome || !incomingAway || !candidateHome || !candidateAway) {
+  if (!event.home.name || !event.away.name || !names.home || !names.away) {
     return false;
   }
 
-  if (sport === "tennis") {
-    return (
-      (incomingHome === candidateHome && incomingAway === candidateAway) ||
-      (incomingHome === candidateAway && incomingAway === candidateHome)
-    );
-  }
+  const direct =
+    providerParticipantNamesEquivalent(event.home.name, names.home) &&
+    providerParticipantNamesEquivalent(event.away.name, names.away);
 
-  return incomingHome === candidateHome && incomingAway === candidateAway;
+  if (sport !== "tennis") return direct;
+
+  return (
+    direct ||
+    (providerParticipantNamesEquivalent(event.home.name, names.away) &&
+      providerParticipantNamesEquivalent(event.away.name, names.home))
+  );
 }
 
 async function writeAlias(
