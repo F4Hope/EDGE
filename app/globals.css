@@ -2447,3 +2447,65 @@ button {
   padding-top: 13px;
   border-top: 1px solid rgba(244, 240, 231, 0.05);
 }
+
+
+/* Events: best current H2H odds */
+
+.event-card-odds {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(82px, 1fr));
+  gap: 8px;
+}
+
+.event-odds-quote {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(200, 169, 107, 0.12);
+  border-radius: 12px;
+  background: rgba(200, 169, 107, 0.035);
+  text-align: center;
+}
+
+.event-odds-quote span,
+.event-odds-quote strong,
+.event-odds-quote small {
+  display: block;
+}
+
+.event-odds-quote span {
+  overflow: hidden;
+  color: #8f8d87;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.event-odds-quote strong {
+  margin-top: 5px;
+  color: var(--champagne);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  font-weight: 400;
+}
+
+.event-odds-quote small {
+  margin-top: 4px;
+  overflow: hidden;
+  color: #65635e;
+  font-size: 6px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.event-card-odds-empty {
+  padding: 10px;
+  border: 1px dashed rgba(244, 240, 231, 0.08);
+  border-radius: 12px;
+  color: #66645f;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-align: center;
+}
