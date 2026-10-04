@@ -170,7 +170,13 @@ export async function syncOddsSnapshots(
     throw new Error(`${provider.name} does not support ${sport}.`);
   }
 
-  const discovered = await provider.getEvents({ sport, from, to });
+  const discovered = await provider.getEvents({
+    sport,
+    from,
+    to,
+    sourceSportKeys: options.allowedSportKeys,
+    maxSourceSportKeys: options.maxSportKeys,
+  });
   const uniqueDiscovered = [
     ...new Map(discovered.map((event) => [event.providerId, event])).values(),
   ];

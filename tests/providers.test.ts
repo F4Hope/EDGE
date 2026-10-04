@@ -5,7 +5,10 @@ import {
   normalizeBasketballGame,
   normalizeFootballFixture,
 } from "../lib/providers/apiSports";
-import { normalizeOddsEvent } from "../lib/providers/oddsApi";
+import {
+  OddsApiProvider,
+  normalizeOddsEvent,
+} from "../lib/providers/oddsApi";
 
 test("normalizes API-Sports football fixtures", () => {
   const event = normalizeFootballFixture({
@@ -128,6 +131,141 @@ test("football discovery queries API-Sports by UTC date instead of standalone fr
       assert.equal(params.get("to"), null);
       assert.equal(params.get("timezone"), "UTC");
     }
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+
+test("tennis discovery caps sport keys before event requests", async () => {
+  const originalFetch = globalThis.fetch;
+  const requestedUrls: string[] = [];
+
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const url =
+      typeof input === "string"
+        ? new URL(input)
+        : input instanceof URL
+          ? input
+          : new URL(input.url);
+    requestedUrls.push(url.toString());
+
+    if (url.pathname.endsWith("/sports")) {
+      return new Response(
+        JSON.stringify([
+          {
+            key: "tennis_atp_alpha",
+            group: "Tennis",
+            title: "ATP Alpha",
+            active: true,
+          },
+          {
+            key: "tennis_atp_beta",
+            group: "Tennis",
+            title: "ATP Beta",
+            active: true,
+          },
+        ]),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    }
+
+    return new Response(
+      JSON.stringify([
+        {
+          id: "tennis-event-1",
+          sport_key: "tennis_atp_alpha",
+          sport_title: "ATP Alpha",
+          commence_time: "2026-10-04T12:00:00Z",
+          home_team: "Player One",
+          away_team: "Player Two",
+        },
+      ]),
+      { status: 200, headers: { "content-type": "application/json" } },
+    );
+  }) as typeof fetch;
+
+  try {
+    const provider = new OddsApiProvider("test-key");
+    const events = await provider.getEvents({
+      sport: "tennis",
+      from: new Date("2026-10-04T00:00:00Z"),
+      to: new Date("2026-10-04T23:59:59Z"),
+      maxSourceSportKeys: 1,
+    });
+
+    assert.equal(events.length, 1);
+    assert.equal(requestedUrls.length, 2);
+    assert.match(requestedUrls[0], /\/v4\/sports\/\?/);
+    assert.match(requestedUrls[1], /tennis_atp_alpha\/events/);
+    assert.doesNotMatch(requestedUrls.join("\n"), /tennis_atp_beta\/events/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("tennis discovery honors explicit sport keys before event requests", async () => {
+  const originalFetch = globalThis.fetch;
+  const requestedUrls: string[] = [];
+
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const url =
+      typeof input === "string"
+        ? new URL(input)
+        : input instanceof URL
+          ? input
+          : new URL(input.url);
+    requestedUrls.push(url.toString());
+
+    if (url.pathname.endsWith("/sports")) {
+      return new Response(
+        JSON.stringify([
+          {
+            key: "tennis_atp_alpha",
+            group: "Tennis",
+            title: "ATP Alpha",
+            active: true,
+          },
+          {
+            key: "tennis_atp_beta",
+            group: "Tennis",
+            title: "ATP Beta",
+            active: true,
+          },
+        ]),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    }
+
+    return new Response(
+      JSON.stringify([
+        {
+          id: "tennis-event-2",
+          sport_key: "tennis_atp_beta",
+          sport_title: "ATP Beta",
+          commence_time: "2026-10-04T14:00:00Z",
+          home_team: "Player Three",
+          away_team: "Player Four",
+        },
+      ]),
+      { status: 200, headers: { "content-type": "application/json" } },
+    );
+  }) as typeof fetch;
+
+  try {
+    const provider = new OddsApiProvider("test-key");
+    const events = await provider.getEvents({
+      sport: "tennis",
+      from: new Date("2026-10-04T00:00:00Z"),
+      to: new Date("2026-10-04T23:59:59Z"),
+      sourceSportKeys: ["tennis_atp_beta"],
+      maxSourceSportKeys: 1,
+    });
+
+    assert.equal(events.length, 1);
+    assert.equal(requestedUrls.length, 2);
+    assert.match(requestedUrls[1], /tennis_atp_beta\/events/);
+    assert.doesNotMatch(requestedUrls.join("\n"), /tennis_atp_alpha\/events/);
   } finally {
     globalThis.fetch = originalFetch;
   }

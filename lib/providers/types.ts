@@ -33,6 +33,8 @@ export interface EventQuery {
   sport: SupportedSport;
   from: Date;
   to: Date;
+  sourceSportKeys?: string[];
+  maxSourceSportKeys?: number;
 }
 
 export interface DataProvider {

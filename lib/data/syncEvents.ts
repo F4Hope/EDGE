@@ -1,6 +1,11 @@
 import { getDb } from "@/lib/prisma";
 import { buildEventChangeSignals } from "@/lib/intelligence/eventChanges";
-import type { DataProvider, ProviderEventStatus, SupportedSport } from "@/lib/providers/types";
+import type {
+  DataProvider,
+  EventQuery,
+  ProviderEventStatus,
+  SupportedSport,
+} from "@/lib/providers/types";
 
 const statusMap = {
   scheduled: "SCHEDULED",
@@ -34,12 +39,18 @@ export async function syncProviderEvents(
   sportKey: SupportedSport,
   from: Date,
   to: Date,
+  queryOptions: Pick<EventQuery, "sourceSportKeys" | "maxSourceSportKeys"> = {},
 ): Promise<EventSyncResult> {
   if (!provider.supports(sportKey)) {
     throw new Error(`${provider.name} does not support ${sportKey}.`);
   }
 
-  const incoming = await provider.getEvents({ sport: sportKey, from, to });
+  const incoming = await provider.getEvents({
+    sport: sportKey,
+    from,
+    to,
+    ...queryOptions,
+  });
   const events = [...new Map(incoming.map((event) => [event.providerId, event])).values()];
 
   const sport = await db.sport.upsert({

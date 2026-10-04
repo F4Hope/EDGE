@@ -297,15 +297,29 @@ export class OddsApiProvider implements DataProvider, OddsProvider, ResultProvid
     }
 
     const catalog = await this.getCatalog();
-    const sportKeys = catalog.filter(
-      (item) => item.active !== false && matchesSport(item, query.sport),
+    const requestedKeys = new Set(
+      (query.sourceSportKeys ?? []).map((key) => key.trim()).filter(Boolean),
+    );
+    const matchingKeys = catalog.filter(
+      (item) =>
+        item.active !== false &&
+        matchesSport(item, query.sport) &&
+        (requestedKeys.size === 0 || requestedKeys.has(item.key)),
     );
 
-    if (sportKeys.length === 0) {
+    if (matchingKeys.length === 0) {
       throw new Error(
-        `The Odds API catalog returned no active keys for ${query.sport}.`,
+        requestedKeys.size > 0
+          ? `The Odds API catalog returned no requested active keys for ${query.sport}.`
+          : `The Odds API catalog returned no active keys for ${query.sport}.`,
       );
     }
+
+    const maxKeys = Math.min(
+      100,
+      Math.max(1, Math.trunc(query.maxSourceSportKeys ?? 4)),
+    );
+    const sportKeys = matchingKeys.slice(0, maxKeys);
 
     const normalized: ProviderEvent[] = [];
     for (const sportEntry of sportKeys) {

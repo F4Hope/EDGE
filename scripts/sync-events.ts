@@ -34,13 +34,34 @@ function parseDate(value: string | undefined, boundary: "from" | "to"): Date {
   return parsed;
 }
 
+function parseCsv(value: string | undefined): string[] {
+  if (!value) return [];
+  return [
+    ...new Set(
+      value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean),
+    ),
+  ];
+}
+
+function parseMaxSportKeys(value: string | undefined): number {
+  const parsed = Number(
+    value ?? process.env.ODDS_EVENT_MAX_SPORT_KEYS ?? "4",
+  );
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 100) {
+    throw new Error(
+      "ODDS_EVENT_MAX_SPORT_KEYS must be an integer from 1 to 100.",
+    );
+  }
+  return parsed;
+}
+
 function parseSports(value: string | undefined): SupportedSport[] {
   if (!value || value === "all") return [...supportedSports];
 
-  const requested = value
-    .split(",")
-    .map((sport) => sport.trim().toLowerCase())
-    .filter(Boolean);
+  const requested = parseCsv(value.toLowerCase());
 
   const invalid = requested.filter(
     (sport) => !supportedSports.includes(sport as SupportedSport),
@@ -68,6 +89,10 @@ async function main() {
 
   const sports = parseSports(getArg("sports"));
   const providerPreference = parseProvider(getArg("provider"));
+  const sourceSportKeys = parseCsv(
+    getArg("sport-keys") ?? process.env.ODDS_API_SPORT_KEYS,
+  );
+  const maxSourceSportKeys = parseMaxSportKeys(getArg("max-sport-keys"));
   const db = getDb();
 
   try {
@@ -76,12 +101,26 @@ async function main() {
       const result = await withSyncCheckpoint(db, {
         provider: provider.name,
         scope: checkpointScope("events", sport),
-        work: () => syncProviderEvents(db, provider, sport, from, to),
+        work: () =>
+          syncProviderEvents(db, provider, sport, from, to, {
+            sourceSportKeys:
+              provider.name === "odds-api" && sourceSportKeys.length > 0
+                ? sourceSportKeys
+                : undefined,
+            maxSourceSportKeys:
+              provider.name === "odds-api" ? maxSourceSportKeys : undefined,
+          }),
         metadata: (value) => ({
           fetched: value.fetched,
           persisted: value.persisted,
           from: value.from,
           to: value.to,
+          sourceSportKeys:
+            provider.name === "odds-api" && sourceSportKeys.length > 0
+              ? sourceSportKeys
+              : undefined,
+          maxSourceSportKeys:
+            provider.name === "odds-api" ? maxSourceSportKeys : undefined,
         }),
       });
       console.log(
