@@ -1,6 +1,6 @@
 import type { SupportedSport } from "@/lib/providers/types";
 
-export const FEATURE_SCHEMA_VERSION = "features-v2";
+export const FEATURE_SCHEMA_VERSION = "features-v3";
 
 export type ParticipantScheduleFeatures = {
   priorEvents60d: number;
@@ -17,6 +17,17 @@ export type ParticipantFormFeatures = {
   winRate: number | null;
   averageFor: number | null;
   averageAgainst: number | null;
+};
+
+export type HeadToHeadFeatures = {
+  sampleSize: number;
+  participantAWins: number;
+  draws: number;
+  participantBWins: number;
+  participantAWinRate: number | null;
+  participantBWinRate: number | null;
+  averageParticipantAScore: number | null;
+  averageParticipantBScore: number | null;
 };
 
 export type MarketSelectionFeatures = {
@@ -82,6 +93,7 @@ export type FeatureVector = {
     home: ParticipantFormFeatures;
     away: ParticipantFormFeatures;
   };
+  headToHead: HeadToHeadFeatures;
   market: MarketFeatureSet;
   sportSpecific: SportSpecificFeatureSet;
   quality: FeatureQualityBreakdown;

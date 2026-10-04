@@ -56,6 +56,9 @@ jobs:
       - name: Test settled recent-form features
         run: npm run test:form
 
+      - name: Test settled head-to-head features
+        run: npm run test:h2h
+
       - name: Test audit and intelligence
         run: npm run test:audit
 

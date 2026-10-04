@@ -1,4 +1,5 @@
 import type {
+  HeadToHeadFeatures,
   ParticipantFormFeatures,
   ParticipantScheduleFeatures,
   SportSpecificFeatureSet,
@@ -10,6 +11,7 @@ type SportFeatureInput = {
   away: ParticipantScheduleFeatures;
   homeForm: ParticipantFormFeatures;
   awayForm: ParticipantFormFeatures;
+  headToHead: HeadToHeadFeatures;
   participantKind: "team" | "player";
 };
 
@@ -42,6 +44,43 @@ function addRecentForm(
     available,
     prefix + "RecentAverageAgainst",
     form.averageAgainst,
+  );
+
+  return true;
+}
+
+function addHeadToHead(
+  values: Record<string, string | number | boolean | null>,
+  available: string[],
+  headToHead: HeadToHeadFeatures,
+): boolean {
+  if (headToHead.sampleSize === 0) return false;
+
+  addIfAvailable(values, available, "h2hSampleSize", headToHead.sampleSize);
+  addIfAvailable(
+    values,
+    available,
+    "h2hParticipantAWinRate",
+    headToHead.participantAWinRate,
+  );
+  addIfAvailable(
+    values,
+    available,
+    "h2hParticipantBWinRate",
+    headToHead.participantBWinRate,
+  );
+  addIfAvailable(values, available, "h2hDraws", headToHead.draws);
+  addIfAvailable(
+    values,
+    available,
+    "h2hAverageParticipantAScore",
+    headToHead.averageParticipantAScore,
+  );
+  addIfAvailable(
+    values,
+    available,
+    "h2hAverageParticipantBScore",
+    headToHead.averageParticipantBScore,
   );
 
   return true;
@@ -83,6 +122,12 @@ function footballFeatures(input: SportFeatureInput): SportSpecificFeatureSet {
     input.awayForm,
   );
 
+  const headToHeadAvailable = addHeadToHead(
+    values,
+    available,
+    input.headToHead,
+  );
+
   const baseMissing = [
     "recentForm",
     "goalsScored",
@@ -100,10 +145,13 @@ function footballFeatures(input: SportFeatureInput): SportSpecificFeatureSet {
     "oddsMovement",
   ];
 
-  const missing =
+  const formAdjusted =
     homeFormAvailable && awayFormAvailable
       ? without(baseMissing, ["recentForm", "goalsScored", "goalsConceded"])
       : baseMissing;
+  const missing = headToHeadAvailable
+    ? without(formAdjusted, ["headToHead"])
+    : formAdjusted;
 
   return { values, available, missing };
 }
@@ -137,6 +185,11 @@ function basketballFeatures(input: SportFeatureInput): SportSpecificFeatureSet {
     "away",
     input.awayForm,
   );
+  const headToHeadAvailable = addHeadToHead(
+    values,
+    available,
+    input.headToHead,
+  );
 
   const baseMissing = [
     "offensiveRating",
@@ -146,13 +199,17 @@ function basketballFeatures(input: SportFeatureInput): SportSpecificFeatureSet {
     "playerAvailability",
     "keyPlayerImpact",
     "matchup",
+    "headToHead",
     "oddsMovement",
   ];
 
-  const missing =
+  const formAdjusted =
     homeFormAvailable && awayFormAvailable
       ? without(baseMissing, ["recentForm"])
       : baseMissing;
+  const missing = headToHeadAvailable
+    ? without(formAdjusted, ["headToHead"])
+    : formAdjusted;
 
   return { values, available, missing };
 }
@@ -180,6 +237,11 @@ function tennisFeatures(input: SportFeatureInput): SportSpecificFeatureSet {
     "playerB",
     input.awayForm,
   );
+  const headToHeadAvailable = addHeadToHead(
+    values,
+    available,
+    input.headToHead,
+  );
 
   const baseMissing = [
     "ranking",
@@ -194,10 +256,13 @@ function tennisFeatures(input: SportFeatureInput): SportSpecificFeatureSet {
     "oddsMovement",
   ];
 
-  const missing =
+  const formAdjusted =
     playerAFormAvailable && playerBFormAvailable
       ? without(baseMissing, ["recentForm"])
       : baseMissing;
+  const missing = headToHeadAvailable
+    ? without(formAdjusted, ["headToHead"])
+    : formAdjusted;
 
   return { values, available, missing };
 }

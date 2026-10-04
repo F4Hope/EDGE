@@ -14,7 +14,7 @@ Phase 4 expands the premium mobile-first interface into the full application she
 
 Phase 5 adds real featured-market odds ingestion through The Odds API. EDGE stores bookmaker-specific decimal odds snapshots for head-to-head/moneyline, spreads/handicaps, and totals, records provider update timestamps, deduplicates repeated snapshots, tracks quota headers, and attaches cross-provider event aliases only when participant/time identity is unambiguous. Event analysis now displays real stored bookmaker quotes, and the Events page can filter by league, country, market, and odds range.
 
-Phase 6 adds the transparent Feature Engine. The current `features-v2` vector calculates deterministic model-input snapshots from evidence that EDGE actually has: event identity, schedule/rest context, settled recent form, market coverage, bookmaker breadth, current price consensus/dispersion, and sport-specific availability flags. Recent form is derived only from valid FINAL score records within the existing 60-day evidence window, using at most the ten most recent settled samples per participant. Missing football, basketball, and tennis inputs are recorded explicitly rather than invented. Each feature snapshot receives a data-quality/completeness score and a stable fingerprint for deduplication. The Feature Engine does not generate predictions.
+Phase 6 adds the transparent Feature Engine. The current `features-v3` vector calculates deterministic model-input snapshots from evidence that EDGE actually has: event identity, schedule/rest context, settled recent form, settled head-to-head history, market coverage, bookmaker breadth, current price consensus/dispersion, and sport-specific availability flags. Recent form is derived only from valid FINAL score records within the existing 60-day evidence window, using at most the ten most recent settled samples per participant. Missing football, basketball, and tennis inputs are recorded explicitly rather than invented. Each feature snapshot receives a data-quality/completeness score and a stable fingerprint for deduplication. The Feature Engine does not generate predictions.
 
 Post-Phase-6 audit infrastructure adds sports result ingestion, statistical calibration/accuracy evaluation for any future settled model records, verified news/injury signal ingestion, descriptive odds-movement diagnostics, model-performance reporting with strict INSUFFICIENT DATA behavior, cursor pagination, health checks, and production security headers. Real-money wager selection/ticket automation is intentionally not implemented.
 
@@ -165,9 +165,15 @@ The seed only creates the three initial reference sports: Football, Basketball, 
 
 ### Settled recent-form evidence
 
-`features-v2` adds source-backed recent form from EDGE's own settled history. For each participant it records sample size, wins/draws/losses, win rate, and average score for/against when valid FINAL result data exists. Football values represent goals, Basketball values represent points, and Tennis values represent the provider's completed match score units.
+`features-v3` includes source-backed recent form from EDGE's own settled history. For each participant it records sample size, wins/draws/losses, win rate, and average score for/against when valid FINAL result data exists. Football values represent goals, Basketball values represent points, and Tennis values represent the provider's completed match score units.
 
 If no valid settled sample exists, recent form remains missing and the UI displays `NO SAMPLE`; EDGE does not substitute zeros or infer outcomes from odds.
+
+### Settled head-to-head evidence
+
+`features-v3` also derives head-to-head evidence from valid FINAL results for the same two participants. EDGE looks back up to 730 days and uses at most the ten most recent valid meetings. Historical home/away roles are normalized back to participant A/B identity, so a reversed venue does not reverse the meaning of the statistics.
+
+The vector records H2H sample size, participant A/B wins and win rates, draws, and average score units for each side. When no valid H2H sample exists, the matchup-history gap remains explicitly missing.
 
 ## Safe data refresh
 

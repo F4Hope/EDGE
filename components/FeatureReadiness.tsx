@@ -13,6 +13,22 @@ function formLabel(sampleSize: number, winRate: number | null): string {
   return `${sampleSize} · ${Math.round(winRate * 100)}% W`;
 }
 
+function headToHeadLabel(
+  sampleSize: number,
+  participantAWinRate: number | null,
+  participantBWinRate: number | null,
+): string {
+  if (
+    sampleSize === 0 ||
+    participantAWinRate === null ||
+    participantBWinRate === null
+  ) {
+    return "NO SAMPLE";
+  }
+
+  return `${sampleSize} · A ${Math.round(participantAWinRate * 100)}% / B ${Math.round(participantBWinRate * 100)}%`;
+}
+
 export function FeatureReadiness({
   feature,
   computedAt,
@@ -54,6 +70,16 @@ export function FeatureReadiness({
         <div>
           <span>AWAY / B FORM</span>
           <b>{formLabel(feature.form.away.sampleSize, feature.form.away.winRate)}</b>
+        </div>
+        <div>
+          <span>HEAD TO HEAD</span>
+          <b>
+            {headToHeadLabel(
+              feature.headToHead.sampleSize,
+              feature.headToHead.participantAWinRate,
+              feature.headToHead.participantBWinRate,
+            )}
+          </b>
         </div>
       </div>
 

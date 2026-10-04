@@ -144,12 +144,23 @@ test("sport-specific feature sets expose missing evidence explicitly", () => {
     averageFor: null,
     averageAgainst: null,
   };
+  const emptyHeadToHead = {
+    sampleSize: 0,
+    participantAWins: 0,
+    draws: 0,
+    participantBWins: 0,
+    participantAWinRate: null,
+    participantBWinRate: null,
+    averageParticipantAScore: null,
+    averageParticipantBScore: null,
+  };
 
   const football = buildSportSpecificFeatures("football", {
     home: schedule,
     away: schedule,
     homeForm: emptyForm,
     awayForm: emptyForm,
+    headToHead: emptyHeadToHead,
     participantKind: "team",
   });
   const basketball = buildSportSpecificFeatures("basketball", {
@@ -157,6 +168,7 @@ test("sport-specific feature sets expose missing evidence explicitly", () => {
     away: schedule,
     homeForm: emptyForm,
     awayForm: emptyForm,
+    headToHead: emptyHeadToHead,
     participantKind: "team",
   });
   const tennis = buildSportSpecificFeatures("tennis", {
@@ -164,6 +176,7 @@ test("sport-specific feature sets expose missing evidence explicitly", () => {
     away: schedule,
     homeForm: emptyForm,
     awayForm: emptyForm,
+    headToHead: emptyHeadToHead,
     participantKind: "player",
   });
 
@@ -212,12 +225,23 @@ test("settled recent form resolves generic form gaps without hiding unsupported 
     averageFor: 1.8,
     averageAgainst: 1,
   };
+  const headToHead = {
+    sampleSize: 0,
+    participantAWins: 0,
+    draws: 0,
+    participantBWins: 0,
+    participantAWinRate: null,
+    participantBWinRate: null,
+    averageParticipantAScore: null,
+    averageParticipantBScore: null,
+  };
 
   const football = buildSportSpecificFeatures("football", {
     home: schedule,
     away: schedule,
     homeForm: form,
     awayForm: form,
+    headToHead,
     participantKind: "team",
   });
 
@@ -255,15 +279,69 @@ test("one-sided form remains explicitly incomplete", () => {
     averageFor: null,
     averageAgainst: null,
   };
+  const emptyHeadToHead = {
+    sampleSize: 0,
+    participantAWins: 0,
+    draws: 0,
+    participantBWins: 0,
+    participantAWinRate: null,
+    participantBWinRate: null,
+    averageParticipantAScore: null,
+    averageParticipantBScore: null,
+  };
 
   const tennis = buildSportSpecificFeatures("tennis", {
     home: schedule,
     away: schedule,
     homeForm: form,
     awayForm: emptyForm,
+    headToHead: emptyHeadToHead,
     participantKind: "player",
   });
 
   assert.ok(tennis.available.includes("playerARecentWinRate"));
   assert.ok(tennis.missing.includes("recentForm"));
+});
+
+
+test("settled head-to-head resolves the matchup history gap", () => {
+  const schedule = {
+    priorEvents60d: 5,
+    eventsLast7d: 1,
+    restDays: 4,
+    backToBack: false,
+  };
+  const form = {
+    sampleSize: 3,
+    wins: 2,
+    draws: 0,
+    losses: 1,
+    winRate: 0.6667,
+    averageFor: 2,
+    averageAgainst: 1,
+  };
+  const headToHead = {
+    sampleSize: 3,
+    participantAWins: 2,
+    draws: 0,
+    participantBWins: 1,
+    participantAWinRate: 0.6667,
+    participantBWinRate: 0.3333,
+    averageParticipantAScore: 2,
+    averageParticipantBScore: 1.3333,
+  };
+
+  const tennis = buildSportSpecificFeatures("tennis", {
+    home: schedule,
+    away: schedule,
+    homeForm: form,
+    awayForm: form,
+    headToHead,
+    participantKind: "player",
+  });
+
+  assert.equal(tennis.values.h2hSampleSize, 3);
+  assert.equal(tennis.values.h2hParticipantAWinRate, 0.6667);
+  assert.ok(!tennis.missing.includes("headToHead"));
+  assert.ok(tennis.missing.includes("playingSurface"));
 });

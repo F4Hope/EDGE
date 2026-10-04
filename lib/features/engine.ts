@@ -2,6 +2,7 @@ import { getDb } from "@/lib/prisma";
 import {
   FEATURE_SCHEMA_VERSION,
   type FeatureVector,
+  type HeadToHeadFeatures,
   type ParticipantFormFeatures,
   type ParticipantScheduleFeatures,
 } from "./types";
@@ -14,6 +15,10 @@ import {
   summarizeParticipantForm,
 } from "./form";
 import {
+  emptyHeadToHead,
+  summarizeHeadToHead,
+} from "./headToHead";
+import {
   supportedSports,
   type SupportedSport,
 } from "@/lib/providers/types";
@@ -22,6 +27,7 @@ type EdgeDb = ReturnType<typeof getDb>;
 
 const DAY_MS = 86_400_000;
 const HISTORY_WINDOW_MS = 60 * DAY_MS;
+const HEAD_TO_HEAD_WINDOW_MS = 730 * DAY_MS;
 const SHORT_WINDOW_MS = 7 * DAY_MS;
 
 function round(value: number, digits = 4): number {
@@ -131,6 +137,98 @@ async function participantEvidence(
   };
 }
 
+async function headToHeadEvidence(
+  db: EdgeDb,
+  input: {
+    eventId: string;
+    eventStart: Date;
+    participantKind: "team" | "player";
+    participantAId: string | null;
+    participantBId: string | null;
+  },
+): Promise<HeadToHeadFeatures> {
+  if (
+    !input.participantAId ||
+    !input.participantBId ||
+    input.participantAId === input.participantBId
+  ) {
+    return emptyHeadToHead();
+  }
+
+  const pairFilter =
+    input.participantKind === "team"
+      ? {
+          OR: [
+            {
+              homeTeamId: input.participantAId,
+              awayTeamId: input.participantBId,
+            },
+            {
+              homeTeamId: input.participantBId,
+              awayTeamId: input.participantAId,
+            },
+          ],
+        }
+      : {
+          OR: [
+            {
+              homePlayerId: input.participantAId,
+              awayPlayerId: input.participantBId,
+            },
+            {
+              homePlayerId: input.participantBId,
+              awayPlayerId: input.participantAId,
+            },
+          ],
+        };
+
+  const priorMeetings = await db.event.findMany({
+    where: {
+      id: { not: input.eventId },
+      startTime: {
+        lt: input.eventStart,
+        gte: new Date(
+          input.eventStart.getTime() - HEAD_TO_HEAD_WINDOW_MS,
+        ),
+      },
+      status: { notIn: ["CANCELLED", "POSTPONED"] },
+      ...pairFilter,
+    },
+    orderBy: { startTime: "desc" },
+    take: 30,
+    select: {
+      homeTeamId: true,
+      awayTeamId: true,
+      homePlayerId: true,
+      awayPlayerId: true,
+      result: {
+        select: {
+          status: true,
+          payload: true,
+        },
+      },
+    },
+  });
+
+  return summarizeHeadToHead(
+    priorMeetings.map((event) => ({
+      homeParticipantId:
+        input.participantKind === "team"
+          ? event.homeTeamId
+          : event.homePlayerId,
+      awayParticipantId:
+        input.participantKind === "team"
+          ? event.awayTeamId
+          : event.awayPlayerId,
+      resultStatus: event.result?.status ?? null,
+      payload: event.result?.payload ?? null,
+    })),
+    input.participantAId,
+    input.participantBId,
+    10,
+  );
+}
+
 export type FeatureCalculationResult = {
   featureId: string;
   reused: boolean;
@@ -188,7 +286,16 @@ export async function calculateEventFeatures(
   const awayParticipant =
     event.awayTeam?.name ?? event.awayPlayer?.fullName ?? null;
 
-  const [homeEvidence, awayEvidence] = await Promise.all([
+  const participantAId =
+    participantKind === "team"
+      ? event.homeTeam?.id ?? null
+      : event.homePlayer?.id ?? null;
+  const participantBId =
+    participantKind === "team"
+      ? event.awayTeam?.id ?? null
+      : event.awayPlayer?.id ?? null;
+
+  const [homeEvidence, awayEvidence, headToHead] = await Promise.all([
     participantEvidence(db, {
       eventId: event.id,
       eventStart: event.startTime,
@@ -201,6 +308,13 @@ export async function calculateEventFeatures(
       teamId: event.awayTeam?.id,
       playerId: event.awayPlayer?.id,
     }),
+    headToHeadEvidence(db, {
+      eventId: event.id,
+      eventStart: event.startTime,
+      participantKind,
+      participantAId,
+      participantBId,
+    }),
   ]);
 
   const homeSchedule = homeEvidence.schedule;
@@ -211,6 +325,7 @@ export async function calculateEventFeatures(
     away: awaySchedule,
     homeForm: homeEvidence.form,
     awayForm: awayEvidence.form,
+    headToHead,
     participantKind,
   });
 
@@ -253,6 +368,7 @@ export async function calculateEventFeatures(
       home: homeEvidence.form,
       away: awayEvidence.form,
     },
+    headToHead,
     market,
     sportSpecific,
     quality,

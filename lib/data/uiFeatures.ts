@@ -20,6 +20,9 @@ function isFeatureVector(value: unknown): value is FeatureVector {
     typeof candidate.eventId === "string" &&
     typeof candidate.sport === "string" &&
     typeof candidate.quality?.overall === "number" &&
+    typeof candidate.form?.home?.sampleSize === "number" &&
+    typeof candidate.form?.away?.sampleSize === "number" &&
+    typeof candidate.headToHead?.sampleSize === "number" &&
     Array.isArray(candidate.sportSpecific?.available) &&
     Array.isArray(candidate.sportSpecific?.missing)
   );
