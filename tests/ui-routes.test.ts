@@ -59,3 +59,13 @@ test("setup center is reachable from More and treated as a More destination", as
   assert.match(setup, /SETUP COMPLETION/);
   assert.match(setup, /not a model-confidence or prediction-quality score/);
 });
+
+
+test("events defaults to priced fixtures and preserves all-fixtures inspection", async () => {
+  const source = await readFile("app/events/page.tsx", "utf8");
+
+  assert.match(source, /WITH ODDS/);
+  assert.match(source, /ALL FIXTURES/);
+  assert.match(source, /coverage = first\(params\.coverage\) === "all" \? "all" : "odds"/);
+  assert.match(source, /requireOdds: coverage === "odds"/);
+});
