@@ -32,3 +32,28 @@ test("production deployment command is non-destructive Prisma migrate deploy", a
   assert.equal(pkg.scripts["db:deploy"], "prisma migrate deploy");
   assert.doesNotMatch(pkg.scripts["db:deploy"], /reset|push|dev/);
 });
+
+
+test("committed baseline migration exists and targets PostgreSQL", async () => {
+  const migration = await readFile(
+    "prisma/migrations/0_init/migration.sql",
+    "utf8",
+  );
+  const lock = await readFile("prisma/migrations/migration_lock.toml", "utf8");
+
+  assert.match(migration, /CREATE TABLE "Event"/);
+  assert.match(migration, /CREATE TABLE "Result"/);
+  assert.match(migration, /CREATE TABLE "SyncCheckpoint"/);
+  assert.match(migration, /IntelligenceSignal_fingerprint_key/);
+  assert.match(lock, /provider = "postgresql"/);
+});
+
+test("migration drift check compares live datasource to the Prisma schema", async () => {
+  const pkg = JSON.parse(await readFile("package.json", "utf8")) as {
+    scripts: Record<string, string>;
+  };
+
+  assert.match(pkg.scripts["db:drift:check"], /--from-config-datasource/);
+  assert.match(pkg.scripts["db:drift:check"], /--to-schema prisma\/schema\.prisma/);
+  assert.match(pkg.scripts["db:drift:check"], /--exit-code/);
+});

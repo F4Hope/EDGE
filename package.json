@@ -51,7 +51,8 @@
     "db:baseline:create": "tsx scripts/create-baseline-migration.ts",
     "db:deploy": "prisma migrate deploy",
     "deploy:preflight": "tsx scripts/production-preflight.ts",
-    "test:deployment": "tsx --test tests/deployment.test.ts"
+    "test:deployment": "tsx --test tests/deployment.test.ts",
+    "db:drift:check": "prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.0",

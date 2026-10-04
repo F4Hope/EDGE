@@ -128,15 +128,11 @@ npm run db:deploy
 
 `deploy:preflight` blocks production deployment when Node is not 22, `DATABASE_URL` is missing/invalid/local, or no committed migration history exists. It never prints secrets.
 
-The initial migration should be generated directly from the current Prisma schema rather than handwritten:
+The initial `0_init` migration is committed under `prisma/migrations/0_init/migration.sql`. It was generated directly from the current Prisma schema using Prisma 7's supported `migrate diff --from-empty --to-schema ... --script` flow rather than handwritten SQL.
 
-```bash
-npm run db:baseline:create
-```
+CI applies the committed migration to a clean PostgreSQL 16 service and runs `npm run db:drift:check`; any difference between the migrated database and `schema.prisma` fails the build.
 
-The generator refuses to overwrite an existing migration history and uses Prisma 7's supported `migrate diff --from-empty --to-schema ... --script` flow.
-
-If a database was already created using `db push`, generate and review the baseline first, then mark that baseline as applied with Prisma `migrate resolve --applied 0_init` before using `db:deploy` for future migrations. New empty production databases should simply use `npm run db:deploy` once the committed baseline exists.
+If an existing database was previously created using `db push`, review the committed baseline and mark it as applied once with Prisma `migrate resolve --applied 0_init` before using `db:deploy` for future migrations. New empty production databases should simply run `npm run db:deploy`.
 
 Useful database command:
 
