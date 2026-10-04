@@ -5,6 +5,10 @@ import {
   PREDICTION_MODEL_VERSION,
 } from "../lib/prediction/model";
 import type { FeatureVector } from "../lib/features/types";
+import {
+  pickPrimaryPrediction,
+  type UiPrediction,
+} from "../lib/data/uiPredictions";
 
 function feature(): FeatureVector {
   return {
@@ -176,4 +180,82 @@ test("weak market coverage keeps prediction in NO_BET state", () => {
   assert.equal(candidates.length, 2);
   assert.ok(candidates.every((candidate) => candidate.status === "NO_BET"));
   assert.ok(candidates.every((candidate) => candidate.risk === "HIGH"));
+});
+
+
+function uiPrediction(
+  overrides: Partial<UiPrediction> & Pick<UiPrediction, "selectionName">,
+): UiPrediction {
+  return {
+    id: overrides.selectionName,
+    marketKey: "h2h",
+    selectionKey: overrides.selectionName.toLowerCase(),
+    selectionName: overrides.selectionName,
+    modelVersion: "market-evidence-v1",
+    modelProbability: 0.5,
+    impliedProbability: 0.5,
+    estimatedEdge: 0,
+    estimatedValue: 0,
+    edgeScore: null,
+    risk: "MEDIUM",
+    status: "WATCH",
+    dataQuality: 0.8,
+    modelAgreement: 0.9,
+    bestDecimalOdds: 2,
+    marketProbability: 0.5,
+    bookmakerCount: 3,
+    validationState: "UNVALIDATED_BASELINE",
+    bettableEnabled: false,
+    evidence: {
+      marketAnchor: 0.5,
+      formAdjustment: 0,
+      headToHeadAdjustment: 0,
+      restAdjustment: 0,
+      totalAdjustment: 0,
+    },
+    createdAt: "2026-10-04T12:00:00.000Z",
+    ...overrides,
+  };
+}
+
+test("primary UI prediction prioritizes decision quality over favorite probability", () => {
+  const favorite = uiPrediction({
+    selectionName: "Favorite",
+    modelProbability: 0.7,
+    estimatedValue: -0.04,
+    risk: "MEDIUM",
+    status: "WATCH",
+  });
+
+  const valueView = uiPrediction({
+    selectionName: "Value View",
+    modelProbability: 0.48,
+    estimatedValue: 0.08,
+    risk: "LOW",
+    status: "WATCH",
+  });
+
+  assert.equal(
+    pickPrimaryPrediction([favorite, valueView])?.selectionName,
+    "Value View",
+  );
+});
+
+test("WATCH model view outranks a higher-value NO_BET output", () => {
+  const watch = uiPrediction({
+    selectionName: "Watch",
+    estimatedValue: 0.02,
+    risk: "MEDIUM",
+    status: "WATCH",
+  });
+
+  const noBet = uiPrediction({
+    selectionName: "No Bet",
+    modelProbability: 0.8,
+    estimatedValue: 0.2,
+    risk: "HIGH",
+    status: "NO_BET",
+  });
+
+  assert.equal(pickPrimaryPrediction([noBet, watch])?.selectionName, "Watch");
 });
