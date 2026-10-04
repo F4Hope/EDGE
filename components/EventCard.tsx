@@ -36,6 +36,22 @@ export function EventCard({ event }: { event: UiEvent }) {
         <span>{formatStartTime(event.startsAt)}</span>
       </div>
 
+      {event.h2hOdds.length > 0 ? (
+        <div className="event-card-odds" aria-label="Best head-to-head odds">
+          {event.h2hOdds.map((quote) => (
+            <div className="event-odds-quote" key={quote.selectionKey}>
+              <span title={quote.selectionName}>{quote.selectionName}</span>
+              <strong>{quote.decimalOdds.toFixed(2)}</strong>
+              <small>{quote.bookmakerName ?? "Bookmaker"}</small>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="event-card-odds-empty">
+          H2H ODDS NOT SYNCED FOR THIS EVENT
+        </div>
+      )}
+
       <div className="event-card-foot">
         <span>{event.country ?? event.provider}</span>
         <span>VIEW EVENT →</span>
