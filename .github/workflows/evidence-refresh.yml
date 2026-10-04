@@ -1,0 +1,74 @@
+name: EDGE Evidence Refresh
+
+permissions:
+  contents: read
+
+concurrency:
+  group: edge-evidence-refresh
+  cancel-in-progress: false
+
+on:
+  workflow_dispatch:
+    inputs:
+      include_odds:
+        description: "Explicitly use The Odds API for event discovery and bookmaker odds"
+        required: false
+        default: false
+        type: boolean
+  schedule:
+    - cron: "17 */4 * * *"
+
+jobs:
+  refresh:
+    name: Refresh source-backed evidence
+    if: ${{ github.event_name == 'workflow_dispatch' || vars.EDGE_SCHEDULED_REFRESH_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: ${{ secrets.EDGE_DATABASE_URL }}
+      API_SPORTS_KEY: ${{ secrets.API_SPORTS_KEY }}
+      ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+      ODDS_API_REGIONS: ${{ vars.ODDS_API_REGIONS || 'eu' }}
+      ODDS_API_MARKETS: ${{ vars.ODDS_API_MARKETS || 'h2h' }}
+      ODDS_API_SPORT_KEYS: ${{ vars.ODDS_API_SPORT_KEYS }}
+      ODDS_SYNC_MAX_SPORT_KEYS: ${{ vars.ODDS_SYNC_MAX_SPORT_KEYS || '12' }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Validate refresh configuration
+        shell: bash
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::EDGE_DATABASE_URL repository secret is required."
+            exit 1
+          fi
+          if [ -z "$API_SPORTS_KEY" ]; then
+            echo "::error::API_SPORTS_KEY repository secret is required for scheduled source-backed refresh."
+            exit 1
+          fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.include_odds }}" = "true" ] && [ -z "$ODDS_API_KEY" ]; then
+            echo "::error::ODDS_API_KEY is required when include_odds is enabled."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Refresh standard evidence
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.include_odds != true }}
+        run: npm run data:refresh
+
+      - name: Refresh evidence including Odds API
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.include_odds == true }}
+        run: npm run data:refresh -- --include-odds

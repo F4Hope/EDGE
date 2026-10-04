@@ -39,7 +39,7 @@ Provider sync checkpoints record RUNNING, COMPLETED, or FAILED state for event, 
 
 EDGE also includes installable mobile-app metadata, safe loading/error/not-found states, and a database-aware health endpoint at `GET /api/health`.
 
-The repository intentionally does not fabricate a `package-lock.json`. Generate it from a successful `npm install` in your Codespace, then commit it to lock transitive dependencies reproducibly.
+The repository includes a committed `package-lock.json`; CI uses `npm ci` so dependency resolution is reproducible.
 
 ## Codespace recovery
 
@@ -124,15 +124,43 @@ After the local database is ready, refresh configured evidence sources with:
 npm run data:refresh
 ```
 
-This command refreshes event metadata from whichever provider keys are configured, refreshes API-Sports final results and football injury/suspension intelligence when available, recalculates transparent features, and runs the readiness doctor.
+This command refreshes Football/Basketball event metadata from API-Sports when configured, refreshes API-Sports final results and football injury/suspension intelligence, recalculates transparent features, and runs the readiness doctor.
 
-Bookmaker odds are deliberately excluded from the default refresh because those calls can consume provider quota. Include them only when explicitly intended:
+The Odds API is deliberately excluded entirely from the default refresh—including event discovery—because those calls can consume provider quota. Include them only when explicitly intended:
 
 ```bash
 npm run data:refresh -- --include-odds
 ```
 
 If `--include-odds` is requested without `ODDS_API_KEY`, the refresh stops with a clear configuration error instead of making assumptions.
+
+## Automated evidence refresh
+
+EDGE includes an opt-in GitHub Actions workflow at `.github/workflows/evidence-refresh.yml`. It can run the standard source-backed refresh every four hours without using The Odds API.
+
+Scheduled execution is disabled by default. Enable it only after production database/API-Sports secrets are configured by setting the repository variable:
+
+```text
+EDGE_SCHEDULED_REFRESH_ENABLED=true
+```
+
+Required repository secrets for scheduled refresh:
+
+```text
+EDGE_DATABASE_URL
+API_SPORTS_KEY
+```
+
+The scheduled path runs only `npm run data:refresh`, which never invokes The Odds API. A manual workflow dispatch exposes an `include_odds` boolean; only when that option is explicitly enabled does the workflow require `ODDS_API_KEY` and run `npm run data:refresh -- --include-odds`.
+
+Optional repository variables can configure the explicit odds path without putting values in source:
+
+```text
+ODDS_API_REGIONS
+ODDS_API_MARKETS
+ODDS_API_SPORT_KEYS
+ODDS_SYNC_MAX_SPORT_KEYS
+```
 
 ## Automatic result synchronization
 

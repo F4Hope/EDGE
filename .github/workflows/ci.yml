@@ -86,6 +86,9 @@ jobs:
       - name: Test safe data refresh orchestration
         run: npm run test:data-refresh
 
+      - name: Test evidence refresh workflow
+        run: npm run test:evidence-refresh-workflow
+
       - name: Test mobile routes
         run: npm run test:ui
 

@@ -36,32 +36,22 @@ function main() {
   console.log("EDGE data refresh");
   console.log("-----------------");
 
-  if (apiSports && oddsApi) {
-    console.log("Refreshing events from configured provider strategy...");
-    run("data:sync", ["--sports=all"]);
-  } else if (apiSports) {
+  if (apiSports) {
     console.log("Refreshing football/basketball events from API-Sports...");
     run("data:sync", [
       "--provider=api-sports",
       "--sports=football,basketball",
     ]);
-  } else if (oddsApi) {
-    console.log("Refreshing events from The Odds API...");
-    run("data:sync", ["--provider=odds-api", "--sports=all"]);
-  } else {
-    console.log(
-      "SKIP events: no sports provider key is configured. Existing database records are unchanged.",
-    );
-  }
 
-  if (apiSports) {
     console.log("Refreshing recent final football/basketball results...");
     run("results:sync", ["--sports=football,basketball"]);
 
     console.log("Refreshing football injury/suspension intelligence...");
     run("intelligence:sync");
   } else {
-    console.log("SKIP results/intelligence: API_SPORTS_KEY is not configured.");
+    console.log(
+      "SKIP API-Sports evidence: API_SPORTS_KEY is not configured.",
+    );
   }
 
   if (includeOdds) {
@@ -72,12 +62,17 @@ function main() {
     }
 
     console.log(
+      "Refreshing Odds API event identities because --include-odds was explicitly requested...",
+    );
+    run("data:sync", ["--provider=odds-api", "--sports=all"]);
+
+    console.log(
       "Refreshing bookmaker odds because --include-odds was explicitly requested...",
     );
     run("odds:sync", ["--sports=all"]);
   } else {
     console.log(
-      "SKIP odds: paid/quota-sensitive odds calls require explicit --include-odds.",
+      "SKIP The Odds API entirely: quota-sensitive event/odds calls require explicit --include-odds.",
     );
   }
 
