@@ -1978,3 +1978,89 @@ button {
   font-weight: 800;
   letter-spacing: 0.12em;
 }
+
+
+/* Data freshness observability */
+
+.freshness-grid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.freshness-card {
+  min-height: 112px;
+  padding: 14px;
+  border: 1px solid rgba(244, 240, 231, 0.07);
+  border-radius: 16px;
+  background: rgba(21, 23, 27, 0.68);
+}
+
+.freshness-card > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 7px;
+}
+
+.freshness-card span {
+  color: #6e6c66;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.freshness-card strong {
+  display: block;
+  margin-top: 15px;
+  color: var(--ivory);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 21px;
+  font-weight: 400;
+}
+
+.freshness-card small {
+  display: block;
+  margin-top: 6px;
+  color: #65635e;
+  font-size: 7px;
+  line-height: 1.45;
+}
+
+.freshness-state {
+  display: inline-flex;
+  min-height: 21px;
+  padding: 0 6px;
+  align-items: center;
+  border: 1px solid rgba(244, 240, 231, 0.07);
+  border-radius: 999px;
+  font-size: 6px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.freshness-state.fresh {
+  color: #8fc5b6;
+  border-color: rgba(143, 197, 182, 0.2);
+}
+
+.freshness-state.aging {
+  color: var(--champagne);
+  border-color: rgba(200, 169, 107, 0.22);
+}
+
+.freshness-state.stale {
+  color: #c4978b;
+  border-color: rgba(196, 151, 139, 0.22);
+}
+
+.freshness-state.empty {
+  color: #74716b;
+}
+
+@media (max-width: 380px) {
+  .freshness-grid {
+    grid-template-columns: 1fr;
+  }
+}

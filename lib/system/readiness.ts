@@ -19,11 +19,21 @@ export type SystemCounts = {
   intelligenceSignals: number;
 };
 
+export type SystemFreshness = {
+  events: string | null;
+  odds: string | null;
+  features: string | null;
+  results: string | null;
+  intelligence: string | null;
+  injurySync: string | null;
+};
+
 export type SystemReadiness = {
   generatedAt: string;
   overall: "READY" | "DEGRADED";
   checks: ReadinessCheck[];
   counts: SystemCounts | null;
+  freshness: SystemFreshness | null;
   capabilities: {
     eventIngestion: boolean;
     oddsIngestion: boolean;
@@ -94,6 +104,7 @@ export async function getSystemReadiness(): Promise<SystemReadiness> {
       overall: "DEGRADED",
       checks,
       counts: null,
+      freshness: null,
       capabilities: {
         eventIngestion: apiSportsConfigured || oddsApiConfigured,
         oddsIngestion: oddsApiConfigured,
@@ -118,6 +129,12 @@ export async function getSystemReadiness(): Promise<SystemReadiness> {
       features,
       results,
       intelligenceSignals,
+      latestEvent,
+      latestOdds,
+      latestFeature,
+      latestResult,
+      latestIntelligence,
+      injuryCheckpoint,
     ] = await Promise.all([
       db.sport.count(),
       db.event.count(),
@@ -126,6 +143,35 @@ export async function getSystemReadiness(): Promise<SystemReadiness> {
       db.feature.count(),
       db.result.count(),
       db.intelligenceSignal.count(),
+      db.event.findFirst({
+        orderBy: { updatedAt: "desc" },
+        select: { updatedAt: true },
+      }),
+      db.oddsSnapshot.findFirst({
+        orderBy: { capturedAt: "desc" },
+        select: { capturedAt: true },
+      }),
+      db.feature.findFirst({
+        orderBy: { computedAt: "desc" },
+        select: { computedAt: true },
+      }),
+      db.result.findFirst({
+        orderBy: { updatedAt: "desc" },
+        select: { updatedAt: true },
+      }),
+      db.intelligenceSignal.findFirst({
+        orderBy: { occurredAt: "desc" },
+        select: { occurredAt: true },
+      }),
+      db.syncCheckpoint.findUnique({
+        where: {
+          provider_scope: {
+            provider: "api-sports",
+            scope: "injuries:football",
+          },
+        },
+        select: { lastCompletedAt: true },
+      }),
     ]);
 
     const counts: SystemCounts = {
@@ -136,6 +182,15 @@ export async function getSystemReadiness(): Promise<SystemReadiness> {
       features,
       results,
       intelligenceSignals,
+    };
+
+    const freshness: SystemFreshness = {
+      events: latestEvent?.updatedAt.toISOString() ?? null,
+      odds: latestOdds?.capturedAt.toISOString() ?? null,
+      features: latestFeature?.computedAt.toISOString() ?? null,
+      results: latestResult?.updatedAt.toISOString() ?? null,
+      intelligence: latestIntelligence?.occurredAt.toISOString() ?? null,
+      injurySync: injuryCheckpoint?.lastCompletedAt?.toISOString() ?? null,
     };
 
     checks.push({
@@ -180,6 +235,7 @@ export async function getSystemReadiness(): Promise<SystemReadiness> {
       overall: "READY",
       checks,
       counts,
+      freshness,
       capabilities: {
         eventIngestion: apiSportsConfigured || oddsApiConfigured,
         oddsIngestion: oddsApiConfigured,
@@ -208,6 +264,7 @@ export async function getSystemReadiness(): Promise<SystemReadiness> {
       overall: "DEGRADED",
       checks,
       counts: null,
+      freshness: null,
       capabilities: {
         eventIngestion: apiSportsConfigured || oddsApiConfigured,
         oddsIngestion: oddsApiConfigured,
