@@ -1,6 +1,10 @@
 FROM node:22-bookworm-slim AS deps
 WORKDIR /app
 
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
 COPY prisma7.config.ts ./
@@ -19,6 +23,10 @@ RUN npm run build
 
 FROM node:22-bookworm-slim AS runner
 WORKDIR /app
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
 
 ARG EDGE_BUILD_SHA=unknown
 

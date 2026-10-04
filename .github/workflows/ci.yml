@@ -213,10 +213,6 @@ jobs:
           test "$(curl --silent --output /tmp/edge-ready.json --write-out '%{http_code}' http://127.0.0.1:3000/api/health/ready)" = "503"
           curl --silent --fail http://127.0.0.1:3000/api/version | grep --fixed-strings "${{ github.sha }}" > /dev/null
 
-      - name: Verify runtime security headers
-        shell: bash
-        run: |
-          set -euo pipefail
           curl --silent --show-error --dump-header /tmp/edge-headers.txt --output /dev/null http://127.0.0.1:3000/api/health/live
           grep --ignore-case '^content-security-policy:' /tmp/edge-headers.txt
           grep --ignore-case '^strict-transport-security:' /tmp/edge-headers.txt
