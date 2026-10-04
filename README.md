@@ -112,6 +112,29 @@ npm run db:studio
 
 The seed only creates the three initial reference sports: Football, Basketball, and Tennis. It does not create fabricated events, odds, predictions, results, or performance statistics.
 
+## Automatic result synchronization
+
+When `API_SPORTS_KEY` is configured, EDGE can refresh final Football and Basketball results for events already known to the database:
+
+```bash
+npm run results:sync
+```
+
+The default window is the previous 72 hours through the current time. A bounded historical window can also be requested:
+
+```bash
+npm run results:sync -- --sports=football,basketball --from=2026-10-01 --to=2026-10-03
+```
+
+Result ingestion matches the stable provider/external event identifier already stored in `EventSource`. Final scores are persisted only when both sides are numeric. Cancelled or abandoned events are recorded as void. Non-final or incomplete score records are skipped rather than inferred.
+
+Stored results are available read-only from:
+
+```text
+GET /api/results
+GET /api/results?eventId=<EDGE_EVENT_ID>
+```
+
 ## Sports/event ingestion
 
 Provider secrets belong only in `.env.local`. EDGE never sends them to the browser.

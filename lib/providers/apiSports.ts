@@ -5,6 +5,11 @@ import type {
   ProviderEventStatus,
   SupportedSport,
 } from "./types";
+import type {
+  ProviderResult,
+  ResultProvider,
+  ResultQuery,
+} from "./resultTypes";
 
 const FOOTBALL_BASE_URL = "https://v3.football.api-sports.io";
 const BASKETBALL_BASE_URL = "https://v1.basketball.api-sports.io";
@@ -37,6 +42,10 @@ type FootballFixtureRow = {
     home?: ApiSportsEntity;
     away?: ApiSportsEntity;
   };
+  goals?: {
+    home?: number | null;
+    away?: number | null;
+  };
 };
 
 type BasketballGameRow = {
@@ -53,6 +62,10 @@ type BasketballGameRow = {
   teams?: {
     home?: ApiSportsEntity;
     away?: ApiSportsEntity;
+  };
+  scores?: {
+    home?: { total?: number | null };
+    away?: { total?: number | null };
   };
 };
 
@@ -100,6 +113,101 @@ function requireText(value: unknown, field: string): string {
   const text = String(value ?? "").trim();
   if (!text) throw new Error(`API-Sports response is missing ${field}.`);
   return text;
+}
+
+function numericScore(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function winnerFromScore(
+  homeScore: number | null,
+  awayScore: number | null,
+): "home" | "away" | "draw" | null {
+  if (homeScore === null || awayScore === null) return null;
+  if (homeScore > awayScore) return "home";
+  if (awayScore > homeScore) return "away";
+  return "draw";
+}
+
+export function normalizeFootballResult(
+  item: FootballFixtureRow,
+): ProviderResult | null {
+  const fixture = item.fixture ?? {};
+  const providerId = String(fixture.id ?? "").trim();
+  const sourceStatus = String(fixture.status?.short ?? "").trim();
+
+  if (!providerId || !sourceStatus) return null;
+
+  if (["CANC", "ABD"].includes(sourceStatus)) {
+    return {
+      providerId,
+      sport: "football",
+      status: "void",
+      completedAt: null,
+      homeScore: null,
+      awayScore: null,
+      winner: null,
+      sourceStatus,
+    };
+  }
+
+  if (!["FT", "AET", "PEN", "AWD", "WO"].includes(sourceStatus)) {
+    return null;
+  }
+
+  const homeScore = numericScore(item.goals?.home);
+  const awayScore = numericScore(item.goals?.away);
+
+  return {
+    providerId,
+    sport: "football",
+    status: "final",
+    completedAt: null,
+    homeScore,
+    awayScore,
+    winner: winnerFromScore(homeScore, awayScore),
+    sourceStatus,
+  };
+}
+
+export function normalizeBasketballResult(
+  item: BasketballGameRow,
+): ProviderResult | null {
+  const providerId = String(item.id ?? "").trim();
+  const sourceStatus = String(item.status?.short ?? "").trim();
+
+  if (!providerId || !sourceStatus) return null;
+
+  if (["CANC", "ABD"].includes(sourceStatus)) {
+    return {
+      providerId,
+      sport: "basketball",
+      status: "void",
+      completedAt: null,
+      homeScore: null,
+      awayScore: null,
+      winner: null,
+      sourceStatus,
+    };
+  }
+
+  if (!["FT", "AOT", "AWD"].includes(sourceStatus)) {
+    return null;
+  }
+
+  const homeScore = numericScore(item.scores?.home?.total);
+  const awayScore = numericScore(item.scores?.away?.total);
+
+  return {
+    providerId,
+    sport: "basketball",
+    status: "final",
+    completedAt: null,
+    homeScore,
+    awayScore,
+    winner: winnerFromScore(homeScore, awayScore),
+    sourceStatus,
+  };
 }
 
 export function normalizeFootballFixture(item: FootballFixtureRow): ProviderEvent {
@@ -166,7 +274,7 @@ export function normalizeBasketballGame(item: BasketballGameRow): ProviderEvent 
   };
 }
 
-export class ApiSportsProvider implements DataProvider {
+export class ApiSportsProvider implements DataProvider, ResultProvider {
   readonly name = "api-sports";
 
   constructor(private readonly apiKey: string) {
@@ -176,6 +284,10 @@ export class ApiSportsProvider implements DataProvider {
   }
 
   supports(sport: SupportedSport): boolean {
+    return sport === "football" || sport === "basketball";
+  }
+
+  supportsResults(sport: SupportedSport): boolean {
     return sport === "football" || sport === "basketball";
   }
 
@@ -211,6 +323,60 @@ export class ApiSportsProvider implements DataProvider {
       events.push(...rows.map(normalizeBasketballGame));
     }
     return events;
+  }
+
+  async getResults(query: ResultQuery): Promise<ProviderResult[]> {
+    assertRange(query.from, query.to);
+
+    if (!this.supportsResults(query.sport)) {
+      throw new Error(
+        "API-Sports result ingestion is not configured for " + query.sport + ".",
+      );
+    }
+
+    if (query.sport === "football") {
+      const rows = await this.request<FootballFixtureRow>(
+        FOOTBALL_BASE_URL,
+        "/fixtures",
+        {
+          from: formatUtcDate(query.from),
+          to: formatUtcDate(query.to),
+          timezone: "UTC",
+        },
+      );
+
+      return rows
+        .map(normalizeFootballResult)
+        .filter((result): result is ProviderResult => result !== null);
+    }
+
+    const days = enumerateUtcDays(query.from, query.to);
+    if (days.length > MAX_BASKETBALL_SYNC_DAYS) {
+      throw new Error(
+        "Basketball result sync range is capped at " +
+          MAX_BASKETBALL_SYNC_DAYS +
+          " UTC days per run to protect provider quota.",
+      );
+    }
+
+    const results: ProviderResult[] = [];
+    for (const day of days) {
+      const rows = await this.request<BasketballGameRow>(
+        BASKETBALL_BASE_URL,
+        "/games",
+        {
+          date: day,
+          timezone: "UTC",
+        },
+      );
+
+      for (const row of rows) {
+        const result = normalizeBasketballResult(row);
+        if (result) results.push(result);
+      }
+    }
+
+    return results;
   }
 
   private async request<T>(

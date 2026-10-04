@@ -28,14 +28,16 @@
     "test:production": "tsx --test tests/production.test.ts",
     "doctor": "tsx scripts/doctor.ts",
     "test:readiness": "tsx --test tests/readiness.test.ts",
-    "check": "npm run db:validate && npm run test:providers && npm run test:odds && npm run test:features && npm run test:audit && npm run test:production && npm run test:readiness && npm run test:local-db && npm run test:codespace && npm run test:ui && npm run lint && npm run build",
+    "check": "npm run db:validate && npm run test:providers && npm run test:odds && npm run test:features && npm run test:audit && npm run test:production && npm run test:readiness && npm run test:local-db && npm run test:codespace && npm run test:results-provider && npm run test:ui && npm run lint && npm run build",
     "db:push": "prisma db push",
     "db:local": "tsx scripts/setup-local-db.ts",
     "db:local:stop": "docker compose -f docker-compose.local.yml down",
     "db:local:logs": "docker compose -f docker-compose.local.yml logs -f edge-db",
     "test:local-db": "tsx --test tests/local-db-setup.test.ts",
     "codespace:resume": "tsx scripts/resume-codespace.ts",
-    "test:codespace": "tsx --test tests/codespace.test.ts"
+    "test:codespace": "tsx --test tests/codespace.test.ts",
+    "results:sync": "tsx scripts/sync-results.ts",
+    "test:results-provider": "tsx --test tests/results-provider.test.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.0",

@@ -51,6 +51,9 @@ jobs:
       - name: Test Codespace recovery configuration
         run: npm run test:codespace
 
+      - name: Test result provider normalization
+        run: npm run test:results-provider
+
       - name: Test mobile routes
         run: npm run test:ui
 
