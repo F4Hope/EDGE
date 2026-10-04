@@ -218,6 +218,28 @@ If no valid settled sample exists, recent form remains missing and the UI displa
 
 The vector records H2H sample size, participant A/B wins and win rates, draws, and average score units for each side. When no valid H2H sample exists, the matchup-history gap remains explicitly missing.
 
+## Full live-data launch gate
+
+Before treating an environment as fully live-data ready, run:
+
+```bash
+npm run launch:check
+```
+
+The gate is intentionally stricter than the general Status page. It requires:
+
+- Node.js 22
+- configured and reachable PostgreSQL
+- an active API-Sports credential
+- an active The Odds API credential
+- at least one normalized event
+- at least one bookmaker odds snapshot
+- at least one transparent feature snapshot
+
+Provider credential checks use the same non-secret status/catalog validation described below. The command exits non-zero when any launch requirement is missing and never prints API keys, passwords, or database URLs.
+
+Passing `launch:check` verifies live-data readiness; production deployment still separately requires `deploy:preflight`, committed migrations, and CI.
+
 ## Provider credential check
 
 After a provider secret is configured, validate connectivity without printing the credential:

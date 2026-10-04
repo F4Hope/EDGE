@@ -116,6 +116,9 @@ jobs:
       - name: Test Setup Center planning
         run: npm run test:setup
 
+      - name: Test live launch gate
+        run: npm run test:launch
+
       - name: Test mobile routes
         run: npm run test:ui
 

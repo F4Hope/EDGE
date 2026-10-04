@@ -63,7 +63,7 @@ export default async function SetupPage() {
         <h2>{plan.nextAction ? "One step at a time." : "Live-data setup is complete."}</h2>
         <p>
           {plan.nextAction ??
-            "All five setup checks are ready. Use System Status to monitor freshness and pipeline health."}
+            "All five setup checks are ready. Run npm run launch:check before treating this environment as fully live-ready, then use System Status to monitor freshness and pipeline health."}
         </p>
       </section>
 
