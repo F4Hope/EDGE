@@ -106,7 +106,37 @@ The Docker volume keeps local database data across normal container restarts. Do
 
 ### External / production PostgreSQL
 
-For deployment, configure a real server-side `DATABASE_URL` in the hosting environment and use migration history appropriate to that environment. Never paste production credentials into source code or commit them to Git.
+For deployment, configure a real server-side `DATABASE_URL` in the hosting environment. Never paste production credentials into source code or commit them to Git.
+
+## Production deployment safety
+
+EDGE separates development schema synchronization from production migration deployment.
+
+Development/Codespaces may use:
+
+```bash
+npm run db:local
+npm run db:push
+```
+
+Production must use committed Prisma migrations:
+
+```bash
+npm run deploy:preflight
+npm run db:deploy
+```
+
+`deploy:preflight` blocks production deployment when Node is not 22, `DATABASE_URL` is missing/invalid/local, or no committed migration history exists. It never prints secrets.
+
+The initial migration should be generated directly from the current Prisma schema rather than handwritten:
+
+```bash
+npm run db:baseline:create
+```
+
+The generator refuses to overwrite an existing migration history and uses Prisma 7's supported `migrate diff --from-empty --to-schema ... --script` flow.
+
+If a database was already created using `db push`, generate and review the baseline first, then mark that baseline as applied with Prisma `migrate resolve --applied 0_init` before using `db:deploy` for future migrations. New empty production databases should simply use `npm run db:deploy` once the committed baseline exists.
 
 Useful database command:
 

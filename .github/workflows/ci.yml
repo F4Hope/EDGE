@@ -89,6 +89,9 @@ jobs:
       - name: Test evidence refresh workflow
         run: npm run test:evidence-refresh-workflow
 
+      - name: Test deployment safety
+        run: npm run test:deployment
+
       - name: Test mobile routes
         run: npm run test:ui
 
