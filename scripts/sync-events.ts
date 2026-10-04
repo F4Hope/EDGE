@@ -3,6 +3,10 @@ import { getDb } from "../lib/prisma";
 import { resolveProvider, type ProviderPreference } from "../lib/providers/registry";
 import { supportedSports, type SupportedSport } from "../lib/providers/types";
 import { syncProviderEvents } from "../lib/data/syncEvents";
+import {
+  checkpointScope,
+  withSyncCheckpoint,
+} from "../lib/system/syncCheckpoint";
 
 dotenv.config({ path: [".env.local", ".env"], quiet: true });
 
@@ -69,7 +73,17 @@ async function main() {
   try {
     for (const sport of sports) {
       const provider = resolveProvider(providerPreference, sport);
-      const result = await syncProviderEvents(db, provider, sport, from, to);
+      const result = await withSyncCheckpoint(db, {
+        provider: provider.name,
+        scope: checkpointScope("events", sport),
+        work: () => syncProviderEvents(db, provider, sport, from, to),
+        metadata: (value) => ({
+          fetched: value.fetched,
+          persisted: value.persisted,
+          from: value.from,
+          to: value.to,
+        }),
+      });
       console.log(
         `Synced ${result.persisted}/${result.fetched} ${sport} events from ${result.provider}.`,
       );

@@ -28,12 +28,21 @@ export type SystemFreshness = {
   injurySync: string | null;
 };
 
+export type SystemSyncState = {
+  provider: string;
+  scope: string;
+  status: string | null;
+  lastStartedAt: string | null;
+  lastCompletedAt: string | null;
+};
+
 export type SystemReadiness = {
   generatedAt: string;
   overall: "READY" | "DEGRADED";
   checks: ReadinessCheck[];
   counts: SystemCounts | null;
   freshness: SystemFreshness | null;
+  syncs: SystemSyncState[];
   capabilities: {
     eventIngestion: boolean;
     oddsIngestion: boolean;
@@ -105,6 +114,7 @@ export async function getSystemReadiness(): Promise<SystemReadiness> {
       checks,
       counts: null,
       freshness: null,
+      syncs: [],
       capabilities: {
         eventIngestion: apiSportsConfigured || oddsApiConfigured,
         oddsIngestion: oddsApiConfigured,
@@ -135,6 +145,7 @@ export async function getSystemReadiness(): Promise<SystemReadiness> {
       latestResult,
       latestIntelligence,
       injuryCheckpoint,
+      syncRows,
     ] = await Promise.all([
       db.sport.count(),
       db.event.count(),
@@ -172,6 +183,17 @@ export async function getSystemReadiness(): Promise<SystemReadiness> {
         },
         select: { lastCompletedAt: true },
       }),
+      db.syncCheckpoint.findMany({
+        orderBy: { updatedAt: "desc" },
+        take: 20,
+        select: {
+          provider: true,
+          scope: true,
+          lastStatus: true,
+          lastStartedAt: true,
+          lastCompletedAt: true,
+        },
+      }),
     ]);
 
     const counts: SystemCounts = {
@@ -192,6 +214,14 @@ export async function getSystemReadiness(): Promise<SystemReadiness> {
       intelligence: latestIntelligence?.occurredAt.toISOString() ?? null,
       injurySync: injuryCheckpoint?.lastCompletedAt?.toISOString() ?? null,
     };
+
+    const syncs: SystemSyncState[] = syncRows.map((row) => ({
+      provider: row.provider,
+      scope: row.scope,
+      status: row.lastStatus,
+      lastStartedAt: row.lastStartedAt?.toISOString() ?? null,
+      lastCompletedAt: row.lastCompletedAt?.toISOString() ?? null,
+    }));
 
     checks.push({
       key: "database-reachability",
@@ -236,6 +266,7 @@ export async function getSystemReadiness(): Promise<SystemReadiness> {
       checks,
       counts,
       freshness,
+      syncs,
       capabilities: {
         eventIngestion: apiSportsConfigured || oddsApiConfigured,
         oddsIngestion: oddsApiConfigured,
@@ -265,6 +296,7 @@ export async function getSystemReadiness(): Promise<SystemReadiness> {
       checks,
       counts: null,
       freshness: null,
+      syncs: [],
       capabilities: {
         eventIngestion: apiSportsConfigured || oddsApiConfigured,
         oddsIngestion: oddsApiConfigured,

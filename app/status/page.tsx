@@ -157,6 +157,50 @@ export default async function StatusPage() {
         </section>
       ) : null}
 
+      {readiness.syncs.length > 0 ? (
+        <section className="analysis-block">
+          <div className="section-heading compact-heading">
+            <div>
+              <p className="eyebrow">PIPELINES</p>
+              <h2>Pipeline sync status</h2>
+            </div>
+          </div>
+
+          <div className="sync-status-list">
+            {readiness.syncs.map((sync) => (
+              <article
+                className="sync-status-row"
+                key={sync.provider + ":" + sync.scope}
+              >
+                <div>
+                  <strong>{sync.scope.replaceAll(":", " · ").toUpperCase()}</strong>
+                  <span>{sync.provider}</span>
+                </div>
+                <div>
+                  <b className={"sync-state " + (sync.status ?? "unknown").toLowerCase()}>
+                    {sync.status ?? "UNKNOWN"}
+                  </b>
+                  <small>
+                    {sync.lastCompletedAt
+                      ? new Date(sync.lastCompletedAt).toLocaleString("en", {
+                          timeZone: "UTC",
+                          timeZoneName: "short",
+                        })
+                      : sync.lastStartedAt
+                        ? "Started " +
+                          new Date(sync.lastStartedAt).toLocaleString("en", {
+                            timeZone: "UTC",
+                            timeZoneName: "short",
+                          })
+                        : "No completed run"}
+                  </small>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <section className="security-note">
         <span className="empty-status">CAPABILITIES</span>
         <h2>Evidence first.</h2>

@@ -48,6 +48,9 @@ jobs:
       - name: Test data freshness semantics
         run: npm run test:freshness
 
+      - name: Test provider sync checkpoints
+        run: npm run test:sync-checkpoints
+
       - name: Test local database bootstrap configuration
         run: npm run test:local-db
 

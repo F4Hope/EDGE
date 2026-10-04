@@ -3,6 +3,10 @@ import { getDb } from "../lib/prisma";
 import { ApiSportsProvider } from "../lib/providers/apiSports";
 import type { SupportedSport } from "../lib/providers/types";
 import { syncProviderResults } from "../lib/data/syncResults";
+import {
+  checkpointScope,
+  withSyncCheckpoint,
+} from "../lib/system/syncCheckpoint";
 
 dotenv.config({ path: [".env.local", ".env"], quiet: true });
 
@@ -77,7 +81,12 @@ async function main() {
 
   try {
     for (const sport of sports) {
-      const summary = await syncProviderResults(db, provider, sport, from, to);
+      const summary = await withSyncCheckpoint(db, {
+        provider: provider.name,
+        scope: checkpointScope("results", sport),
+        work: () => syncProviderResults(db, provider, sport, from, to),
+        metadata: (value) => value,
+      });
       console.log("Result sync complete.", summary);
     }
   } finally {

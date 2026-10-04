@@ -35,6 +35,8 @@ GET /api/system/readiness
 
 Data freshness is reported separately for event metadata, odds snapshots, feature calculations, settled results, intelligence observations, and the API-Sports injury sync checkpoint. A configured provider is therefore distinguishable from a provider that has actually delivered recent evidence.
 
+Provider sync checkpoints record RUNNING, COMPLETED, or FAILED state for event, result, odds, and injury-intelligence pipelines. The Status screen displays their latest completion time without exposing provider credentials.
+
 EDGE also includes installable mobile-app metadata, safe loading/error/not-found states, and a database-aware health endpoint at `GET /api/health`.
 
 The repository intentionally does not fabricate a `package-lock.json`. Generate it from a successful `npm install` in your Codespace, then commit it to lock transitive dependencies reproducibly.

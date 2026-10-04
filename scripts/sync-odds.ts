@@ -10,6 +10,10 @@ import {
   supportedSports,
   type SupportedSport,
 } from "../lib/providers/types";
+import {
+  checkpointScope,
+  withSyncCheckpoint,
+} from "../lib/system/syncCheckpoint";
 
 dotenv.config({ path: [".env.local", ".env"], quiet: true });
 
@@ -114,20 +118,32 @@ async function main() {
 
   try {
     for (const sport of sports) {
-      const result = await syncOddsSnapshots(
-        db,
-        provider,
-        sport,
-        from,
-        to,
-        {
-          regions,
-          markets,
-          maxSportKeys,
-          allowedSportKeys:
-            allowedSportKeys.length > 0 ? allowedSportKeys : undefined,
-        },
-      );
+      const result = await withSyncCheckpoint(db, {
+        provider: provider.name,
+        scope: checkpointScope("odds", sport),
+        work: () =>
+          syncOddsSnapshots(
+            db,
+            provider,
+            sport,
+            from,
+            to,
+            {
+              regions,
+              markets,
+              maxSportKeys,
+              allowedSportKeys:
+                allowedSportKeys.length > 0 ? allowedSportKeys : undefined,
+            },
+          ),
+        metadata: (value) => ({
+          snapshotsInserted: value.snapshotsInserted,
+          snapshotsReused: value.snapshotsReused,
+          oddsEvents: value.oddsEvents,
+          sportKeys: value.sportKeys,
+          quota: value.quota,
+        }),
+      });
 
       console.log(
         [
