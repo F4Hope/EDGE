@@ -16,14 +16,20 @@ const links = [
     copy: "Audit calibration and accuracy when real settled history exists.",
   },
   {
-    href: "/status",
+    href: "/setup",
     index: "03",
+    title: "Setup Center",
+    copy: "See exactly what is ready, what is missing, and the next safe setup action.",
+  },
+  {
+    href: "/status",
+    index: "04",
     title: "System status",
     copy: "Check live readiness, stored evidence, and configuration health.",
   },
   {
     href: "/settings",
-    index: "04",
+    index: "05",
     title: "Configuration",
     copy: "Check provider configuration without exposing secrets.",
   },

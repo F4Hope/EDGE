@@ -11,6 +11,7 @@ const requiredRoutes = [
   "app/history/page.tsx",
   "app/model/page.tsx",
   "app/settings/page.tsx",
+  "app/setup/page.tsx",
 ];
 
 test("Phase 4 required mobile routes exist", async () => {
@@ -43,4 +44,18 @@ test("history surface exposes source-backed settled results", async () => {
   assert.match(source, /Settled results/);
   assert.match(source, /SOURCE-BACKED/);
   assert.match(source, /No settled model sample exists yet/);
+});
+
+
+test("setup center is reachable from More and treated as a More destination", async () => {
+  const [more, nav, setup] = await Promise.all([
+    readFile("app/more/page.tsx", "utf8"),
+    readFile("components/BottomNav.tsx", "utf8"),
+    readFile("app/setup/page.tsx", "utf8"),
+  ]);
+
+  assert.match(more, /href: "\/setup"/);
+  assert.match(nav, /path\.startsWith\("\/setup"\)/);
+  assert.match(setup, /SETUP COMPLETION/);
+  assert.match(setup, /not a model-confidence or prediction-quality score/);
 });

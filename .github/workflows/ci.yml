@@ -110,6 +110,9 @@ jobs:
       - name: Test public request guards
         run: npm run test:request-guards
 
+      - name: Test Setup Center planning
+        run: npm run test:setup
+
       - name: Test mobile routes
         run: npm run test:ui
 

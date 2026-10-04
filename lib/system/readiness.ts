@@ -285,9 +285,7 @@ export async function getSystemReadiness(): Promise<SystemReadiness> {
       label: "Database reachability",
       level: "BLOCKED",
       detail:
-        error instanceof Error
-          ? `Database check failed: ${error.message}`
-          : "Database check failed.",
+        "Database check failed. Review server logs and database/network configuration.",
     });
 
     return {

@@ -57,6 +57,7 @@ const items: Array<{
       path.startsWith("/events") ||
       path.startsWith("/model") ||
       path.startsWith("/status") ||
+      path.startsWith("/setup") ||
       path.startsWith("/settings"),
   },
 ];

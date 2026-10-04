@@ -40,8 +40,8 @@ export default function SettingsPage() {
         title="Configuration"
         description="Configuration status only. Secret values are never rendered to the browser."
         action={
-          <Link className="secondary-link" href="/status">
-            LIVE STATUS →
+          <Link className="secondary-link" href="/setup">
+            SETUP CENTER →
           </Link>
         }
       />

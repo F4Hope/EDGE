@@ -18,6 +18,18 @@ Phase 6 adds the transparent Feature Engine. The current `features-v3` vector ca
 
 Post-Phase-6 audit infrastructure adds sports result ingestion, statistical calibration/accuracy evaluation for any future settled model records, verified news/injury signal ingestion, descriptive odds-movement diagnostics, model-performance reporting with strict INSUFFICIENT DATA behavior, cursor pagination, health checks, and production security headers. Real-money wager selection/ticket automation is intentionally not implemented.
 
+## Setup Center
+
+The mobile app includes a plain-language Setup Center at `/setup`. It reports a five-step live-data setup percentage based only on real configuration and stored evidence:
+
+1. reachable database
+2. API-Sports configured
+3. The Odds API configured
+4. normalized event data stored
+5. transparent feature snapshots stored
+
+The percentage is configuration/evidence readiness only. It is never used as model confidence, prediction quality, or a wagering signal. The page shows one safe next action at a time and never renders secret values.
+
 ## System doctor
 
 Run this before development or deployment. It reports Node compatibility, provider/database configuration, database reachability, and stored data counts without printing secrets.
