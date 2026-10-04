@@ -28,7 +28,7 @@
     "test:production": "tsx --test tests/production.test.ts",
     "doctor": "tsx scripts/doctor.ts",
     "test:readiness": "tsx --test tests/readiness.test.ts",
-    "check": "npm run db:validate && npm run test:providers && npm run test:odds && npm run test:features && npm run test:form && npm run test:h2h && npm run test:audit && npm run test:production && npm run test:readiness && npm run test:freshness && npm run test:sync-checkpoints && npm run test:local-db && npm run test:codespace && npm run test:results-provider && npm run test:intelligence-provider && npm run test:event-changes && npm run test:data-refresh && npm run test:evidence-refresh-workflow && npm run test:deployment && npm run test:container && npm run test:ui && npm run lint && npm run build",
+    "check": "npm run db:validate && npm run test:providers && npm run test:odds && npm run test:features && npm run test:form && npm run test:h2h && npm run test:audit && npm run test:production && npm run test:readiness && npm run test:freshness && npm run test:sync-checkpoints && npm run test:local-db && npm run test:codespace && npm run test:results-provider && npm run test:intelligence-provider && npm run test:event-changes && npm run test:data-refresh && npm run test:evidence-refresh-workflow && npm run test:deployment && npm run test:container && npm run test:operations && npm run test:ui && npm run lint && npm run build",
     "db:push": "prisma db push",
     "db:local": "tsx scripts/setup-local-db.ts",
     "db:local:stop": "docker compose -f docker-compose.local.yml down",
@@ -56,7 +56,8 @@
     "test:container": "tsx --test tests/container.test.ts",
     "results:sync:odds": "tsx scripts/sync-odds-results.ts",
     "test:form": "tsx --test tests/form-features.test.ts",
-    "test:h2h": "tsx --test tests/head-to-head.test.ts"
+    "test:h2h": "tsx --test tests/head-to-head.test.ts",
+    "test:operations": "tsx --test tests/operations.test.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.0",

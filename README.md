@@ -140,9 +140,22 @@ Useful database command:
 npm run db:studio
 ```
 
+## Runtime probes and build identity
+
+EDGE exposes separate operational probes:
+
+```text
+GET /api/health/live   # process liveness; does not require the database
+GET /api/health/ready  # database-backed readiness; returns 503 when unavailable
+GET /api/health        # compatibility alias for readiness
+GET /api/version       # non-secret service/version/build metadata
+```
+
+The liveness response includes uptime plus application version/build identity. Readiness verifies PostgreSQL reachability. These endpoints use `Cache-Control: no-store` and do not expose provider keys, database URLs, or other secrets.
+
 ## Container deployment
 
-EDGE includes a multi-stage production `Dockerfile` using Node.js 22 and Next.js standalone output. The runtime image runs as the unprivileged `nextjs` user and uses `/api/health` for its Docker health check.
+EDGE includes a multi-stage production `Dockerfile` using Node.js 22 and Next.js standalone output. The runtime image runs as the unprivileged `nextjs` user and uses `/api/health/live` for its Docker liveness check. The CI image also embeds the non-secret Git commit SHA as `EDGE_BUILD_SHA`.
 
 Build locally:
 

@@ -1,14 +1,11 @@
 import { NextResponse } from "next/server";
-import { checkReadiness } from "@/lib/system/health";
+import { getBuildInfo } from "@/lib/system/buildInfo";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const result = await checkReadiness();
-
-  return NextResponse.json(result.body, {
-    status: result.statusCode,
+  return NextResponse.json(getBuildInfo(), {
     headers: { "Cache-Control": "no-store" },
   });
 }

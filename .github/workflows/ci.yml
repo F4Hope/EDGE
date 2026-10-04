@@ -101,6 +101,9 @@ jobs:
       - name: Test production container contract
         run: npm run test:container
 
+      - name: Test runtime operations
+        run: npm run test:operations
+
       - name: Test mobile routes
         run: npm run test:ui
 
@@ -171,4 +174,8 @@ jobs:
           persist-credentials: false
 
       - name: Build Docker image
-        run: docker build --tag edge-ci:${{ github.sha }} .
+        run: >-
+          docker build
+          --build-arg EDGE_BUILD_SHA=${{ github.sha }}
+          --tag edge-ci:${{ github.sha }}
+          .

@@ -9,7 +9,8 @@ test("production Docker image uses Node 22 standalone output and a non-root user
   assert.match(dockerfile, /\.next\/standalone/);
   assert.match(dockerfile, /USER nextjs/);
   assert.match(dockerfile, /HEALTHCHECK/);
-  assert.match(dockerfile, /\/api\/health/);
+  assert.match(dockerfile, /\/api\/health\/live/);
+  assert.match(dockerfile, /EDGE_BUILD_SHA/);
   assert.doesNotMatch(dockerfile, /COPY \.env/);
 });
 
