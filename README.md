@@ -140,6 +140,27 @@ Useful database command:
 npm run db:studio
 ```
 
+## Container deployment
+
+EDGE includes a multi-stage production `Dockerfile` using Node.js 22 and Next.js standalone output. The runtime image runs as the unprivileged `nextjs` user and uses `/api/health` for its Docker health check.
+
+Build locally:
+
+```bash
+docker build -t edge-sports-intelligence .
+```
+
+Run only after production migrations have been applied and supply secrets at runtime rather than baking them into the image:
+
+```bash
+docker run --rm -p 3000:3000 \
+  -e DATABASE_URL="postgresql://..." \
+  -e API_SPORTS_KEY="..." \
+  edge-sports-intelligence
+```
+
+The image does not contain `.env` files. CI builds the production image after the application and migration jobs pass.
+
 The seed only creates the three initial reference sports: Football, Basketball, and Tennis. It does not create fabricated events, odds, predictions, results, or performance statistics.
 
 ## Safe data refresh

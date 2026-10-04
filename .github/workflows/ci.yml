@@ -92,6 +92,9 @@ jobs:
       - name: Test deployment safety
         run: npm run test:deployment
 
+      - name: Test production container contract
+        run: npm run test:container
+
       - name: Test mobile routes
         run: npm run test:ui
 
@@ -145,3 +148,21 @@ jobs:
 
       - name: Verify zero migration drift
         run: npm run db:drift:check
+
+
+  container:
+    name: Build production container
+    needs:
+      - validate
+      - migration
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Build Docker image
+        run: docker build --tag edge-ci:${{ github.sha }} .
