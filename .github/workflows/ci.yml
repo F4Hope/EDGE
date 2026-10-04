@@ -119,6 +119,9 @@ jobs:
       - name: Test live launch gate
         run: npm run test:launch
 
+      - name: Test release metadata
+        run: npm run test:release
+
       - name: Test mobile routes
         run: npm run test:ui
 

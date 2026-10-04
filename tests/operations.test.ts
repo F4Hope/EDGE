@@ -20,7 +20,7 @@ test("build info exposes version and optional non-secret commit identity", () =>
   try {
     const info = getBuildInfo();
     assert.equal(info.service, "edge-sports-intelligence");
-    assert.equal(info.version, "0.7.0");
+    assert.equal(info.version, "0.8.0-rc.1");
     assert.equal(info.commit, "abc123");
     assert.ok(info.node.length > 0);
   } finally {

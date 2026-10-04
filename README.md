@@ -18,6 +18,18 @@ Phase 6 adds the transparent Feature Engine. The current `features-v3` vector ca
 
 Post-Phase-6 audit infrastructure adds sports result ingestion, statistical calibration/accuracy evaluation for any future settled model records, verified news/injury signal ingestion, descriptive odds-movement diagnostics, model-performance reporting with strict INSUFFICIENT DATA behavior, cursor pagination, health checks, and production security headers. Real-money wager selection/ticket automation is intentionally not implemented.
 
+## Release candidate
+
+The current package version is `0.8.0-rc.1`. This marks the codebase as a release candidate; it does not claim external live-data configuration is already complete.
+
+Run the complete local release gate with:
+
+```bash
+npm run release:check
+```
+
+See `CHANGELOG.md` for the included capabilities, remaining environment requirements, and the product boundary.
+
 ## Setup Center
 
 The mobile app includes a plain-language Setup Center at `/setup`. It reports a five-step live-data setup percentage based only on real configuration and stored evidence:
