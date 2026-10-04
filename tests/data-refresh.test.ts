@@ -32,6 +32,18 @@ test("normal refresh uses API-Sports for non-quota-sensitive evidence", async ()
   assert.match(source, /--sports=football,basketball/);
 });
 
+test("API-Sports refresh uses plan-safe default windows", async () => {
+  const source = await readFile("scripts/refresh-data.ts", "utf8");
+
+  assert.match(source, /API_SPORTS_EVENT_FORWARD_HOURS/);
+  assert.match(source, /API_SPORTS_RESULT_LOOKBACK_HOURS/);
+  assert.match(source, /eventForwardHours/);
+  assert.match(source, /resultLookbackHours/);
+  assert.match(source, /"--to=" \+ isoOffset\(now, eventForwardHours\)/);
+  assert.match(source, /"--from=" \+ isoOffset\(now, -resultLookbackHours\)/);
+  assert.match(source, /"--to=" \+ now\.toISOString\(\)/);
+});
+
 test("data refresh directs Codespaces to local database bootstrap when needed", async () => {
   const source = await readFile("scripts/refresh-data.ts", "utf8");
 
