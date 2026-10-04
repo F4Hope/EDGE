@@ -1,3 +1,4 @@
+import { providerParticipantNamesEquivalent } from "@/lib/data/eventIdentity";
 import { getDb } from "@/lib/prisma";
 import {
   supportedSports,
@@ -31,6 +32,16 @@ export type UiEventCollection = {
   message: string | null;
 };
 
+type OddsSnapshotShape = {
+  provider: string;
+  bookmakerKey: string | null;
+  bookmakerName: string | null;
+  selectionKey: string;
+  selectionName: string;
+  decimalOdds: unknown;
+  capturedAt: Date;
+};
+
 type EventWithRelations = {
   id: string;
   provider: string;
@@ -43,14 +54,7 @@ type EventWithRelations = {
   homePlayer: { fullName: string } | null;
   awayPlayer: { fullName: string } | null;
   markets: Array<{
-    oddsSnapshots: Array<{
-      bookmakerKey: string | null;
-      bookmakerName: string | null;
-      selectionKey: string;
-      selectionName: string;
-      decimalOdds: unknown;
-      capturedAt: Date;
-    }>;
+    oddsSnapshots: OddsSnapshotShape[];
   }>;
 };
 
@@ -62,62 +66,97 @@ function normalizeLabel(value: string | null | undefined): string {
     .trim();
 }
 
+function selectionBucket(
+  selectionName: string,
+  home: string | null,
+  away: string | null,
+): "home" | "draw" | "away" | string {
+  const normalized = normalizeLabel(selectionName);
+
+  if (
+    home &&
+    providerParticipantNamesEquivalent(selectionName, home)
+  ) {
+    return "home";
+  }
+
+  if (normalized === "draw" || normalized === "tie") {
+    return "draw";
+  }
+
+  if (
+    away &&
+    providerParticipantNamesEquivalent(selectionName, away)
+  ) {
+    return "away";
+  }
+
+  return `other:${normalized}`;
+}
+
 function bestH2hOdds(
   event: EventWithRelations,
   home: string | null,
   away: string | null,
 ): UiEventOddsQuote[] {
-  const market = event.markets[0];
-  if (!market) return [];
+  if (event.markets.length === 0) return [];
 
   const latestPerBookmakerSelection = new Map<
     string,
-    (typeof market.oddsSnapshots)[number]
+    { snapshot: OddsSnapshotShape; bucket: string }
   >();
 
-  for (const snapshot of market.oddsSnapshots) {
-    if (snapshot.capturedAt >= event.startTime) continue;
+  for (const market of event.markets) {
+    for (const snapshot of market.oddsSnapshots) {
+      if (snapshot.capturedAt >= event.startTime) continue;
 
-    const identity = [
-      snapshot.bookmakerKey ?? "unknown-bookmaker",
-      snapshot.selectionKey,
-    ].join("|");
+      const bucket = selectionBucket(snapshot.selectionName, home, away);
+      const identity = [
+        snapshot.provider,
+        snapshot.bookmakerKey ?? "unknown-bookmaker",
+        bucket,
+      ].join("|");
 
-    if (!latestPerBookmakerSelection.has(identity)) {
-      latestPerBookmakerSelection.set(identity, snapshot);
+      if (!latestPerBookmakerSelection.has(identity)) {
+        latestPerBookmakerSelection.set(identity, { snapshot, bucket });
+      }
     }
   }
 
   const bestPerSelection = new Map<
     string,
-    (typeof market.oddsSnapshots)[number]
+    { snapshot: OddsSnapshotShape; bucket: string }
   >();
 
-  for (const snapshot of latestPerBookmakerSelection.values()) {
-    const current = bestPerSelection.get(snapshot.selectionKey);
+  for (const candidate of latestPerBookmakerSelection.values()) {
+    const current = bestPerSelection.get(candidate.bucket);
     if (
       !current ||
-      Number(snapshot.decimalOdds) > Number(current.decimalOdds)
+      Number(candidate.snapshot.decimalOdds) >
+        Number(current.snapshot.decimalOdds)
     ) {
-      bestPerSelection.set(snapshot.selectionKey, snapshot);
+      bestPerSelection.set(candidate.bucket, candidate);
     }
   }
 
-  const homeLabel = normalizeLabel(home);
-  const awayLabel = normalizeLabel(away);
-
-  function rank(selectionName: string): number {
-    const normalized = normalizeLabel(selectionName);
-    if (homeLabel && normalized === homeLabel) return 0;
-    if (normalized === "draw" || normalized === "tie") return 1;
-    if (awayLabel && normalized === awayLabel) return 2;
+  function rank(bucket: string): number {
+    if (bucket === "home") return 0;
+    if (bucket === "draw") return 1;
+    if (bucket === "away") return 2;
     return 3;
   }
 
   return [...bestPerSelection.values()]
-    .map((snapshot) => ({
-      selectionKey: snapshot.selectionKey,
-      selectionName: snapshot.selectionName,
+    .map(({ snapshot, bucket }) => ({
+      selectionKey: bucket,
+      selectionName:
+        bucket === "home"
+          ? (home ?? snapshot.selectionName)
+          : bucket === "away"
+            ? (away ?? snapshot.selectionName)
+            : bucket === "draw"
+              ? "Draw"
+              : snapshot.selectionName,
       decimalOdds: Number(snapshot.decimalOdds),
       bookmakerName: snapshot.bookmakerName,
       capturedAt: snapshot.capturedAt.toISOString(),
@@ -128,7 +167,7 @@ function bestH2hOdds(
     )
     .sort(
       (a, b) =>
-        rank(a.selectionName) - rank(b.selectionName) ||
+        rank(a.selectionKey) - rank(b.selectionKey) ||
         a.selectionName.localeCompare(b.selectionName),
     )
     .slice(0, 3);
@@ -166,12 +205,12 @@ const relationInclude = {
   markets: {
     where: { key: "h2h" as const, status: "OPEN" as const },
     orderBy: { updatedAt: "desc" as const },
-    take: 1,
     include: {
       oddsSnapshots: {
         orderBy: { capturedAt: "desc" as const },
         take: 300,
         select: {
+          provider: true,
           bookmakerKey: true,
           bookmakerName: true,
           selectionKey: true,
@@ -193,6 +232,7 @@ export async function getUiEvents(options?: {
   market?: "h2h" | "spreads" | "totals";
   minOdds?: number;
   maxOdds?: number;
+  requireOdds?: boolean;
 }): Promise<UiEventCollection> {
   const now = new Date();
   const hours = Math.min(24 * 14, Math.max(1, options?.hours ?? 168));
@@ -200,8 +240,11 @@ export async function getUiEvents(options?: {
   const to = new Date(now.getTime() + hours * 60 * 60 * 1000);
 
   const hasLeagueFilter = Boolean(options?.league || options?.country);
+  const effectiveMarket =
+    options?.market ?? (options?.requireOdds ? "h2h" : undefined);
   const hasOddsFilter =
-    Boolean(options?.market) ||
+    Boolean(effectiveMarket) ||
+    options?.requireOdds === true ||
     options?.minOdds !== undefined ||
     options?.maxOdds !== undefined;
 
@@ -210,6 +253,7 @@ export async function getUiEvents(options?: {
     const rows = await db.event.findMany({
       where: {
         startTime: { gte: now, lte: to },
+        status: { notIn: ["COMPLETED", "CANCELLED", "POSTPONED"] },
         ...(options?.sport ? { sport: { key: options.sport } } : {}),
         ...(hasLeagueFilter
           ? {
@@ -237,20 +281,27 @@ export async function getUiEvents(options?: {
           ? {
               markets: {
                 some: {
-                  ...(options?.market ? { key: options.market } : {}),
-                  ...(options?.minOdds !== undefined ||
+                  status: "OPEN" as const,
+                  ...(effectiveMarket ? { key: effectiveMarket } : {}),
+                  ...(options?.requireOdds === true ||
+                  options?.minOdds !== undefined ||
                   options?.maxOdds !== undefined
                     ? {
                         oddsSnapshots: {
                           some: {
-                            decimalOdds: {
-                              ...(options?.minOdds !== undefined
-                                ? { gte: options.minOdds }
-                                : {}),
-                              ...(options?.maxOdds !== undefined
-                                ? { lte: options.maxOdds }
-                                : {}),
-                            },
+                            ...(options?.minOdds !== undefined ||
+                            options?.maxOdds !== undefined
+                              ? {
+                                  decimalOdds: {
+                                    ...(options?.minOdds !== undefined
+                                      ? { gte: options.minOdds }
+                                      : {}),
+                                    ...(options?.maxOdds !== undefined
+                                      ? { lte: options.maxOdds }
+                                      : {}),
+                                  },
+                                }
+                              : {}),
                           },
                         },
                       }
@@ -267,14 +318,17 @@ export async function getUiEvents(options?: {
 
     const events = rows
       .map((row) => toUiEvent(row))
-      .filter((event): event is UiEvent => event !== null);
+      .filter((event): event is UiEvent => event !== null)
+      .filter((event) => !options?.requireOdds || event.h2hOdds.length >= 2);
 
     return {
       events,
       available: true,
       message:
         events.length === 0
-          ? "No normalized upcoming events match this filter window."
+          ? options?.requireOdds
+            ? "No upcoming events with stored H2H odds match this filter window."
+            : "No normalized upcoming events match this filter window."
           : null,
     };
   } catch (error) {

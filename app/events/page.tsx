@@ -28,7 +28,7 @@ function parseHours(value: string | undefined): number {
   if (value === "24") return 24;
   if (value === "48") return 48;
   if (value === "168") return 168;
-  return 168;
+  return 24;
 }
 
 function parseOdds(value: string | undefined): number | undefined {
@@ -46,6 +46,18 @@ function parseMarket(
   return undefined;
 }
 
+function eventsHref(input: {
+  hours: number;
+  sport?: SupportedSport;
+  coverage: "odds" | "all";
+}): string {
+  const params = new URLSearchParams();
+  params.set("hours", String(input.hours));
+  if (input.sport) params.set("sport", input.sport);
+  if (input.coverage === "all") params.set("coverage", "all");
+  return `/events?${params.toString()}`;
+}
+
 export default async function EventsPage({
   searchParams,
 }: {
@@ -54,6 +66,7 @@ export default async function EventsPage({
   const params = await searchParams;
   const sport = parseSport(first(params.sport));
   const hours = parseHours(first(params.hours));
+  const coverage = first(params.coverage) === "all" ? "all" : "odds";
   const league = first(params.league)?.trim() || undefined;
   const country = first(params.country)?.trim() || undefined;
   const market = parseMarket(first(params.market));
@@ -68,14 +81,19 @@ export default async function EventsPage({
     market,
     minOdds,
     maxOdds,
+    requireOdds: coverage === "odds",
     limit: 100,
   });
 
   const sportFilters = [
-    { label: "All", href: `/events?hours=${hours}`, active: !sport },
+    {
+      label: "All",
+      href: eventsHref({ hours, coverage }),
+      active: !sport,
+    },
     ...supportedSports.map((item) => ({
       label: item[0].toUpperCase() + item.slice(1),
-      href: `/events?sport=${item}&hours=${hours}`,
+      href: eventsHref({ sport: item, hours, coverage }),
       active: item === sport,
     })),
   ];
@@ -85,8 +103,23 @@ export default async function EventsPage({
       <ScreenHeader
         eyebrow="EVENT UNIVERSE"
         title="Events"
-        description="Normalized upcoming events from connected providers, with market filters backed by stored Phase 5 odds snapshots."
+        description="The default feed contains upcoming events with stored bookmaker odds. Use All Fixtures only when you want to inspect uncovered provider fixtures."
       />
+
+      <div className="window-switch" aria-label="Odds coverage">
+        <Link
+          href={eventsHref({ hours, sport, coverage: "odds" })}
+          className={coverage === "odds" ? "window-button active" : "window-button"}
+        >
+          WITH ODDS
+        </Link>
+        <Link
+          href={eventsHref({ hours, sport, coverage: "all" })}
+          className={coverage === "all" ? "window-button active" : "window-button"}
+        >
+          ALL FIXTURES
+        </Link>
+      </div>
 
       <div className="filter-rail" aria-label="Sport filters">
         {sportFilters.map((filter) => (
@@ -104,7 +137,7 @@ export default async function EventsPage({
         {[24, 48, 168].map((value) => (
           <Link
             key={value}
-            href={`/events?hours=${value}${sport ? `&sport=${sport}` : ""}`}
+            href={eventsHref({ hours: value, sport, coverage })}
             className={hours === value ? "window-button active" : "window-button"}
           >
             {value === 168 ? "7 DAYS" : `${value}H`}
@@ -119,6 +152,7 @@ export default async function EventsPage({
         <summary>ADVANCED FILTERS <span>+</span></summary>
         <form className="filter-panel-body" method="get">
           <input type="hidden" name="hours" value={hours} />
+          <input type="hidden" name="coverage" value={coverage} />
           {sport ? <input type="hidden" name="sport" value={sport} /> : null}
 
           <div className="filter-field">
@@ -144,7 +178,7 @@ export default async function EventsPage({
           <div className="filter-field">
             <label htmlFor="market">Market</label>
             <select id="market" name="market" defaultValue={market ?? ""}>
-              <option value="">Any stored market</option>
+              <option value="">Default H2H / Moneyline</option>
               <option value="h2h">Head to head / Moneyline</option>
               <option value="spreads">Spread / Handicap</option>
               <option value="totals">Totals / Over Under</option>
@@ -179,8 +213,8 @@ export default async function EventsPage({
           </button>
 
           <p className="filter-footnote">
-            EDGE SCORE, model confidence, risk, and BetPawa availability remain locked
-            until their later phases.
+            WITH ODDS hides fixtures without usable stored H2H prices. All Fixtures
+            remains available for provider coverage inspection.
           </p>
         </form>
       </details>
@@ -189,7 +223,7 @@ export default async function EventsPage({
         <div className="section-heading compact-heading">
           <div>
             <p className="eyebrow">UPCOMING</p>
-            <h2>Normalized events</h2>
+            <h2>{coverage === "odds" ? "Events with odds" : "All normalized fixtures"}</h2>
           </div>
           <span className="count-badge">
             {state.available ? `${state.events.length} FOUND` : "UNAVAILABLE"}
@@ -207,7 +241,9 @@ export default async function EventsPage({
             status={state.available ? "NO EVENTS" : "DATA OFFLINE"}
             title={
               state.available
-                ? "Nothing matches this filter window."
+                ? coverage === "odds"
+                  ? "No priced events match this window."
+                  : "Nothing matches this filter window."
                 : "Event database unavailable."
             }
             description={
