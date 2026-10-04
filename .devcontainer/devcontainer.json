@@ -1,16 +1,6 @@
 {
   "name": "EDGE Sports Intelligence",
   "image": "mcr.microsoft.com/devcontainers/universal:2",
-  "features": {
-    "ghcr.io/devcontainers/features/node:1": {
-      "version": "22"
-    },
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {
-      "version": "latest",
-      "moby": true,
-      "dockerDashComposeVersion": "v2"
-    }
-  },
   "forwardPorts": [
     3000
   ],
@@ -20,7 +10,6 @@
       "onAutoForward": "notify"
     }
   },
-  "postCreateCommand": "npm ci --no-audit --no-fund",
-  "remoteUser": "codespace",
-  "postStartCommand": "npm run codespace:auto-start"
+  "postCreateCommand": "bash -lc '. /usr/local/share/nvm/nvm.sh && nvm alias default 22 && nvm use 22 && npm ci --no-audit --no-fund'",
+  "postStartCommand": "bash -lc '. /usr/local/share/nvm/nvm.sh && nvm use 22 && npm run codespace:auto-start'"
 }
