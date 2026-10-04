@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  ApiSportsProvider,
   normalizeBasketballGame,
   normalizeFootballFixture,
 } from "../lib/providers/apiSports";
@@ -60,4 +61,74 @@ test("normalizes The Odds API tennis events as player participants", () => {
   assert.equal(event.home.kind, "player");
   assert.equal(event.away.kind, "player");
   assert.equal(event.competition.id, "tennis_atp_example");
+});
+
+
+test("football discovery queries API-Sports by UTC date instead of standalone from/to", async () => {
+  const originalFetch = globalThis.fetch;
+  const requestedUrls: string[] = [];
+
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const url =
+      typeof input === "string"
+        ? new URL(input)
+        : input instanceof URL
+          ? input
+          : new URL(input.url);
+    requestedUrls.push(url.toString());
+
+    const day = url.searchParams.get("date") ?? "2026-10-04";
+    return new Response(
+      JSON.stringify({
+        errors: [],
+        results: 1,
+        response: [
+          {
+            fixture: {
+              id: day === "2026-10-04" ? 1001 : 1002,
+              date: day + "T18:00:00+00:00",
+              status: { short: "NS" },
+            },
+            league: {
+              id: 39,
+              name: "Example League",
+              country: "Example",
+            },
+            teams: {
+              home: { id: 1, name: "Alpha FC" },
+              away: { id: 2, name: "Beta FC" },
+            },
+          },
+        ],
+      }),
+      {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      },
+    );
+  }) as typeof fetch;
+
+  try {
+    const provider = new ApiSportsProvider("test-key");
+    const events = await provider.getEvents({
+      sport: "football",
+      from: new Date("2026-10-04T12:00:00Z"),
+      to: new Date("2026-10-05T12:00:00Z"),
+    });
+
+    assert.equal(events.length, 2);
+    assert.deepEqual(
+      requestedUrls.map((value) => new URL(value).searchParams.get("date")),
+      ["2026-10-04", "2026-10-05"],
+    );
+
+    for (const value of requestedUrls) {
+      const params = new URL(value).searchParams;
+      assert.equal(params.get("from"), null);
+      assert.equal(params.get("to"), null);
+      assert.equal(params.get("timezone"), "UTC");
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });

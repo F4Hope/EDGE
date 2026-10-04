@@ -13,6 +13,7 @@ import type {
 
 const FOOTBALL_BASE_URL = "https://v3.football.api-sports.io";
 const BASKETBALL_BASE_URL = "https://v1.basketball.api-sports.io";
+const MAX_FOOTBALL_SYNC_DAYS = 14;
 const MAX_BASKETBALL_SYNC_DAYS = 14;
 
 type ApiSportsEnvelope<T> = {
@@ -299,12 +300,26 @@ export class ApiSportsProvider implements DataProvider, ResultProvider {
     }
 
     if (query.sport === "football") {
-      const rows = await this.request<FootballFixtureRow>(FOOTBALL_BASE_URL, "/fixtures", {
-        from: formatUtcDate(query.from),
-        to: formatUtcDate(query.to),
-        timezone: "UTC",
-      });
-      return rows.map(normalizeFootballFixture);
+      const days = enumerateUtcDays(query.from, query.to);
+      if (days.length > MAX_FOOTBALL_SYNC_DAYS) {
+        throw new Error(
+          `Football sync range is capped at ${MAX_FOOTBALL_SYNC_DAYS} UTC days per run to protect provider quota.`,
+        );
+      }
+
+      const events: ProviderEvent[] = [];
+      for (const day of days) {
+        const rows = await this.request<FootballFixtureRow>(
+          FOOTBALL_BASE_URL,
+          "/fixtures",
+          {
+            date: day,
+            timezone: "UTC",
+          },
+        );
+        events.push(...rows.map(normalizeFootballFixture));
+      }
+      return events;
     }
 
     const days = enumerateUtcDays(query.from, query.to);
@@ -335,19 +350,32 @@ export class ApiSportsProvider implements DataProvider, ResultProvider {
     }
 
     if (query.sport === "football") {
-      const rows = await this.request<FootballFixtureRow>(
-        FOOTBALL_BASE_URL,
-        "/fixtures",
-        {
-          from: formatUtcDate(query.from),
-          to: formatUtcDate(query.to),
-          timezone: "UTC",
-        },
-      );
+      const days = enumerateUtcDays(query.from, query.to);
+      if (days.length > MAX_FOOTBALL_SYNC_DAYS) {
+        throw new Error(
+          "Football result sync range is capped at " +
+            MAX_FOOTBALL_SYNC_DAYS +
+            " UTC days per run to protect provider quota.",
+        );
+      }
 
-      return rows
-        .map(normalizeFootballResult)
-        .filter((result): result is ProviderResult => result !== null);
+      const results: ProviderResult[] = [];
+      for (const day of days) {
+        const rows = await this.request<FootballFixtureRow>(
+          FOOTBALL_BASE_URL,
+          "/fixtures",
+          {
+            date: day,
+            timezone: "UTC",
+          },
+        );
+
+        for (const row of rows) {
+          const result = normalizeFootballResult(row);
+          if (result) results.push(result);
+        }
+      }
+      return results;
     }
 
     const days = enumerateUtcDays(query.from, query.to);
