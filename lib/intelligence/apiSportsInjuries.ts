@@ -102,8 +102,6 @@ export function normalizeApiSportsInjury(
 
   const type = intelligenceType(reportType, reason);
   const signalSeverity = severity(reportType);
-  const context = reason ?? reportType;
-
   return {
     fingerprint: availabilityFingerprint(providerFixtureId, providerPlayerId),
     providerFixtureId,

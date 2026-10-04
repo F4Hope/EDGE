@@ -1,10 +1,7 @@
 import dotenv from "dotenv";
 import { getDb } from "../lib/prisma";
 import { ApiSportsProvider } from "../lib/providers/apiSports";
-import {
-  supportedSports,
-  type SupportedSport,
-} from "../lib/providers/types";
+import type { SupportedSport } from "../lib/providers/types";
 import { syncProviderResults } from "../lib/data/syncResults";
 
 dotenv.config({ path: [".env.local", ".env"], quiet: true });

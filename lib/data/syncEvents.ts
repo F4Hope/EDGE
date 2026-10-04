@@ -300,7 +300,7 @@ export async function syncProviderEvents(
               summary: signal.summary,
               occurredAt: signal.occurredAt,
               expiresAt: signal.expiresAt,
-              metadata: signal.metadata,
+              metadata: JSON.parse(JSON.stringify(signal.metadata)),
             },
             create: {
               eventId: savedEvent.id,
@@ -312,7 +312,7 @@ export async function syncProviderEvents(
               summary: signal.summary,
               occurredAt: signal.occurredAt,
               expiresAt: signal.expiresAt,
-              metadata: signal.metadata,
+              metadata: JSON.parse(JSON.stringify(signal.metadata)),
             },
           });
         }
