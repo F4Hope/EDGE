@@ -12,6 +12,7 @@ import { getUiOddsForEvent } from "@/lib/data/uiOdds";
 import { getUiFeatureForEvent } from "@/lib/data/uiFeatures";
 import { getUiIntelligenceForEvent } from "@/lib/data/uiIntelligence";
 import { getUiMovementForEvent } from "@/lib/data/uiMovement";
+import { getUiPredictionsForEvent } from "@/lib/data/uiPredictions";
 
 export const dynamic = "force-dynamic";
 
@@ -32,13 +33,20 @@ export default async function AnalysisPage({
   params: Promise<{ eventId: string }>;
 }) {
   const { eventId } = await params;
-  const [state, oddsState, featureState, intelligenceState, movementState] =
-    await Promise.all([
+  const [
+    state,
+    oddsState,
+    featureState,
+    intelligenceState,
+    movementState,
+    predictionState,
+  ] = await Promise.all([
       getUiEventById(eventId),
       getUiOddsForEvent(eventId),
       getUiFeatureForEvent(eventId),
       getUiIntelligenceForEvent(eventId),
       getUiMovementForEvent(eventId),
+      getUiPredictionsForEvent(eventId),
     ]);
 
   if (!state.event) {
@@ -64,6 +72,7 @@ export default async function AnalysisPage({
     (total, market) => total + market.quotes.length,
     0,
   );
+  const primaryPrediction = predictionState.predictions[0] ?? null;
 
   return (
     <MobileShell>
@@ -149,7 +158,17 @@ export default async function AnalysisPage({
       <section className="analysis-block">
         <div className="section-heading compact-heading">
           <div><p className="eyebrow">CORE INTELLIGENCE</p><h2>Decision metrics</h2></div>
-          <span className="status-pill no-bet">NO BET</span>
+          <span
+            className={`status-pill ${
+              !primaryPrediction || primaryPrediction.status === "NO_BET"
+                ? "no-bet"
+                : ""
+            }`}
+          >
+            {primaryPrediction
+              ? primaryPrediction.status.replaceAll("_", " ")
+              : "NO BET"}
+          </span>
         </div>
         <div className="metric-grid">
           <MetricPlaceholder
@@ -162,12 +181,95 @@ export default async function AnalysisPage({
             }
             state={oddsState.markets.length > 0 ? "ready" : "pending"}
           />
-          <MetricPlaceholder label="MODEL PROBABILITY" note="Models pending" />
-          <MetricPlaceholder label="EDGE SCORE" note="Scoring pending" />
-          <MetricPlaceholder label="ESTIMATED VALUE" note="Requires odds + model" />
-          <MetricPlaceholder label="RISK" note="Risk engine pending" />
-          <MetricPlaceholder label="MODEL AGREEMENT" note="Ensemble pending" />
+          <MetricPlaceholder
+            label="MODEL PROBABILITY"
+            value={
+              primaryPrediction
+                ? `${(primaryPrediction.modelProbability * 100).toFixed(1)}%`
+                : "—"
+            }
+            note={
+              primaryPrediction
+                ? primaryPrediction.selectionName
+                : predictionState.message ?? "Prediction not generated"
+            }
+            state={primaryPrediction ? "ready" : "pending"}
+          />
+          <MetricPlaceholder
+            label="EDGE SCORE"
+            value={
+              primaryPrediction?.edgeScore === null ||
+              primaryPrediction?.edgeScore === undefined
+                ? "—"
+                : String(primaryPrediction.edgeScore)
+            }
+            note="Validation-gated in baseline model"
+            state={primaryPrediction ? "unconfirmed" : "pending"}
+          />
+          <MetricPlaceholder
+            label="ESTIMATED VALUE"
+            value={
+              primaryPrediction?.estimatedValue === null ||
+              primaryPrediction?.estimatedValue === undefined
+                ? "—"
+                : `${(primaryPrediction.estimatedValue * 100).toFixed(1)}%`
+            }
+            note="Model probability × best stored odds − 1"
+            state={primaryPrediction ? "ready" : "pending"}
+          />
+          <MetricPlaceholder
+            label="RISK"
+            value={primaryPrediction?.risk ?? "—"}
+            note="Evidence quality + bookmaker breadth"
+            state={primaryPrediction ? "ready" : "pending"}
+          />
+          <MetricPlaceholder
+            label="MODEL AGREEMENT"
+            value={
+              primaryPrediction?.modelAgreement === null ||
+              primaryPrediction?.modelAgreement === undefined
+                ? "—"
+                : `${(primaryPrediction.modelAgreement * 100).toFixed(1)}%`
+            }
+            note="Agreement with de-vigged market anchor"
+            state={primaryPrediction ? "ready" : "pending"}
+          />
         </div>
+      </section>
+
+      <section className="analysis-block">
+        <div className="section-heading compact-heading">
+          <div>
+            <p className="eyebrow">PHASE 7 FORECAST</p>
+            <h2>Market-evidence probabilities</h2>
+          </div>
+          <span className="count-badge">
+            {predictionState.predictions.length} OUTPUTS
+          </span>
+        </div>
+
+        {predictionState.predictions.length > 0 ? (
+          <div className="analysis-list">
+            {predictionState.predictions.map((prediction) => (
+              <div key={prediction.id}>
+                <span>{prediction.selectionName}</span>
+                <strong>
+                  {(prediction.modelProbability * 100).toFixed(1)}% ·{" "}
+                  {prediction.status.replaceAll("_", " ")}
+                </strong>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            status={predictionState.available ? "NOT GENERATED" : "DATA OFFLINE"}
+            title="No model probability is stored for this event."
+            description={
+              predictionState.message ??
+              "Run the Phase 7 prediction generator after odds and feature calculation."
+            }
+          />
+        )}
       </section>
 
       <section className="analysis-block">
@@ -257,19 +359,24 @@ export default async function AnalysisPage({
       <section className="why-risk-grid">
         <article>
           <span className="empty-status">WHY</span>
-          <h2>No recommendation generated.</h2>
+          <h2>
+            {primaryPrediction
+              ? "Baseline probability generated."
+              : "No recommendation generated."}
+          </h2>
           <p>
-            Real market odds can now be stored and displayed, but odds alone are not
-            evidence of value. EDGE still needs a model probability and downstream
-            validation before recommending a selection.
+            {primaryPrediction
+              ? "EDGE now generates a transparent market-anchored probability using pre-event odds plus bounded form, head-to-head, and rest evidence. The baseline remains WATCH/NO BET until settled forward performance supports a stronger decision gate."
+              : "Real market odds can now be stored and displayed, but a prediction must be generated before downstream validation can begin."}
           </p>
         </article>
         <article>
           <span className="empty-status">RISKS</span>
-          <h2>Analysis incomplete.</h2>
+          <h2>Validation still required.</h2>
           <p>
-            Model evidence, injury/news checks, movement interpretation, risk scoring,
-            and BetPawa availability are not yet available for this event.
+            The Phase 7 baseline does not enable BETTABLE status. Settled outcomes,
+            calibration, injury/news checks, movement interpretation, and bookmaker
+            availability still determine whether later model versions can graduate.
           </p>
         </article>
       </section>
