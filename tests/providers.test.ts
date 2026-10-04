@@ -196,7 +196,7 @@ test("tennis discovery caps sport keys before event requests", async () => {
 
     assert.equal(events.length, 1);
     assert.equal(requestedUrls.length, 2);
-    assert.match(requestedUrls[0], /\/v4\/sports\/\?/);
+    assert.match(requestedUrls[0], /\/v4\/sports\?/);
     assert.match(requestedUrls[1], /tennis_atp_alpha\/events/);
     assert.doesNotMatch(requestedUrls.join("\n"), /tennis_atp_beta\/events/);
   } finally {
