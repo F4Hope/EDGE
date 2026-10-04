@@ -36,8 +36,10 @@ function parseDate(value: string | undefined, boundary: "from" | "to"): Date {
   return parsed;
 }
 
-function parseSports(value: string | undefined): SupportedSport[] {
-  const allowed = supportedSports.filter((sport) => sport !== "tennis");
+type ResultSport = Exclude<SupportedSport, "tennis">;
+
+function parseSports(value: string | undefined): ResultSport[] {
+  const allowed: ResultSport[] = ["football", "basketball"];
 
   if (!value || value === "all") return [...allowed];
 
@@ -47,7 +49,7 @@ function parseSports(value: string | undefined): SupportedSport[] {
     .filter(Boolean);
 
   const invalid = requested.filter(
-    (sport) => !allowed.includes(sport as SupportedSport),
+    (sport) => !allowed.includes(sport as ResultSport),
   );
 
   if (invalid.length > 0) {
@@ -57,7 +59,7 @@ function parseSports(value: string | undefined): SupportedSport[] {
     );
   }
 
-  return [...new Set(requested)] as SupportedSport[];
+  return [...new Set(requested)] as ResultSport[];
 }
 
 async function main() {
