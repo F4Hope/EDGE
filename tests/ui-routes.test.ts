@@ -69,3 +69,19 @@ test("events defaults to priced fixtures and preserves all-fixtures inspection",
   assert.match(source, /coverage = first\(params\.coverage\) === "all" \? "all" : "odds"/);
   assert.match(source, /requireOdds: coverage === "odds"/);
 });
+
+
+test("event cards expose canonical odds roles, source and freshness", async () => {
+  const [card, data] = await Promise.all([
+    readFile("components/EventCard.tsx", "utf8"),
+    readFile("lib/data/uiEvents.ts", "utf8"),
+  ]);
+
+  assert.match(card, /HOME/);
+  assert.match(card, /DRAW/);
+  assert.match(card, /AWAY/);
+  assert.match(card, /formatOddsAge/);
+  assert.match(card, /quote\.bookmakerName/);
+  assert.match(card, /quote\.provider/);
+  assert.match(data, /provider: snapshot\.provider/);
+});

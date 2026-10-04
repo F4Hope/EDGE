@@ -10,6 +10,7 @@ export type UiEventOddsQuote = {
   selectionName: string;
   decimalOdds: number;
   bookmakerName: string | null;
+  provider: string;
   capturedAt: string;
 };
 
@@ -159,6 +160,7 @@ function bestH2hOdds(
               : snapshot.selectionName,
       decimalOdds: Number(snapshot.decimalOdds),
       bookmakerName: snapshot.bookmakerName,
+      provider: snapshot.provider,
       capturedAt: snapshot.capturedAt.toISOString(),
     }))
     .filter(

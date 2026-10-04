@@ -2509,3 +2509,39 @@ button {
   letter-spacing: 0.08em;
   text-align: center;
 }
+
+
+/* Events: explicit market role, source and freshness */
+
+.event-odds-role {
+  color: var(--gold) !important;
+  font-size: 7px !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.12em !important;
+}
+
+.event-odds-selection {
+  margin-top: 5px;
+  overflow: hidden;
+  color: #9d9a93 !important;
+  font-size: 7px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0 !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.event-odds-source {
+  margin-top: 5px !important;
+  color: #6f6c66 !important;
+  font-size: 6px !important;
+  line-height: 1.35;
+}
+
+.event-odds-age {
+  margin-top: 3px !important;
+  color: #827f78 !important;
+  font-size: 6px !important;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
