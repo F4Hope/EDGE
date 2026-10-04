@@ -22,6 +22,24 @@ function hasFlag(name: string): boolean {
   return process.argv.includes("--" + name);
 }
 
+function positiveHours(
+  envName: string,
+  fallback: number,
+  max = 24 * 14,
+): number {
+  const parsed = Number(process.env[envName] ?? fallback);
+  if (!Number.isFinite(parsed) || parsed <= 0 || parsed > max) {
+    throw new Error(
+      envName + " must be a positive number no greater than " + max + ".",
+    );
+  }
+  return parsed;
+}
+
+function isoOffset(base: Date, hours: number): string {
+  return new Date(base.getTime() + hours * 60 * 60 * 1000).toISOString();
+}
+
 function main() {
   if (!process.env.DATABASE_URL) {
     throw new Error(
@@ -37,14 +55,39 @@ function main() {
   console.log("-----------------");
 
   if (apiSports) {
-    console.log("Refreshing football/basketball events from API-Sports...");
+    const now = new Date();
+    const eventForwardHours = positiveHours(
+      "API_SPORTS_EVENT_FORWARD_HOURS",
+      24,
+    );
+    const resultLookbackHours = positiveHours(
+      "API_SPORTS_RESULT_LOOKBACK_HOURS",
+      24,
+    );
+
+    console.log(
+      "Refreshing football/basketball events from API-Sports " +
+        "(" +
+        eventForwardHours +
+        "h forward)...",
+    );
     run("data:sync", [
       "--provider=api-sports",
       "--sports=football,basketball",
+      "--to=" + isoOffset(now, eventForwardHours),
     ]);
 
-    console.log("Refreshing recent final football/basketball results...");
-    run("results:sync", ["--sports=football,basketball"]);
+    console.log(
+      "Refreshing recent final football/basketball results " +
+        "(" +
+        resultLookbackHours +
+        "h lookback)...",
+    );
+    run("results:sync", [
+      "--sports=football,basketball",
+      "--from=" + isoOffset(now, -resultLookbackHours),
+      "--to=" + now.toISOString(),
+    ]);
 
     console.log("Refreshing football injury/suspension intelligence...");
     run("intelligence:sync");
