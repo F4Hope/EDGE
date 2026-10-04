@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { MobileShell } from "@/components/MobileShell";
 import { ScreenHeader } from "@/components/ScreenHeader";
 
@@ -38,12 +39,29 @@ export default function SettingsPage() {
         eyebrow="SYSTEM"
         title="Configuration"
         description="Configuration status only. Secret values are never rendered to the browser."
+        action={
+          <Link className="secondary-link" href="/status">
+            LIVE STATUS →
+          </Link>
+        }
       />
 
       <section className="settings-card">
-        <ConfigRow label="PostgreSQL" configured={databaseConfigured} note="Event and intelligence database" />
-        <ConfigRow label="API-Sports" configured={apiSportsConfigured} note="Football / basketball event source" />
-        <ConfigRow label="The Odds API" configured={oddsApiConfigured} note="Multi-sport event and featured-market odds source" />
+        <ConfigRow
+          label="PostgreSQL"
+          configured={databaseConfigured}
+          note="Event, odds, feature, audit, and intelligence database"
+        />
+        <ConfigRow
+          label="API-Sports"
+          configured={apiSportsConfigured}
+          note="Football / basketball event source"
+        />
+        <ConfigRow
+          label="The Odds API"
+          configured={oddsApiConfigured}
+          note="Multi-sport event and featured-market odds source"
+        />
 
         <div className="setting-row">
           <div>

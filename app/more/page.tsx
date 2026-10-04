@@ -13,13 +13,19 @@ const links = [
     href: "/model",
     index: "02",
     title: "Model performance",
-    copy: "Audit model quality when real prediction history exists.",
+    copy: "Audit calibration and accuracy when real settled history exists.",
+  },
+  {
+    href: "/status",
+    index: "03",
+    title: "System status",
+    copy: "Check live readiness, stored evidence, and configuration health.",
   },
   {
     href: "/settings",
-    index: "03",
+    index: "04",
     title: "Configuration",
-    copy: "Check database and provider readiness without exposing secrets.",
+    copy: "Check provider configuration without exposing secrets.",
   },
 ];
 
@@ -29,7 +35,7 @@ export default function MorePage() {
       <ScreenHeader
         eyebrow="EDGE SYSTEM"
         title="More"
-        description="Secondary intelligence and configuration surfaces."
+        description="Secondary intelligence, audit, readiness, and configuration surfaces."
       />
 
       <div className="utility-list">

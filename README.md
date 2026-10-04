@@ -8,13 +8,34 @@ Phase 1 established the Next.js 16 App Router application, TypeScript, Tailwind 
 
 Phase 2 adds the PostgreSQL + Prisma data layer for the long-term sports intelligence pipeline. The initial schema covers users, sports, leagues, teams, players, events, markets, odds snapshots, features, model runs, predictions, selections, combos, combo selections, and results without coupling the application to one sports-data provider.
 
-Phase 3 adds the first real sports/event ingestion path. A provider abstraction normalizes API-Sports and The Odds API event data into the EDGE database, supports Football, Basketball, and Tennis, exposes read-only normalized events through `GET /api/events`, and keeps provider credentials server-side. No live events are fabricated when a provider is unavailable.\n\nPhase 4 expands the premium mobile-first interface into the full application shell. The required Events, Analysis, Picks, Combo Builder, History, Model Performance, and Settings screens now exist, with a fifth More navigation surface for secondary tools. Events and event basics use real normalized database records when available; model metrics, EDGE SCORE, risk, performance, and BetPawa status remain explicitly unavailable until their later phases are implemented.
+Phase 3 adds the first real sports/event ingestion path. A provider abstraction normalizes API-Sports and The Odds API event data into the EDGE database, supports Football, Basketball, and Tennis, exposes read-only normalized events through `GET /api/events`, and keeps provider credentials server-side. No live events are fabricated when a provider is unavailable.
+
+Phase 4 expands the premium mobile-first interface into the full application shell. The required Events, Analysis, Picks, Combo Builder, History, Model Performance, and Settings screens now exist, with a fifth More navigation surface for secondary tools. Events and event basics use real normalized database records when available; model metrics, EDGE SCORE, risk, performance, and BetPawa status remain explicitly unavailable until their later phases are implemented.
 
 Phase 5 adds real featured-market odds ingestion through The Odds API. EDGE stores bookmaker-specific decimal odds snapshots for head-to-head/moneyline, spreads/handicaps, and totals, records provider update timestamps, deduplicates repeated snapshots, tracks quota headers, and attaches cross-provider event aliases only when participant/time identity is unambiguous. Event analysis now displays real stored bookmaker quotes, and the Events page can filter by league, country, market, and odds range.
 
 Phase 6 adds the first transparent Feature Engine. It calculates deterministic model-input snapshots from evidence that EDGE actually has: event identity, schedule/rest context, market coverage, bookmaker breadth, current price consensus/dispersion, and sport-specific availability flags. Missing football, basketball, and tennis inputs are recorded explicitly rather than invented. Each feature snapshot receives a data-quality/completeness score and a stable fingerprint for deduplication. Phase 6 does not generate predictions.
 
 Post-Phase-6 audit infrastructure adds sports result ingestion, statistical calibration/accuracy evaluation for any future settled model records, verified news/injury signal ingestion, descriptive odds-movement diagnostics, model-performance reporting with strict INSUFFICIENT DATA behavior, cursor pagination, health checks, and production security headers. Real-money wager selection/ticket automation is intentionally not implemented.
+
+## System doctor
+
+Run this before development or deployment. It reports Node compatibility, provider/database configuration, database reachability, and stored data counts without printing secrets.
+
+```bash
+npm run doctor
+```
+
+The in-app readiness screen is available at:
+
+```text
+/status
+GET /api/system/readiness
+```
+
+EDGE also includes installable mobile-app metadata, safe loading/error/not-found states, and a database-aware health endpoint at `GET /api/health`.
+
+The repository intentionally does not fabricate a `package-lock.json`. Generate it from a successful `npm install` in your Codespace, then commit it to lock transitive dependencies reproducibly.
 
 ## Local development
 

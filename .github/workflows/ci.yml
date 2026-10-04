@@ -42,6 +42,9 @@ jobs:
       - name: Test production utilities
         run: npm run test:production
 
+      - name: Test system readiness
+        run: npm run test:readiness
+
       - name: Test mobile routes
         run: npm run test:ui
 

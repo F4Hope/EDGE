@@ -1,6 +1,6 @@
 {
   "name": "edge-sports-intelligence",
-  "version": "0.6.1",
+  "version": "0.7.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -25,7 +25,10 @@
     "results:import": "tsx scripts/import-results.ts",
     "intelligence:import": "tsx scripts/import-intelligence.ts",
     "test:audit": "tsx --test tests/audit-intelligence.test.ts",
-    "test:production": "tsx --test tests/production.test.ts"
+    "test:production": "tsx --test tests/production.test.ts",
+    "doctor": "tsx scripts/doctor.ts",
+    "test:readiness": "tsx --test tests/readiness.test.ts",
+    "check": "npm run db:validate && npm run test:providers && npm run test:odds && npm run test:features && npm run test:audit && npm run test:production && npm run test:readiness && npm run test:ui && npm run lint && npm run build"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.0",
@@ -48,5 +51,9 @@
     "tailwindcss": "^4.1.0",
     "tsx": "^4.23.15",
     "typescript": "^5.9.0"
-  }
+  },
+  "engines": {
+    "node": ">=22 <23"
+  },
+  "packageManager": "npm@10.9.2"
 }
