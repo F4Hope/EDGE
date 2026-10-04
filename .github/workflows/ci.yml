@@ -179,3 +179,21 @@ jobs:
           --build-arg EDGE_BUILD_SHA=${{ github.sha }}
           --tag edge-ci:${{ github.sha }}
           .
+
+      - name: Smoke standalone runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run --detach --rm --name edge-smoke -p 3000:3000 edge-ci:${{ github.sha }}
+          trap 'docker stop edge-smoke >/dev/null 2>&1 || true' EXIT
+
+          for attempt in {1..30}; do
+            if curl --silent --fail http://127.0.0.1:3000/api/health/live >/tmp/edge-live.json; then
+              break
+            fi
+            sleep 1
+          done
+
+          curl --silent --fail http://127.0.0.1:3000/api/health/live
+          test "$(curl --silent --output /tmp/edge-ready.json --write-out '%{http_code}' http://127.0.0.1:3000/api/health/ready)" = "503"
+          curl --silent --fail http://127.0.0.1:3000/api/version | grep --fixed-strings "${{ github.sha }}" > /dev/null

@@ -172,7 +172,7 @@ docker run --rm -p 3000:3000 \
   edge-sports-intelligence
 ```
 
-The image does not contain `.env` files. CI builds the production image after the application and migration jobs pass.
+The image does not contain `.env` files. CI builds the production image after the application and migration jobs pass. CI also boots the completed image, verifies liveness without a database, verifies readiness correctly returns HTTP 503 without database configuration, and confirms the embedded Git SHA through `/api/version`.
 
 The seed only creates the three initial reference sports: Football, Basketball, and Tennis. It does not create fabricated events, odds, predictions, results, or performance statistics.
 
