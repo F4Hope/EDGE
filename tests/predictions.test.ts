@@ -186,11 +186,13 @@ test("weak market coverage keeps prediction in NO_BET state", () => {
 function uiPrediction(
   overrides: Partial<UiPrediction> & Pick<UiPrediction, "selectionName">,
 ): UiPrediction {
+  const { selectionName, ...rest } = overrides;
+
   return {
-    id: overrides.selectionName,
+    id: selectionName,
     marketKey: "h2h",
-    selectionKey: overrides.selectionName.toLowerCase(),
-    selectionName: overrides.selectionName,
+    selectionKey: selectionName.toLowerCase(),
+    selectionName,
     modelVersion: "market-evidence-v1",
     modelProbability: 0.5,
     impliedProbability: 0.5,
@@ -214,7 +216,7 @@ function uiPrediction(
       totalAdjustment: 0,
     },
     createdAt: "2026-10-04T12:00:00.000Z",
-    ...overrides,
+    ...rest,
   };
 }
 
