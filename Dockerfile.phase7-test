@@ -1,0 +1,19 @@
+FROM node:22-bookworm-slim
+WORKDIR /app
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
+COPY package.json package-lock.json ./
+COPY prisma ./prisma
+COPY prisma7.config.ts ./
+RUN npm ci --no-audit --no-fund
+
+COPY . .
+
+RUN npm run test:predictions
+RUN npm run test:data-refresh
+RUN npm run build
+
+CMD ["node", "-e", "console.log('EDGE Phase 7 validation image ready')"]
