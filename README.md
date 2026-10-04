@@ -207,6 +207,7 @@ ODDS_API_REGIONS
 ODDS_API_MARKETS
 ODDS_API_SPORT_KEYS
 ODDS_SYNC_MAX_SPORT_KEYS
+ODDS_RESULT_MAX_SPORT_KEYS
 ```
 
 ## Automatic result synchronization
@@ -231,6 +232,22 @@ Stored results are available read-only from:
 GET /api/results
 GET /api/results?eventId=<EDGE_EVENT_ID>
 ```
+
+### Tennis results via The Odds API
+
+Recent tennis results use a separate, explicitly quota-sensitive path:
+
+```bash
+npm run results:sync:odds
+```
+
+The command looks only at recent tennis sport keys already stored in EDGE `EventSource` records, requests completed scores for up to three days, and caps the number of sport keys queried. The default cap is four and can be changed deliberately with:
+
+```text
+ODDS_RESULT_MAX_SPORT_KEYS=4
+```
+
+This command is never used by the default scheduled refresh. It is invoked automatically only inside `npm run data:refresh -- --include-odds`, where Odds API usage has already been explicitly requested.
 
 ## Automatic schedule-change intelligence
 

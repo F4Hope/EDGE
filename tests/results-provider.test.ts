@@ -4,6 +4,7 @@ import {
   normalizeBasketballResult,
   normalizeFootballResult,
 } from "../lib/providers/apiSports";
+import { normalizeOddsScore } from "../lib/providers/oddsApi";
 
 test("normalizes a final football score without inventing completion time", () => {
   const result = normalizeFootballResult({
@@ -75,4 +76,75 @@ test("does not convert incomplete final scores into fabricated numbers", () => {
   assert.equal(result?.status, "final");
   assert.equal(result?.homeScore, null);
   assert.equal(result?.winner, null);
+});
+
+
+test("normalizes a completed tennis score from The Odds API", () => {
+  const result = normalizeOddsScore(
+    {
+      id: "tennis-event-1",
+      sport_key: "tennis_atp_example",
+      sport_title: "ATP Example",
+      commence_time: "2026-10-03T18:00:00Z",
+      completed: true,
+      home_team: "Player One",
+      away_team: "Player Two",
+      scores: [
+        { name: "Player One", score: "2" },
+        { name: "Player Two", score: "1" },
+      ],
+      last_update: "2026-10-03T20:15:00Z",
+    },
+    "tennis",
+  );
+
+  assert.deepEqual(result, {
+    providerId: "tennis-event-1",
+    sport: "tennis",
+    status: "final",
+    completedAt: null,
+    homeScore: 2,
+    awayScore: 1,
+    winner: "home",
+    sourceStatus: "completed",
+  });
+});
+
+test("ignores live or incomplete Odds API score records", () => {
+  assert.equal(
+    normalizeOddsScore(
+      {
+        id: "tennis-live",
+        sport_key: "tennis_atp_example",
+        sport_title: "ATP Example",
+        commence_time: "2026-10-03T18:00:00Z",
+        completed: false,
+        home_team: "Player One",
+        away_team: "Player Two",
+        scores: [
+          { name: "Player One", score: "1" },
+          { name: "Player Two", score: "0" },
+        ],
+      },
+      "tennis",
+    ),
+    null,
+  );
+
+  assert.equal(
+    normalizeOddsScore(
+      {
+        id: "tennis-incomplete",
+        sport_key: "tennis_atp_example",
+        sport_title: "ATP Example",
+        commence_time: "2026-10-03T18:00:00Z",
+        completed: true,
+        home_team: "Player One",
+        away_team: "Player Two",
+        scores: [{ name: "Player One", score: "2" }],
+      },
+      "tennis",
+    ),
+    null,
+  );
 });

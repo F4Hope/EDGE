@@ -2,6 +2,7 @@ import type { getDb } from "@/lib/prisma";
 import type {
   ProviderResult,
   ResultProvider,
+  ResultQuery,
 } from "@/lib/providers/resultTypes";
 import type { SupportedSport } from "@/lib/providers/types";
 
@@ -38,12 +39,18 @@ export async function syncProviderResults(
   sport: SupportedSport,
   from: Date,
   to: Date,
+  options: Pick<ResultQuery, "sourceSportKeys" | "maxSourceSportKeys"> = {},
 ): Promise<ResultSyncSummary> {
   if (!provider.supportsResults(sport)) {
     throw new Error(provider.name + " does not support result ingestion for " + sport + ".");
   }
 
-  const incoming = await provider.getResults({ sport, from, to });
+  const incoming = await provider.getResults({
+    sport,
+    from,
+    to,
+    ...options,
+  });
   const unique = [
     ...new Map(incoming.map((result) => [result.providerId, result])).values(),
   ];

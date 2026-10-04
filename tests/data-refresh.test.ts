@@ -9,15 +9,18 @@ test("data refresh keeps every Odds API call explicitly opt-in", async () => {
   assert.match(source, /SKIP The Odds API entirely/);
   assert.match(source, /--provider=odds-api/);
   assert.match(source, /odds:sync/);
+  assert.match(source, /results:sync:odds/);
   assert.match(source, /results:sync/);
   assert.match(source, /intelligence:sync/);
   assert.match(source, /features:calculate/);
 
   const includeOddsIndex = source.indexOf("if (includeOdds)");
   const oddsProviderIndex = source.indexOf('"--provider=odds-api"');
+  const oddsResultSyncIndex = source.indexOf('run("results:sync:odds"');
   const oddsSyncIndex = source.indexOf('run("odds:sync"');
   assert.ok(includeOddsIndex >= 0);
   assert.ok(oddsProviderIndex > includeOddsIndex);
+  assert.ok(oddsResultSyncIndex > includeOddsIndex);
   assert.ok(oddsSyncIndex > includeOddsIndex);
 });
 

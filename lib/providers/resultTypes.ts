@@ -17,6 +17,8 @@ export type ResultQuery = {
   sport: SupportedSport;
   from: Date;
   to: Date;
+  sourceSportKeys?: string[];
+  maxSourceSportKeys?: number;
 };
 
 export interface ResultProvider {

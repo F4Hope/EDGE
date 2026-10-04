@@ -67,6 +67,11 @@ function main() {
     run("data:sync", ["--provider=odds-api", "--sports=all"]);
 
     console.log(
+      "Refreshing recent tennis scores because --include-odds was explicitly requested...",
+    );
+    run("results:sync:odds");
+
+    console.log(
       "Refreshing bookmaker odds because --include-odds was explicitly requested...",
     );
     run("odds:sync", ["--sports=all"]);

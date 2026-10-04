@@ -13,6 +13,11 @@ import type {
   ProviderQuota,
 } from "./oddsTypes";
 import { featuredMarketKeys } from "./oddsTypes";
+import type {
+  ProviderResult,
+  ResultProvider,
+  ResultQuery,
+} from "./resultTypes";
 
 const ODDS_API_BASE_URL = "https://api.the-odds-api.com/v4/";
 
@@ -53,6 +58,17 @@ type OddsApiBookmaker = {
 
 type OddsApiOddsEvent = OddsApiEvent & {
   bookmakers?: OddsApiBookmaker[];
+};
+
+type OddsApiScore = {
+  name: string;
+  score: string;
+};
+
+type OddsApiScoreEvent = OddsApiEvent & {
+  completed?: boolean;
+  scores?: OddsApiScore[] | null;
+  last_update?: string | null;
 };
 
 function normalizedNameKey(value: string): string {
@@ -156,6 +172,55 @@ export function normalizeOddsEvent(
   };
 }
 
+export function normalizeOddsScore(
+  item: OddsApiScoreEvent,
+  sport: SupportedSport,
+): ProviderResult | null {
+  if (!item.completed) return null;
+
+  const homeKey = normalizedNameKey(item.home_team ?? "");
+  const awayKey = normalizedNameKey(item.away_team ?? "");
+  if (!item.id || !homeKey || !awayKey || !Array.isArray(item.scores)) {
+    return null;
+  }
+
+  const scoreMap = new Map(
+    item.scores
+      .filter(
+        (score) =>
+          typeof score?.name === "string" &&
+          typeof score?.score === "string",
+      )
+      .map((score) => [normalizedNameKey(score.name), score.score.trim()]),
+  );
+
+  const parseScore = (value: string | undefined): number | null => {
+    if (value === undefined || value === "") return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+  };
+
+  const homeScore = parseScore(scoreMap.get(homeKey));
+  const awayScore = parseScore(scoreMap.get(awayKey));
+  if (homeScore === null || awayScore === null) return null;
+
+  return {
+    providerId: item.id,
+    sport,
+    status: "final",
+    completedAt: null,
+    homeScore,
+    awayScore,
+    winner:
+      homeScore > awayScore
+        ? "home"
+        : awayScore > homeScore
+          ? "away"
+          : "draw",
+    sourceStatus: "completed",
+  };
+}
+
 export function normalizeOddsPayload(
   item: OddsApiOddsEvent,
   sport: SupportedSport,
@@ -204,7 +269,7 @@ export function normalizeOddsPayload(
   };
 }
 
-export class OddsApiProvider implements DataProvider, OddsProvider {
+export class OddsApiProvider implements DataProvider, OddsProvider, ResultProvider {
   readonly name = "odds-api";
   private catalogPromise?: Promise<OddsApiSport[]>;
 
@@ -216,6 +281,10 @@ export class OddsApiProvider implements DataProvider, OddsProvider {
 
   supports(sport: SupportedSport): boolean {
     return sport === "football" || sport === "basketball" || sport === "tennis";
+  }
+
+  supportsResults(sport: SupportedSport): boolean {
+    return sport === "tennis";
   }
 
   async getEvents(query: EventQuery): Promise<ProviderEvent[]> {
@@ -301,6 +370,73 @@ export class OddsApiProvider implements DataProvider, OddsProvider {
     }
 
     return { events, quota };
+  }
+
+  async getResults(query: ResultQuery): Promise<ProviderResult[]> {
+    if (!this.supportsResults(query.sport)) {
+      throw new Error(
+        "The Odds API result adapter currently supports tennis only.",
+      );
+    }
+
+    if (
+      Number.isNaN(query.from.getTime()) ||
+      Number.isNaN(query.to.getTime()) ||
+      query.from > query.to
+    ) {
+      throw new Error("Invalid result date range.");
+    }
+
+    const requestedKeys = [
+      ...new Set(
+        (query.sourceSportKeys ?? [])
+          .map((key) => key.trim())
+          .filter(Boolean),
+      ),
+    ];
+    if (requestedKeys.length === 0) {
+      throw new Error(
+        "The Odds API score sync requires explicit source sport keys from stored EDGE events.",
+      );
+    }
+
+    const maxKeys = Math.min(
+      12,
+      Math.max(1, query.maxSourceSportKeys ?? 4),
+    );
+    const sportKeys = requestedKeys.slice(0, maxKeys);
+    const ageMs = Math.max(0, Date.now() - query.from.getTime());
+    const daysFrom = Math.min(
+      3,
+      Math.max(1, Math.ceil(ageMs / (24 * 60 * 60 * 1000))),
+    );
+
+    const results: ProviderResult[] = [];
+    for (const sportKey of sportKeys) {
+      const response = await this.request<OddsApiScoreEvent[]>(
+        `sports/${encodeURIComponent(sportKey)}/scores`,
+        {
+          daysFrom: String(daysFrom),
+          dateFormat: "iso",
+        },
+      );
+
+      for (const item of response.data) {
+        const commenceAt = new Date(item.commence_time);
+        if (
+          Number.isNaN(commenceAt.getTime()) ||
+          commenceAt < query.from ||
+          commenceAt > query.to
+        ) {
+          continue;
+        }
+
+        const normalized = normalizeOddsScore(item, query.sport);
+        if (normalized) results.push(normalized);
+      }
+    }
+
+    return results;
   }
 
   private getCatalog(): Promise<OddsApiSport[]> {
