@@ -29,6 +29,7 @@ test("installable-app and safe-failure surfaces exist", async () => {
     access("app/manifest.ts"),
     access("app/loading.tsx"),
     access("app/error.tsx"),
+    access("app/global-error.tsx"),
     access("app/not-found.tsx"),
     access("app/status/page.tsx"),
     access("public/icon.svg"),
