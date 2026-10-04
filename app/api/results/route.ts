@@ -1,11 +1,14 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { getDb } from "@/lib/prisma";
+import { apiFailure, apiJson, getRequestId } from "@/lib/production/api";
 import { parsePageRequest } from "@/lib/production/pagination";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
+  const requestId = getRequestId(request);
+
   try {
     const db = getDb();
     const { limit } = parsePageRequest(request.nextUrl.searchParams);
@@ -30,19 +33,18 @@ export async function GET(request: NextRequest) {
       take: limit,
     });
 
-    return NextResponse.json(
-      { results },
+    return apiJson(
+      requestId,
+      { results, meta: { requestId } },
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error && error.message.includes("DATABASE_URL")
-            ? "Database connection is not configured."
-            : "Results are currently unavailable.",
-      },
-      { status: 503 },
+    return apiFailure(
+      "/api/results",
+      requestId,
+      error,
+      "Results are currently unavailable.",
+      503,
     );
   }
 }

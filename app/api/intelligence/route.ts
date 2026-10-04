@@ -1,28 +1,36 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { getUiIntelligenceForEvent } from "@/lib/data/uiIntelligence";
+import { apiJson, getRequestId } from "@/lib/production/api";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
+  const requestId = getRequestId(request);
   const eventId = request.nextUrl.searchParams.get("eventId")?.trim();
+
   if (!eventId) {
-    return NextResponse.json(
-      { error: "eventId is required." },
+    return apiJson(
+      requestId,
+      { error: "eventId is required.", requestId },
       { status: 400 },
     );
   }
 
   const state = await getUiIntelligenceForEvent(eventId);
   if (!state.available) {
-    return NextResponse.json(
-      { error: state.message ?? "Intelligence unavailable." },
+    return apiJson(
+      requestId,
+      { error: state.message ?? "Intelligence unavailable.", requestId },
       { status: 503 },
     );
   }
 
-  return NextResponse.json({
+  return apiJson(requestId, {
     data: state.signals,
-    meta: { count: state.signals.length },
+    meta: {
+      count: state.signals.length,
+      requestId,
+    },
   });
 }

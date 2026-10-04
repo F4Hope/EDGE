@@ -1,33 +1,42 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { getUiMovementForEvent } from "@/lib/data/uiMovement";
+import { apiJson, getRequestId } from "@/lib/production/api";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
+  const requestId = getRequestId(request);
   const eventId = request.nextUrl.searchParams.get("eventId")?.trim();
+
   if (!eventId) {
-    return NextResponse.json(
-      { error: "eventId is required." },
+    return apiJson(
+      requestId,
+      { error: "eventId is required.", requestId },
       { status: 400 },
     );
   }
 
   const state = await getUiMovementForEvent(eventId);
   if (!state.available) {
-    return NextResponse.json(
-      { error: state.message ?? "Movement diagnostics unavailable." },
+    return apiJson(
+      requestId,
+      {
+        error: state.message ?? "Movement diagnostics unavailable.",
+        requestId,
+      },
       { status: 503 },
     );
   }
 
-  return NextResponse.json({
+  return apiJson(requestId, {
     data: state.markets,
     meta: {
       eventId,
       flaggedMarkets: state.markets.filter(
         (market) => market.summary.flagged,
       ).length,
+      requestId,
     },
   });
 }

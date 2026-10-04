@@ -1,5 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { getDb } from "@/lib/prisma";
+import {
+  ApiRequestError,
+  apiFailure,
+  apiJson,
+  getRequestId,
+} from "@/lib/production/api";
 import { parsePageRequest } from "@/lib/production/pagination";
 import { supportedSports, type SupportedSport } from "@/lib/providers/types";
 
@@ -10,12 +16,14 @@ function parseDate(value: string | null, fallback: Date): Date {
   if (!value) return fallback;
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) {
-    throw new Error(`Invalid date: ${value}`);
+    throw new ApiRequestError("Invalid date parameter.", 400);
   }
   return parsed;
 }
 
 export async function GET(request: NextRequest) {
+  const requestId = getRequestId(request);
+
   try {
     const now = new Date();
     const defaultTo = new Date(now.getTime() + 48 * 60 * 60 * 1000);
@@ -23,14 +31,14 @@ export async function GET(request: NextRequest) {
     const to = parseDate(request.nextUrl.searchParams.get("to"), defaultTo);
 
     if (from > to) {
-      return NextResponse.json({ error: "from must be before to." }, { status: 400 });
+      throw new ApiRequestError("from must be before to.", 400);
     }
 
     const sportParam = request.nextUrl.searchParams.get("sport")?.toLowerCase();
     if (sportParam && !supportedSports.includes(sportParam as SupportedSport)) {
-      return NextResponse.json(
-        { error: `Unsupported sport. Use one of: ${supportedSports.join(", ")}.` },
-        { status: 400 },
+      throw new ApiRequestError(
+        "Unsupported sport. Use one of: " + supportedSports.join(", ") + ".",
+        400,
       );
     }
 
@@ -47,9 +55,7 @@ export async function GET(request: NextRequest) {
       },
       orderBy: [{ startTime: "asc" }, { id: "asc" }],
       take: page.limit,
-      ...(page.cursor
-        ? { cursor: { id: page.cursor }, skip: 1 }
-        : {}),
+      ...(page.cursor ? { cursor: { id: page.cursor }, skip: 1 } : {}),
       include: {
         sport: { select: { key: true, name: true } },
         league: { select: { name: true, country: true } },
@@ -60,7 +66,8 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    return NextResponse.json(
+    return apiJson(
+      requestId,
       {
         data: events.map((event) => ({
           id: event.id,
@@ -82,6 +89,7 @@ export async function GET(request: NextRequest) {
               ? events[events.length - 1]?.id ?? null
               : null,
           source: "edge-database",
+          requestId,
         },
       },
       {
@@ -91,8 +99,12 @@ export async function GET(request: NextRequest) {
       },
     );
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Event query failed.";
-    const status = message.includes("DATABASE_URL") ? 503 : 400;
-    return NextResponse.json({ error: message }, { status });
+    return apiFailure(
+      "/api/events",
+      requestId,
+      error,
+      "Events are currently unavailable.",
+      503,
+    );
   }
 }

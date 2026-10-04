@@ -1,14 +1,17 @@
-import { NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { getDb } from "@/lib/prisma";
 import { calculateModelPerformance } from "@/lib/evaluation/performance";
+import { apiFailure, apiJson, getRequestId } from "@/lib/production/api";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const requestId = getRequestId(request);
+
   try {
     const report = await calculateModelPerformance(getDb());
-    return NextResponse.json({
+    return apiJson(requestId, {
       data: report,
       meta: {
         sufficientData: report.sampleCount > 0,
@@ -16,14 +19,16 @@ export async function GET() {
           report.sampleCount > 0
             ? "Statistical model evaluation from settled records."
             : "INSUFFICIENT DATA",
+        requestId,
       },
     });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Performance query failed.";
-    return NextResponse.json(
-      { error: message },
-      { status: message.includes("DATABASE_URL") ? 503 : 500 },
+    return apiFailure(
+      "/api/model-performance",
+      requestId,
+      error,
+      "Model performance is currently unavailable.",
+      503,
     );
   }
 }

@@ -104,6 +104,9 @@ jobs:
       - name: Test runtime operations
         run: npm run test:operations
 
+      - name: Test API production envelope
+        run: npm run test:api-production
+
       - name: Test mobile routes
         run: npm run test:ui
 

@@ -140,6 +140,12 @@ Useful database command:
 npm run db:studio
 ```
 
+## API request correlation
+
+Public API responses include an `X-Request-ID` header. Callers may supply a bounded alphanumeric/underscore/hyphen `X-Request-ID`; otherwise EDGE generates a UUID. Where a response body already has metadata, the same request ID is included there for easier incident correlation.
+
+Unexpected API failures are logged server-side as structured JSON containing the route, request ID, error class, and non-sensitive error code. Raw exception messages, stack traces, database URLs, and provider secrets are not returned to clients. Explicit validation errors remain safe and descriptive.
+
 ## Runtime probes and build identity
 
 EDGE exposes separate operational probes:
