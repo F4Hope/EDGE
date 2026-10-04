@@ -43,13 +43,17 @@ The repository includes a committed `package-lock.json`; CI uses `npm ci` so dep
 
 ## Codespace recovery
 
-The repository includes a devcontainer that pins Node 22 and installs Docker-in-Docker support. When a Codespace is rebuilt from the current repository configuration, resume EDGE with:
+The repository includes a devcontainer that pins Node 22 and installs Docker-in-Docker support. Dependency installation uses the committed lockfile with `npm ci`.
+
+Every subsequent Codespace start now runs `npm run codespace:auto-start` automatically. It restores the private local PostgreSQL service, reapplies the current development schema safely, seeds reference sports, runs the database smoke test, and validates Prisma. It does **not** call sports providers, refresh live data, or consume The Odds API quota.
+
+If automatic recovery reports a warning, the full manual recovery command remains:
 
 ```bash
 npm run codespace:resume
 ```
 
-The resume command verifies Node 22, restores the private local PostgreSQL service, applies the current development schema, seeds reference sports, runs the database smoke test, and validates Prisma. It does not reset or delete database data.
+The resume command verifies Node 22, installs locked dependencies only when needed, restores the private local PostgreSQL service, applies the current development schema, seeds reference sports, runs the database smoke test, validates Prisma, and runs the readiness doctor. It does not reset/delete database data or trigger provider refreshes.
 
 ## Local development
 

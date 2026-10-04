@@ -27,3 +27,30 @@ test("Codespace resume restores local database without destructive reset", async
   assert.doesNotMatch(source, /migrate reset/);
   assert.doesNotMatch(source, /docker volume rm/);
 });
+
+
+test("Codespace startup automatically restores local database state without provider calls", async () => {
+  const raw = await readFile(".devcontainer/devcontainer.json", "utf8");
+  const config = JSON.parse(raw) as {
+    postCreateCommand?: string;
+    postStartCommand?: string;
+  };
+  const source = await readFile("scripts/codespace-auto-start.ts", "utf8");
+
+  assert.match(config.postCreateCommand ?? "", /npm ci/);
+  assert.equal(config.postStartCommand, "npm run codespace:auto-start");
+  assert.match(source, /db:local/);
+  assert.match(source, /db:validate/);
+  assert.doesNotMatch(source, /data:refresh|odds:sync|results:sync|intelligence:sync/);
+  assert.doesNotMatch(source, /migrate reset|docker volume rm/);
+});
+
+test("manual Codespace resume uses locked dependencies and does not refresh providers", async () => {
+  const source = await readFile("scripts/resume-codespace.ts", "utf8");
+
+  assert.match(source, /"ci"/);
+  assert.match(source, /db:local/);
+  assert.match(source, /db:validate/);
+  assert.match(source, /doctor/);
+  assert.doesNotMatch(source, /data:refresh|odds:sync|results:sync|intelligence:sync/);
+});

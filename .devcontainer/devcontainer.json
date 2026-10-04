@@ -8,13 +8,16 @@
       "dockerDashComposeVersion": "v2"
     }
   },
-  "forwardPorts": [3000],
+  "forwardPorts": [
+    3000
+  ],
   "portsAttributes": {
     "3000": {
       "label": "EDGE",
       "onAutoForward": "notify"
     }
   },
-  "postCreateCommand": "npm install",
-  "remoteUser": "node"
+  "postCreateCommand": "npm ci --no-audit --no-fund",
+  "remoteUser": "node",
+  "postStartCommand": "npm run codespace:auto-start"
 }
