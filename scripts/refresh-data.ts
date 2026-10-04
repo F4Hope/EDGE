@@ -84,6 +84,9 @@ function main() {
   console.log("Recalculating transparent feature snapshots...");
   run("features:calculate", ["--sports=all"]);
 
+  console.log("Generating Phase 7 market-evidence predictions...");
+  run("predictions:generate");
+
   console.log("Running system readiness check...");
   run("doctor");
 
