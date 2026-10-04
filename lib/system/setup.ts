@@ -54,7 +54,7 @@ export function buildSetupPlan(readiness: SystemReadiness): SetupPlan {
         : "The core Football/Basketball provider credential is not configured.",
       action: apiSportsReady
         ? null
-        : "Add API_SPORTS_KEY as a Codespace or production secret. EDGE never displays its value.",
+        : "Add API_SPORTS_KEY as a Codespace or production secret, then run npm run providers:check. EDGE never displays its value.",
     },
     {
       key: "odds-api",
@@ -65,7 +65,7 @@ export function buildSetupPlan(readiness: SystemReadiness): SetupPlan {
         : "Odds/Tennis provider access is not configured.",
       action: oddsApiReady
         ? null
-        : "Add ODDS_API_KEY as a Codespace or production secret when you are ready to enable odds and Tennis coverage.",
+        : "Add ODDS_API_KEY as a Codespace or production secret when you are ready to enable odds and Tennis coverage, then run npm run providers:check.",
     },
     {
       key: "events",

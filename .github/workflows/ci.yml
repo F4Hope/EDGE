@@ -47,6 +47,9 @@ jobs:
       - name: Test provider normalization
         run: npm run test:providers
 
+      - name: Test provider credential health
+        run: npm run test:provider-health
+
       - name: Test odds normalization
         run: npm run test:odds
 

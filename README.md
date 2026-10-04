@@ -218,6 +218,18 @@ If no valid settled sample exists, recent form remains missing and the UI displa
 
 The vector records H2H sample size, participant A/B wins and win rates, draws, and average score units for each side. When no valid H2H sample exists, the matchup-history gap remains explicitly missing.
 
+## Provider credential check
+
+After a provider secret is configured, validate connectivity without printing the credential:
+
+```bash
+npm run providers:check
+```
+
+The API-Sports check uses its documented `/status` endpoint, and The Odds API check uses `/v4/sports`. Both provider docs state those calls do not count against the normal usage quota. The command reports only generic reachability/authorization status, safe remaining-quota headers when available, and active sport count for The Odds API. It never prints the API key or request URL containing it.
+
+Missing credentials produce warnings without making network calls. A configured credential that is rejected or unreachable causes a non-zero exit so setup problems are visible.
+
 ## Safe data refresh
 
 After the local database is ready, refresh configured evidence sources with:
