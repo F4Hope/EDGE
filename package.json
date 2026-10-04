@@ -60,7 +60,6 @@
     "test:operations": "tsx --test tests/operations.test.ts",
     "test:api-production": "tsx --test tests/api-production.test.ts",
     "test:request-guards": "tsx --test tests/request-guards.test.ts",
-    "codespace:auto-start": "tsx scripts/codespace-auto-start.ts",
     "test:setup": "tsx --test tests/setup-center.test.ts",
     "providers:check": "tsx scripts/check-providers.ts",
     "test:provider-health": "tsx --test tests/provider-health.test.ts",

@@ -67,17 +67,18 @@ The repository includes a committed `package-lock.json`; CI uses `npm ci` so dep
 
 ## Codespace recovery
 
-The repository includes a devcontainer that pins Node 22 and installs Docker-in-Docker support. Dependency installation uses the committed lockfile with `npm ci`.
+EDGE intentionally does **not** ship a custom `.devcontainer` configuration. GitHub Codespaces should create the repository with its default environment instead of running EDGE-specific container bootstrap logic during creation.
 
-Every subsequent Codespace start now runs `npm run codespace:auto-start` automatically. It restores the private local PostgreSQL service, reapplies the current development schema safely, seeds reference sports, runs the database smoke test, and validates Prisma. It does **not** call sports providers, refresh live data, or consume The Odds API quota.
-
-If automatic recovery reports a warning, the full manual recovery command remains:
+Once the Codespace terminal is open and Node/npm are available, run:
 
 ```bash
+npm ci --no-audit --no-fund
 npm run codespace:resume
 ```
 
 The resume command verifies Node 22, installs locked dependencies only when needed, restores the private local PostgreSQL service, applies the current development schema, seeds reference sports, runs the database smoke test, validates Prisma, and runs the readiness doctor. It does not reset/delete database data or trigger provider refreshes.
+
+If the default Codespace opens on a different Node major and NVM is available, select Node 22 first with `nvm use 22`. No EDGE script runs automatically during Codespace creation or startup.
 
 ## Local development
 
