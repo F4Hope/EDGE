@@ -8,6 +8,7 @@ test("data refresh keeps quota-sensitive odds synchronization opt-in", async () 
   assert.match(source, /include-odds/);
   assert.match(source, /paid\/quota-sensitive odds calls require explicit/);
   assert.match(source, /results:sync/);
+  assert.match(source, /intelligence:sync/);
   assert.match(source, /features:calculate/);
   assert.doesNotMatch(source, /run\("odds:sync"\);/);
 });

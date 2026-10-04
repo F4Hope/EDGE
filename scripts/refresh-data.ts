@@ -57,8 +57,11 @@ function main() {
   if (apiSports) {
     console.log("Refreshing recent final football/basketball results...");
     run("results:sync", ["--sports=football,basketball"]);
+
+    console.log("Refreshing football injury/suspension intelligence...");
+    run("intelligence:sync");
   } else {
-    console.log("SKIP results: API_SPORTS_KEY is not configured.");
+    console.log("SKIP results/intelligence: API_SPORTS_KEY is not configured.");
   }
 
   if (includeOdds) {

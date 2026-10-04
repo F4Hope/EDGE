@@ -321,6 +321,7 @@ model Prediction {
 model IntelligenceSignal {
   id          String                  @id @default(cuid())
   eventId     String
+  fingerprint String?                 @unique
   type        IntelligenceSignalType
   severity    IntelligenceSeverity
   source      String
@@ -338,6 +339,21 @@ model IntelligenceSignal {
 
   @@index([eventId, occurredAt])
   @@index([eventId, severity, type])
+}
+
+model SyncCheckpoint {
+  id              String    @id @default(cuid())
+  provider        String
+  scope           String
+  lastStartedAt   DateTime?
+  lastCompletedAt DateTime?
+  lastStatus      String?
+  metadata        Json?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([provider, scope])
+  @@index([provider, lastCompletedAt])
 }
 
 model Selection {

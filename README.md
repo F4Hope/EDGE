@@ -120,7 +120,7 @@ After the local database is ready, refresh configured evidence sources with:
 npm run data:refresh
 ```
 
-This command refreshes event metadata from whichever provider keys are configured, refreshes API-Sports final results when available, recalculates transparent features, and runs the readiness doctor.
+This command refreshes event metadata from whichever provider keys are configured, refreshes API-Sports final results and football injury/suspension intelligence when available, recalculates transparent features, and runs the readiness doctor.
 
 Bookmaker odds are deliberately excluded from the default refresh because those calls can consume provider quota. Include them only when explicitly intended:
 
@@ -152,6 +152,24 @@ Stored results are available read-only from:
 GET /api/results
 GET /api/results?eventId=<EDGE_EVENT_ID>
 ```
+
+## Automatic injury and suspension intelligence
+
+When `API_SPORTS_KEY` is configured, EDGE can refresh source-backed Football availability intelligence for upcoming fixtures:
+
+```bash
+npm run intelligence:sync
+```
+
+The sync uses the API-Sports fixture injury feed, normalizes provider records into `INJURY`, `SUSPENSION`, or `LINEUP` signals, and updates the existing event intelligence surface. Provider fixture/player pairs use stable fingerprints, so refreshed reports update instead of duplicating.
+
+A database checkpoint prevents accidental repeated calls inside a four-hour window. Force a refresh only when deliberately needed:
+
+```bash
+npm run intelligence:sync -- --force
+```
+
+Automated signals expire unless refreshed, so stale availability information is not kept indefinitely. Participant-side attribution is set only when the team identity can be matched reliably; otherwise EDGE leaves the side unknown rather than guessing.
 
 ## Sports/event ingestion
 
