@@ -80,6 +80,7 @@ export default async function StatusPage() {
         <p>
           Event ingestion: {readiness.capabilities.eventIngestion ? "ready" : "not configured"} ·
           Odds ingestion: {readiness.capabilities.oddsIngestion ? "ready" : "not configured"} ·
+          Result ingestion: {readiness.capabilities.resultIngestion ? "ready" : "not configured"} ·
           Feature engine: {readiness.capabilities.featureEngine ? "ready" : "waiting"} ·
           Movement diagnostics: {readiness.capabilities.movementDiagnostics ? "ready" : "waiting"}.
         </p>

@@ -36,3 +36,11 @@ test("mobile UI preserves explicit uncertainty language", async () => {
   assert.match(analysis, /AVAILABILITY UNCONFIRMED/);
   assert.match(history, /INSUFFICIENT DATA/);
 });
+
+
+test("history surface exposes source-backed settled results", async () => {
+  const source = await readFile("app/history/page.tsx", "utf8");
+  assert.match(source, /Settled results/);
+  assert.match(source, /SOURCE-BACKED/);
+  assert.match(source, /No settled model sample exists yet/);
+});

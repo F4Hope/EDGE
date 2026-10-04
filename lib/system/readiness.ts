@@ -27,6 +27,7 @@ export type SystemReadiness = {
   capabilities: {
     eventIngestion: boolean;
     oddsIngestion: boolean;
+    resultIngestion: boolean;
     featureEngine: boolean;
     resultAudit: boolean;
     intelligenceSignals: boolean;
@@ -68,7 +69,7 @@ export async function getSystemReadiness(): Promise<SystemReadiness> {
       "API-Sports",
       apiSportsConfigured,
       "API_SPORTS_KEY is configured server-side.",
-      "API_SPORTS_KEY is not configured. Football/basketball event ingestion may fall back to another provider.",
+      "API_SPORTS_KEY is not configured. Football/basketball event ingestion may fall back to another provider, and provider result sync remains disabled.",
     ),
     envCheck(
       "odds-api",
@@ -95,6 +96,7 @@ export async function getSystemReadiness(): Promise<SystemReadiness> {
       capabilities: {
         eventIngestion: apiSportsConfigured || oddsApiConfigured,
         oddsIngestion: oddsApiConfigured,
+        resultIngestion: false,
         featureEngine: false,
         resultAudit: false,
         intelligenceSignals: false,
@@ -179,6 +181,7 @@ export async function getSystemReadiness(): Promise<SystemReadiness> {
       capabilities: {
         eventIngestion: apiSportsConfigured || oddsApiConfigured,
         oddsIngestion: oddsApiConfigured,
+        resultIngestion: apiSportsConfigured,
         featureEngine: true,
         resultAudit: true,
         intelligenceSignals: true,
@@ -205,6 +208,7 @@ export async function getSystemReadiness(): Promise<SystemReadiness> {
       capabilities: {
         eventIngestion: apiSportsConfigured || oddsApiConfigured,
         oddsIngestion: oddsApiConfigured,
+        resultIngestion: false,
         featureEngine: false,
         resultAudit: false,
         intelligenceSignals: false,
