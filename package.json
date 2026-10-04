@@ -44,7 +44,9 @@
     "test:intelligence-provider": "tsx --test tests/intelligence-provider.test.ts",
     "test:freshness": "tsx --test tests/freshness.test.ts",
     "test:event-changes": "tsx --test tests/event-changes.test.ts",
-    "test:sync-checkpoints": "tsx --test tests/sync-checkpoints.test.ts"
+    "test:sync-checkpoints": "tsx --test tests/sync-checkpoints.test.ts",
+    "audit:runtime": "npm audit --omit=dev --omit=optional --audit-level=high",
+    "audit:critical": "npm audit --audit-level=critical"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.0",
