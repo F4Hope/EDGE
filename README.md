@@ -140,6 +140,14 @@ Useful database command:
 npm run db:studio
 ```
 
+## Public API abuse safeguards
+
+Database-backed public GET routes use a lightweight in-process read guard. The guard keeps only a short hashed client key in memory, returns HTTP 429 with `Retry-After` and rate-limit headers after a bounded burst, and caps its in-memory bucket count. Health and version probes are intentionally exempt so deployment monitoring cannot lock itself out.
+
+This is a process-level safety net, not a distributed DDoS control. Production deployments should still place EDGE behind the hosting platform's CDN/WAF/rate-limit controls.
+
+Opaque event/cursor identifiers are bounded to 128 safe characters, and the events API rejects date windows longer than 31 days. Pagination remains capped separately.
+
 ## API request correlation
 
 Public API responses include an `X-Request-ID` header. Callers may supply a bounded alphanumeric/underscore/hyphen `X-Request-ID`; otherwise EDGE generates a UUID. Where a response body already has metadata, the same request ID is included there for easier incident correlation.

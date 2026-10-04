@@ -2,18 +2,31 @@ import { NextRequest } from "next/server";
 import { getDb } from "@/lib/prisma";
 import { apiFailure, apiJson, getRequestId } from "@/lib/production/api";
 import { parsePageRequest } from "@/lib/production/pagination";
+import {
+  enforcePublicReadRateLimit,
+  requireOpaqueId,
+} from "@/lib/production/requestGuards";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
   const requestId = getRequestId(request);
+  const limited = enforcePublicReadRateLimit(
+    request,
+    requestId,
+    "/api/results",
+    { limit: 120 },
+  );
+  if (limited) return limited;
 
   try {
     const db = getDb();
     const { limit } = parsePageRequest(request.nextUrl.searchParams);
-    const eventId =
-      request.nextUrl.searchParams.get("eventId")?.trim() || undefined;
+    const rawEventId = request.nextUrl.searchParams.get("eventId");
+    const eventId = rawEventId
+      ? requireOpaqueId(rawEventId, "eventId")
+      : undefined;
 
     const results = await db.result.findMany({
       where: eventId ? { eventId } : undefined,

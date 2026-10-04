@@ -1,19 +1,41 @@
 import { NextRequest } from "next/server";
 import { getUiMovementForEvent } from "@/lib/data/uiMovement";
-import { apiJson, getRequestId } from "@/lib/production/api";
+import {
+  apiFailure,
+  apiJson,
+  getRequestId,
+} from "@/lib/production/api";
+import {
+  enforcePublicReadRateLimit,
+  requireOpaqueId,
+} from "@/lib/production/requestGuards";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   const requestId = getRequestId(request);
-  const eventId = request.nextUrl.searchParams.get("eventId")?.trim();
+  const limited = enforcePublicReadRateLimit(
+    request,
+    requestId,
+    "/api/movement",
+    { limit: 180 },
+  );
+  if (limited) return limited;
 
-  if (!eventId) {
-    return apiJson(
+  let eventId: string;
+  try {
+    eventId = requireOpaqueId(
+      request.nextUrl.searchParams.get("eventId"),
+      "eventId",
+    );
+  } catch (error) {
+    return apiFailure(
+      "/api/movement",
       requestId,
-      { error: "eventId is required.", requestId },
-      { status: 400 },
+      error,
+      "Request validation failed.",
+      400,
     );
   }
 

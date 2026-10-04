@@ -7,6 +7,10 @@ import {
   getRequestId,
 } from "@/lib/production/api";
 import { parsePageRequest } from "@/lib/production/pagination";
+import {
+  enforcePublicReadRateLimit,
+  requireOpaqueId,
+} from "@/lib/production/requestGuards";
 import { supportedSports, type SupportedSport } from "@/lib/providers/types";
 
 export const runtime = "nodejs";
@@ -23,6 +27,13 @@ function parseDate(value: string | null, fallback: Date): Date {
 
 export async function GET(request: NextRequest) {
   const requestId = getRequestId(request);
+  const limited = enforcePublicReadRateLimit(
+    request,
+    requestId,
+    "/api/events",
+    { limit: 120 },
+  );
+  if (limited) return limited;
 
   try {
     const now = new Date();
@@ -32,6 +43,12 @@ export async function GET(request: NextRequest) {
 
     if (from > to) {
       throw new ApiRequestError("from must be before to.", 400);
+    }
+    if (to.getTime() - from.getTime() > 31 * 24 * 60 * 60 * 1000) {
+      throw new ApiRequestError(
+        "Event date range cannot exceed 31 days.",
+        400,
+      );
     }
 
     const sportParam = request.nextUrl.searchParams.get("sport")?.toLowerCase();
@@ -46,6 +63,7 @@ export async function GET(request: NextRequest) {
       defaultLimit: 100,
       maxLimit: 250,
     });
+    if (page.cursor) requireOpaqueId(page.cursor, "cursor");
 
     const db = getDb();
     const events = await db.event.findMany({

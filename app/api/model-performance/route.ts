@@ -2,12 +2,20 @@ import { NextRequest } from "next/server";
 import { getDb } from "@/lib/prisma";
 import { calculateModelPerformance } from "@/lib/evaluation/performance";
 import { apiFailure, apiJson, getRequestId } from "@/lib/production/api";
+import { enforcePublicReadRateLimit } from "@/lib/production/requestGuards";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   const requestId = getRequestId(request);
+  const limited = enforcePublicReadRateLimit(
+    request,
+    requestId,
+    "/api/model-performance",
+    { limit: 60 },
+  );
+  if (limited) return limited;
 
   try {
     const report = await calculateModelPerformance(getDb());

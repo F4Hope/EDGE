@@ -1,12 +1,21 @@
 import { NextRequest } from "next/server";
 import { getUiHistory } from "@/lib/data/uiHistory";
 import { apiJson, getRequestId } from "@/lib/production/api";
+import { enforcePublicReadRateLimit } from "@/lib/production/requestGuards";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   const requestId = getRequestId(request);
+  const limited = enforcePublicReadRateLimit(
+    request,
+    requestId,
+    "/api/history",
+    { limit: 60 },
+  );
+  if (limited) return limited;
+
   const state = await getUiHistory();
 
   if (!state.available) {
