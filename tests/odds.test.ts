@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { normalizeOddsPayload } from "../lib/providers/oddsApi";
+import { normalizeOddsPayload, OddsApiProvider } from "../lib/providers/oddsApi";
 import {
   makeSelectionKey,
   makeSnapshotFingerprint,
@@ -78,4 +78,112 @@ test("snapshot fingerprint deduplicates the same provider update", () => {
 
   assert.equal(first, duplicate);
   assert.notEqual(first, changedPrice);
+});
+
+
+test("Odds API timestamps omit milliseconds for event discovery", async () => {
+  const originalFetch = globalThis.fetch;
+  const requestedUrls: string[] = [];
+
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const url =
+      typeof input === "string"
+        ? new URL(input)
+        : input instanceof URL
+          ? input
+          : new URL(input.url);
+    requestedUrls.push(url.toString());
+
+    if (url.pathname.endsWith("/sports")) {
+      return new Response(
+        JSON.stringify([
+          {
+            key: "tennis_atp_china_open",
+            group: "Tennis",
+            title: "ATP China Open",
+            active: true,
+          },
+        ]),
+        {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        },
+      );
+    }
+
+    return new Response(JSON.stringify([]), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  }) as typeof fetch;
+
+  try {
+    const provider = new OddsApiProvider("test-key");
+    await provider.getEvents({
+      sport: "tennis",
+      from: new Date("2026-10-04T00:00:00.000Z"),
+      to: new Date("2026-10-04T23:59:59.999Z"),
+      sourceSportKeys: ["tennis_atp_china_open"],
+      maxSourceSportKeys: 1,
+    });
+
+    const eventUrl = requestedUrls
+      .map((value) => new URL(value))
+      .find((url) => url.pathname.includes("/events"));
+
+    assert.ok(eventUrl);
+    assert.equal(
+      eventUrl.searchParams.get("commenceTimeFrom"),
+      "2026-10-04T00:00:00Z",
+    );
+    assert.equal(
+      eventUrl.searchParams.get("commenceTimeTo"),
+      "2026-10-04T23:59:59Z",
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("Odds API timestamps omit milliseconds for odds queries", async () => {
+  const originalFetch = globalThis.fetch;
+  let requestedUrl: URL | null = null;
+
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    requestedUrl =
+      typeof input === "string"
+        ? new URL(input)
+        : input instanceof URL
+          ? input
+          : new URL(input.url);
+
+    return new Response(JSON.stringify([]), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  }) as typeof fetch;
+
+  try {
+    const provider = new OddsApiProvider("test-key");
+    await provider.getOdds({
+      sport: "tennis",
+      sportKeys: ["tennis_atp_china_open"],
+      regions: ["eu"],
+      markets: ["h2h"],
+      from: new Date("2026-10-04T00:00:00.000Z"),
+      to: new Date("2026-10-04T23:59:59.999Z"),
+    });
+
+    assert.ok(requestedUrl);
+    assert.equal(
+      requestedUrl.searchParams.get("commenceTimeFrom"),
+      "2026-10-04T00:00:00Z",
+    );
+    assert.equal(
+      requestedUrl.searchParams.get("commenceTimeTo"),
+      "2026-10-04T23:59:59Z",
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });

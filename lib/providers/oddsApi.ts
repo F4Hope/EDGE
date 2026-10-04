@@ -71,6 +71,10 @@ type OddsApiScoreEvent = OddsApiEvent & {
   last_update?: string | null;
 };
 
+function formatOddsApiTimestamp(date: Date): string {
+  return date.toISOString().replace(/\.\d{3}Z$/, "Z");
+}
+
 function normalizedNameKey(value: string): string {
   return value
     .normalize("NFKD")
@@ -327,8 +331,8 @@ export class OddsApiProvider implements DataProvider, OddsProvider, ResultProvid
         `sports/${encodeURIComponent(sportEntry.key)}/events`,
         {
           dateFormat: "iso",
-          commenceTimeFrom: query.from.toISOString(),
-          commenceTimeTo: query.to.toISOString(),
+          commenceTimeFrom: formatOddsApiTimestamp(query.from),
+          commenceTimeTo: formatOddsApiTimestamp(query.to),
         },
       );
       normalized.push(
@@ -366,8 +370,8 @@ export class OddsApiProvider implements DataProvider, OddsProvider, ResultProvid
           markets: query.markets.join(","),
           oddsFormat: "decimal",
           dateFormat: "iso",
-          commenceTimeFrom: query.from.toISOString(),
-          commenceTimeTo: query.to.toISOString(),
+          commenceTimeFrom: formatOddsApiTimestamp(query.from),
+          commenceTimeTo: formatOddsApiTimestamp(query.to),
         },
       );
 
