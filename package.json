@@ -71,7 +71,8 @@
     "test:predictions": "tsx --test tests/predictions.test.ts",
     "test:worker": "tsx --test tests/worker-deployment.test.ts",
     "test:combos": "tsx --test tests/combos.test.ts",
-    "events:reconcile": "tsx scripts/reconcile-event-providers.ts"
+    "events:reconcile": "tsx scripts/reconcile-event-providers.ts",
+    "odds:sync:api-sports": "tsx scripts/sync-api-sports-odds.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.0",
