@@ -54,3 +54,23 @@ test("manual Codespace resume uses locked dependencies and does not refresh prov
   assert.match(source, /doctor/);
   assert.doesNotMatch(source, /data:refresh|odds:sync|results:sync|intelligence:sync/);
 });
+
+
+test("devcontainer uses the Codespaces-native user and pins Node 22 explicitly", async () => {
+  const raw = await readFile(".devcontainer/devcontainer.json", "utf8");
+  const config = JSON.parse(raw) as {
+    image?: string;
+    remoteUser?: string;
+    features?: Record<string, { version?: string }>;
+  };
+
+  assert.equal(config.image, "mcr.microsoft.com/devcontainers/universal:2");
+  assert.equal(config.remoteUser, "codespace");
+  assert.equal(
+    config.features?.["ghcr.io/devcontainers/features/node:1"]?.version,
+    "22",
+  );
+  assert.ok(
+    config.features?.["ghcr.io/devcontainers/features/docker-in-docker:2"],
+  );
+});
