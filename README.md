@@ -57,20 +57,42 @@ npm run test:providers
 
 ## Database setup
 
-EDGE uses PostgreSQL with Prisma ORM 7.10.0. Keep the real database URL local and never paste it into source code or commit it to Git.
+EDGE uses PostgreSQL with Prisma ORM 7.10.0.
+
+### Codespaces / local development — recommended
+
+No external database account or connection-string setup is required. EDGE can start a private PostgreSQL 16 container bound only to the Codespace loopback interface and configure the ignored `.env.local` automatically:
 
 ```bash
-cp .env.example .env.local
+npm run db:local
 ```
 
-Set `DATABASE_URL` inside `.env.local`, then run:
+That single command:
+
+- starts PostgreSQL at `127.0.0.1:54329`
+- writes the local development `DATABASE_URL` to ignored `.env.local`
+- applies the current Prisma schema with `prisma db push`
+- seeds Football, Basketball, and Tennis
+- runs the database smoke test
+- runs the EDGE system doctor
+
+Stop the local database with:
 
 ```bash
-npm run db:generate
-npm run db:migrate -- --name init
-npm run db:seed
-npm run db:smoke
+npm run db:local:stop
 ```
+
+View PostgreSQL logs with:
+
+```bash
+npm run db:local:logs
+```
+
+The Docker volume keeps local database data across normal container restarts. Do not use this development database configuration as a production database.
+
+### External / production PostgreSQL
+
+For deployment, configure a real server-side `DATABASE_URL` in the hosting environment and use migration history appropriate to that environment. Never paste production credentials into source code or commit them to Git.
 
 Useful database command:
 

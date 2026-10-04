@@ -45,6 +45,9 @@ jobs:
       - name: Test system readiness
         run: npm run test:readiness
 
+      - name: Test local database bootstrap configuration
+        run: npm run test:local-db
+
       - name: Test mobile routes
         run: npm run test:ui
 

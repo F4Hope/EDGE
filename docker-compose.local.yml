@@ -1,0 +1,20 @@
+services:
+  edge-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: edge
+      POSTGRES_PASSWORD: edge_local_dev_only
+      POSTGRES_DB: edge
+    ports:
+      - "127.0.0.1:54329:5432"
+    volumes:
+      - edge_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U edge -d edge"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+volumes:
+  edge_postgres_data:
