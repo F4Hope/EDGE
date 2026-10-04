@@ -6,6 +6,7 @@ import {
   makeSnapshotFingerprint,
 } from "../lib/data/syncOdds";
 import { providerParticipantNamesEquivalent } from "../lib/data/eventIdentity";
+import { normalizeApiSportsMatchWinnerRow } from "../lib/providers/apiSportsOdds";
 
 test("normalizes featured decimal odds and ignores unsupported markets", () => {
   const event = normalizeOddsPayload(
@@ -226,4 +227,80 @@ test("cross-provider identity still rejects materially different clubs", () => {
     providerParticipantNamesEquivalent("Real Madrid", "Atletico Madrid"),
     false,
   );
+});
+
+
+test("normalizes API-Sports Match Winner odds", () => {
+  const normalized = normalizeApiSportsMatchWinnerRow({
+    fixture: {
+      id: 1493152,
+      date: "2026-10-04T22:15:00+00:00",
+    },
+    league: {
+      id: 128,
+      name: "Liga Profesional Argentina",
+      country: "Argentina",
+    },
+    update: "2026-10-04T18:00:25+00:00",
+    bookmakers: [
+      {
+        id: 8,
+        name: "Bet365",
+        bets: [
+          {
+            id: 1,
+            name: "Match Winner",
+            values: [
+              { value: "Home", odd: "1.85" },
+              { value: "Draw", odd: "3.10" },
+              { value: "Away", odd: "5.25" },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+
+  assert.ok(normalized);
+  assert.equal(normalized.providerId, "1493152");
+  assert.equal(normalized.bookmakers.length, 1);
+  assert.equal(normalized.bookmakers[0].key, "api-sports:8");
+  assert.deepEqual(normalized.bookmakers[0].outcomes, [
+    { side: "home", price: 1.85 },
+    { side: "draw", price: 3.1 },
+    { side: "away", price: 5.25 },
+  ]);
+});
+
+test("API-Sports Match Winner normalization ignores invalid prices and bets", () => {
+  const normalized = normalizeApiSportsMatchWinnerRow({
+    fixture: {
+      id: 99,
+      date: "2026-10-05T12:00:00Z",
+    },
+    bookmakers: [
+      {
+        id: 1,
+        name: "Book",
+        bets: [
+          {
+            id: 2,
+            name: "Correct Score",
+            values: [{ value: "1-0", odd: "6.0" }],
+          },
+          {
+            id: 1,
+            name: "Match Winner",
+            values: [
+              { value: "Home", odd: "0.95" },
+              { value: "Away", odd: "2.10" },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+
+  assert.ok(normalized);
+  assert.equal(normalized.bookmakers.length, 0);
 });
