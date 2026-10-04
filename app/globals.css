@@ -1602,3 +1602,123 @@ button {
   font-size: 7px;
   letter-spacing: 0.07em;
 }
+
+
+/* Audit, intelligence, movement and production surfaces */
+
+.intelligence-list,
+.movement-list {
+  margin-top: 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.intelligence-item,
+.movement-item {
+  padding: 17px;
+  border: 1px solid rgba(244, 240, 231, 0.07);
+  border-radius: 18px;
+  background: rgba(21, 23, 27, 0.68);
+}
+
+.intelligence-item > div:first-child,
+.movement-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.signal-severity,
+.signal-type,
+.movement-direction,
+.movement-flag {
+  display: inline-flex;
+  min-height: 25px;
+  padding: 0 8px;
+  align-items: center;
+  border-radius: 999px;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.signal-severity {
+  margin-right: 7px;
+  border: 1px solid rgba(244, 240, 231, 0.07);
+  color: #8f8c84;
+}
+
+.signal-severity.high,
+.signal-severity.critical,
+.movement-flag {
+  border: 1px solid rgba(200, 169, 107, 0.26);
+  color: var(--champagne);
+  background: rgba(200, 169, 107, 0.07);
+}
+
+.signal-type,
+.movement-direction {
+  color: #66645f;
+}
+
+.intelligence-item h3,
+.movement-item h3 {
+  margin: 10px 0 0;
+  color: var(--ivory);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  font-weight: 400;
+}
+
+.intelligence-item p,
+.movement-item p {
+  margin: 9px 0 0;
+  color: #85837d;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.intelligence-item footer {
+  margin-top: 13px;
+  padding-top: 11px;
+  border-top: 1px solid rgba(244, 240, 231, 0.05);
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: #65635e;
+  font-size: 7px;
+}
+
+.movement-metrics {
+  margin-top: 13px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid rgba(244, 240, 231, 0.05);
+  border-bottom: 1px solid rgba(244, 240, 231, 0.05);
+}
+
+.movement-metrics > div {
+  padding: 12px 9px;
+  border-right: 1px solid rgba(244, 240, 231, 0.05);
+}
+
+.movement-metrics > div:last-child {
+  border-right: 0;
+}
+
+.movement-metrics span {
+  display: block;
+  color: #65635e;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.movement-metrics strong {
+  display: block;
+  margin-top: 5px;
+  color: #bbb7ae;
+  font-size: 11px;
+  font-weight: 600;
+}

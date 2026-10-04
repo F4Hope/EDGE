@@ -36,6 +36,12 @@ jobs:
       - name: Test feature engine
         run: npm run test:features
 
+      - name: Test audit and intelligence
+        run: npm run test:audit
+
+      - name: Test production utilities
+        run: npm run test:production
+
       - name: Test mobile routes
         run: npm run test:ui
 

@@ -66,6 +66,24 @@ enum ResultStatus {
   VOID
 }
 
+enum IntelligenceSignalType {
+  INJURY
+  SUSPENSION
+  LINEUP
+  WITHDRAWAL
+  SCHEDULE_CHANGE
+  POSTPONEMENT
+  WEATHER
+  NEWS
+}
+
+enum IntelligenceSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
 model User {
   id          String      @id @default(cuid())
   email       String?     @unique
@@ -172,8 +190,9 @@ model Event {
   sources     EventSource[]
   markets     Market[]
   features    Feature[]
-  predictions Prediction[]
-  result      Result?
+  predictions         Prediction[]
+  intelligenceSignals IntelligenceSignal[]
+  result              Result?
 
   @@unique([provider, externalId])
   @@index([startTime])
@@ -297,6 +316,28 @@ model Prediction {
   @@index([marketId, createdAt])
   @@index([modelRunId])
   @@index([status, edgeScore])
+}
+
+model IntelligenceSignal {
+  id          String                  @id @default(cuid())
+  eventId     String
+  type        IntelligenceSignalType
+  severity    IntelligenceSeverity
+  source      String
+  headline    String
+  summary     String?
+  affectsHome Boolean?
+  affectsAway Boolean?
+  participant String?
+  occurredAt  DateTime
+  expiresAt   DateTime?
+  metadata    Json?
+  createdAt   DateTime                @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId, occurredAt])
+  @@index([eventId, severity, type])
 }
 
 model Selection {

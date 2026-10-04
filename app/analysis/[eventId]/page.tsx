@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
 import { FeatureReadiness } from "@/components/FeatureReadiness";
+import { IntelligencePanel } from "@/components/IntelligencePanel";
+import { MovementPanel } from "@/components/MovementPanel";
 import { MetricPlaceholder } from "@/components/MetricPlaceholder";
 import { MobileShell } from "@/components/MobileShell";
 import { OddsTable } from "@/components/OddsTable";
@@ -8,6 +10,8 @@ import { ScreenHeader } from "@/components/ScreenHeader";
 import { getUiEventById } from "@/lib/data/uiEvents";
 import { getUiOddsForEvent } from "@/lib/data/uiOdds";
 import { getUiFeatureForEvent } from "@/lib/data/uiFeatures";
+import { getUiIntelligenceForEvent } from "@/lib/data/uiIntelligence";
+import { getUiMovementForEvent } from "@/lib/data/uiMovement";
 
 export const dynamic = "force-dynamic";
 
@@ -28,11 +32,14 @@ export default async function AnalysisPage({
   params: Promise<{ eventId: string }>;
 }) {
   const { eventId } = await params;
-  const [state, oddsState, featureState] = await Promise.all([
-    getUiEventById(eventId),
-    getUiOddsForEvent(eventId),
-    getUiFeatureForEvent(eventId),
-  ]);
+  const [state, oddsState, featureState, intelligenceState, movementState] =
+    await Promise.all([
+      getUiEventById(eventId),
+      getUiOddsForEvent(eventId),
+      getUiFeatureForEvent(eventId),
+      getUiIntelligenceForEvent(eventId),
+      getUiMovementForEvent(eventId),
+    ]);
 
   if (!state.event) {
     return (
@@ -164,12 +171,78 @@ export default async function AnalysisPage({
       </section>
 
       <section className="analysis-block">
+        <div className="section-heading compact-heading">
+          <div>
+            <p className="eyebrow">NEWS / AVAILABILITY CONTEXT</p>
+            <h2>Intelligence signals</h2>
+          </div>
+          <span className="count-badge">
+            {intelligenceState.signals.length} ACTIVE
+          </span>
+        </div>
+
+        {intelligenceState.signals.length > 0 ? (
+          <IntelligencePanel signals={intelligenceState.signals} />
+        ) : (
+          <EmptyState
+            status={intelligenceState.available ? "NO SIGNALS" : "DATA OFFLINE"}
+            title={
+              intelligenceState.available
+                ? "No active intelligence signals."
+                : "Intelligence data unavailable."
+            }
+            description={
+              intelligenceState.message ??
+              "Import verified injury, suspension, lineup, withdrawal, weather, or schedule information when available."
+            }
+          />
+        )}
+      </section>
+
+      <section className="analysis-block">
+        <div className="section-heading compact-heading">
+          <div>
+            <p className="eyebrow">MARKET DIAGNOSTICS</p>
+            <h2>Odds movement</h2>
+          </div>
+          <span className="count-badge">
+            {movementState.markets.filter((market) => market.summary.flagged).length} FLAGGED
+          </span>
+        </div>
+
+        {movementState.markets.some(
+          (market) => market.summary.movements.length > 0,
+        ) ? (
+          <MovementPanel markets={movementState.markets} />
+        ) : (
+          <EmptyState
+            status={movementState.available ? "INSUFFICIENT HISTORY" : "DATA OFFLINE"}
+            title={
+              movementState.available
+                ? "More snapshots are required."
+                : "Movement diagnostics unavailable."
+            }
+            description={
+              movementState.message ??
+              "Repeated odds snapshots are required before movement can be described."
+            }
+          />
+        )}
+      </section>
+
+      <section className="analysis-block">
         <p className="eyebrow">CONTEXT</p>
         <div className="analysis-list">
           <div><span>FORM</span><strong>Not calculated</strong></div>
           <div><span>STATISTICS</span><strong>Not calculated</strong></div>
-          <div><span>INJURIES</span><strong>Not connected</strong></div>
-          <div><span>NEWS</span><strong>Not connected</strong></div>
+          <div>
+            <span>INJURIES / NEWS</span>
+            <strong>
+              {intelligenceState.signals.length > 0
+                ? `${intelligenceState.signals.length} active signals`
+                : "No active records"}
+            </strong>
+          </div>
           <div>
             <span>ODDS HISTORY</span>
             <strong>

@@ -2,28 +2,77 @@ import { EmptyState } from "@/components/EmptyState";
 import { MetricPlaceholder } from "@/components/MetricPlaceholder";
 import { MobileShell } from "@/components/MobileShell";
 import { ScreenHeader } from "@/components/ScreenHeader";
+import { getUiHistory } from "@/lib/data/uiHistory";
 
-export default function HistoryPage() {
+export const dynamic = "force-dynamic";
+
+function pct(value: number | null): string {
+  return value === null ? "—" : `${(value * 100).toFixed(1)}%`;
+}
+
+export default async function HistoryPage() {
+  const state = await getUiHistory();
+  const evaluation = state.performance.evaluation;
+
   return (
     <MobileShell>
       <ScreenHeader
         eyebrow="AUDIT TRAIL"
         title="History"
-        description="Predictions and results will remain traceable by model version, market, risk, odds, and settlement."
+        description="Stored model records and settled event outcomes remain traceable. Statistical performance is shown only when real settled data supports it."
       />
 
       <div className="metric-grid">
-        <MetricPlaceholder label="PREDICTIONS" note="Not recorded yet" />
-        <MetricPlaceholder label="SETTLED" note="Insufficient data" />
-        <MetricPlaceholder label="ROI" note="Never fabricated" />
-        <MetricPlaceholder label="CALIBRATION" note="Awaiting history" />
+        <MetricPlaceholder
+          label="PREDICTIONS"
+          value={String(state.predictionCount)}
+          note="Stored analytical records"
+          state={state.predictionCount > 0 ? "ready" : "pending"}
+        />
+        <MetricPlaceholder
+          label="SETTLED EVENTS"
+          value={String(state.settledEvents)}
+          note="Final imported results"
+          state={state.settledEvents > 0 ? "ready" : "pending"}
+        />
+        <MetricPlaceholder
+          label="ACCURACY"
+          value={pct(evaluation.accuracyAtHalf)}
+          note={evaluation.count > 0 ? `${evaluation.count} scored outcomes` : "Insufficient data"}
+          state={evaluation.count > 0 ? "ready" : "pending"}
+        />
+        <MetricPlaceholder
+          label="CALIBRATION ERROR"
+          value={pct(evaluation.calibrationError)}
+          note="Lower is better"
+          state={evaluation.count > 0 ? "ready" : "pending"}
+        />
       </div>
 
-      <EmptyState
-        status="INSUFFICIENT DATA"
-        title="No prediction history exists yet."
-        description="Performance statistics will appear only after real predictions have been stored and settled. EDGE will never invent a win rate or ROI."
-      />
+      {state.performance.sampleCount === 0 ? (
+        <EmptyState
+          status={state.available ? "INSUFFICIENT DATA" : "DATA OFFLINE"}
+          title={
+            state.available
+              ? "No settled model sample exists yet."
+              : "Historical evaluation unavailable."
+          }
+          description={
+            state.message ??
+            "Performance statistics require real stored model records and settled outcomes."
+          }
+        />
+      ) : (
+        <section className="security-note">
+          <span className="empty-status">CALIBRATION</span>
+          <h2>{state.performance.sampleCount} evaluated outcomes</h2>
+          <p>
+            Brier score: {evaluation.brierScore?.toFixed(4) ?? "—"} · Calibration
+            error: {pct(evaluation.calibrationError)}. No performance statistic is
+            displayed without settled source data.
+          </p>
+        </section>
+      )}
     </MobileShell>
   );
 }

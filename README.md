@@ -14,6 +14,8 @@ Phase 5 adds real featured-market odds ingestion through The Odds API. EDGE stor
 
 Phase 6 adds the first transparent Feature Engine. It calculates deterministic model-input snapshots from evidence that EDGE actually has: event identity, schedule/rest context, market coverage, bookmaker breadth, current price consensus/dispersion, and sport-specific availability flags. Missing football, basketball, and tennis inputs are recorded explicitly rather than invented. Each feature snapshot receives a data-quality/completeness score and a stable fingerprint for deduplication. Phase 6 does not generate predictions.
 
+Post-Phase-6 audit infrastructure adds sports result ingestion, statistical calibration/accuracy evaluation for any future settled model records, verified news/injury signal ingestion, descriptive odds-movement diagnostics, model-performance reporting with strict INSUFFICIENT DATA behavior, cursor pagination, health checks, and production security headers. Real-money wager selection/ticket automation is intentionally not implemented.
+
 ## Local development
 
 ```bash
