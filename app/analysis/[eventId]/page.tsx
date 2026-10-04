@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
+import { FeatureReadiness } from "@/components/FeatureReadiness";
 import { MetricPlaceholder } from "@/components/MetricPlaceholder";
 import { MobileShell } from "@/components/MobileShell";
 import { OddsTable } from "@/components/OddsTable";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { getUiEventById } from "@/lib/data/uiEvents";
 import { getUiOddsForEvent } from "@/lib/data/uiOdds";
+import { getUiFeatureForEvent } from "@/lib/data/uiFeatures";
 
 export const dynamic = "force-dynamic";
 
@@ -26,9 +28,10 @@ export default async function AnalysisPage({
   params: Promise<{ eventId: string }>;
 }) {
   const { eventId } = await params;
-  const [state, oddsState] = await Promise.all([
+  const [state, oddsState, featureState] = await Promise.all([
     getUiEventById(eventId),
     getUiOddsForEvent(eventId),
+    getUiFeatureForEvent(eventId),
   ]);
 
   if (!state.event) {
@@ -97,6 +100,40 @@ export default async function AnalysisPage({
             description={
               oddsState.message ??
               "Run the Phase 5 odds sync for this event window."
+            }
+          />
+        )}
+      </section>
+
+      <section className="analysis-block">
+        <div className="section-heading compact-heading">
+          <div>
+            <p className="eyebrow">FEATURE ENGINE</p>
+            <h2>Model input readiness</h2>
+          </div>
+          <span className="count-badge">
+            {featureState.feature
+              ? `${Math.round(featureState.feature.quality.overall * 100)}% QUALITY`
+              : "NOT CALCULATED"}
+          </span>
+        </div>
+
+        {featureState.feature ? (
+          <FeatureReadiness
+            feature={featureState.feature}
+            computedAt={featureState.computedAt}
+          />
+        ) : (
+          <EmptyState
+            status={featureState.available ? "NOT CALCULATED" : "DATA OFFLINE"}
+            title={
+              featureState.available
+                ? "Feature vector not generated yet."
+                : "Feature engine data unavailable."
+            }
+            description={
+              featureState.message ??
+              "Run the Phase 6 feature calculation for this event."
             }
           />
         )}

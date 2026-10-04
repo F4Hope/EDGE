@@ -240,16 +240,17 @@ model OddsSnapshot {
 }
 
 model Feature {
-  id          String   @id @default(cuid())
-  eventId     String
+  id           String   @id @default(cuid())
+  eventId      String
   modelVersion String
-  values      Json
-  dataQuality Decimal? @db.Decimal(6, 5)
-  computedAt  DateTime @default(now())
+  fingerprint  String?  @unique
+  values       Json
+  dataQuality  Decimal? @db.Decimal(6, 5)
+  computedAt   DateTime @default(now())
 
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
-  @@index([eventId, computedAt])
+  @@index([eventId, modelVersion, computedAt])
   @@index([modelVersion, computedAt])
 }
 

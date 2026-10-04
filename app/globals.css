@@ -1493,3 +1493,112 @@ button {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Phase 6 feature readiness */
+
+.feature-readiness-card {
+  margin-top: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(244, 240, 231, 0.075);
+  border-radius: 20px;
+  background:
+    linear-gradient(135deg, rgba(13, 92, 74, 0.07), transparent 45%),
+    rgba(21, 23, 27, 0.72);
+}
+
+.feature-readiness-head {
+  min-height: 76px;
+  padding: 16px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid rgba(244, 240, 231, 0.055);
+}
+
+.feature-readiness-head h3 {
+  margin: 6px 0 0;
+  color: var(--ivory);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 19px;
+  font-weight: 400;
+}
+
+.feature-readiness-head > strong {
+  color: var(--champagne);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 30px;
+  font-weight: 400;
+}
+
+.feature-readiness-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.feature-readiness-grid > div {
+  min-height: 76px;
+  padding: 15px 17px;
+  border-bottom: 1px solid rgba(244, 240, 231, 0.05);
+}
+
+.feature-readiness-grid > div:nth-child(odd) {
+  border-right: 1px solid rgba(244, 240, 231, 0.05);
+}
+
+.feature-readiness-grid span,
+.feature-coverage span {
+  display: block;
+  color: #706f69;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+}
+
+.feature-readiness-grid b {
+  display: block;
+  margin-top: 8px;
+  color: #bdb8ae;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.feature-coverage {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  border-bottom: 1px solid rgba(244, 240, 231, 0.05);
+}
+
+.feature-coverage > div {
+  padding: 14px 17px;
+}
+
+.feature-coverage > div + div {
+  border-left: 1px solid rgba(244, 240, 231, 0.05);
+}
+
+.feature-coverage strong {
+  display: block;
+  margin-top: 7px;
+  color: var(--champagne);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 23px;
+  font-weight: 400;
+}
+
+.feature-missing {
+  margin: 0;
+  padding: 14px 17px 6px;
+  color: #817f79;
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+.feature-timestamp {
+  display: block;
+  padding: 4px 17px 15px;
+  color: #5f5d58;
+  font-size: 7px;
+  letter-spacing: 0.07em;
+}

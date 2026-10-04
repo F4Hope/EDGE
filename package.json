@@ -1,6 +1,6 @@
 {
   "name": "edge-sports-intelligence",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -19,7 +19,9 @@
     "test:providers": "tsx --test tests/providers.test.ts",
     "test:ui": "tsx --test tests/ui-routes.test.ts",
     "odds:sync": "tsx scripts/sync-odds.ts",
-    "test:odds": "tsx --test tests/odds.test.ts"
+    "test:odds": "tsx --test tests/odds.test.ts",
+    "features:calculate": "tsx scripts/calculate-features.ts",
+    "test:features": "tsx --test tests/features.test.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.0",

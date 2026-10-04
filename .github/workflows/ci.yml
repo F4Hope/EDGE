@@ -33,6 +33,9 @@ jobs:
       - name: Test odds normalization
         run: npm run test:odds
 
+      - name: Test feature engine
+        run: npm run test:features
+
       - name: Test mobile routes
         run: npm run test:ui
 

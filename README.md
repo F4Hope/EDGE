@@ -12,6 +12,8 @@ Phase 3 adds the first real sports/event ingestion path. A provider abstraction 
 
 Phase 5 adds real featured-market odds ingestion through The Odds API. EDGE stores bookmaker-specific decimal odds snapshots for head-to-head/moneyline, spreads/handicaps, and totals, records provider update timestamps, deduplicates repeated snapshots, tracks quota headers, and attaches cross-provider event aliases only when participant/time identity is unambiguous. Event analysis now displays real stored bookmaker quotes, and the Events page can filter by league, country, market, and odds range.
 
+Phase 6 adds the first transparent Feature Engine. It calculates deterministic model-input snapshots from evidence that EDGE actually has: event identity, schedule/rest context, market coverage, bookmaker breadth, current price consensus/dispersion, and sport-specific availability flags. Missing football, basketball, and tennis inputs are recorded explicitly rather than invented. Each feature snapshot receives a data-quality/completeness score and a stable fingerprint for deduplication. Phase 6 does not generate predictions.
+
 ## Local development
 
 ```bash
