@@ -147,15 +147,16 @@ test("Odds API timestamps omit milliseconds for event discovery", async () => {
 
 test("Odds API timestamps omit milliseconds for odds queries", async () => {
   const originalFetch = globalThis.fetch;
-  let requestedUrl: URL | null = null;
+  const requestedUrls: string[] = [];
 
   globalThis.fetch = (async (input: string | URL | Request) => {
-    requestedUrl =
+    const url =
       typeof input === "string"
         ? new URL(input)
         : input instanceof URL
           ? input
           : new URL(input.url);
+    requestedUrls.push(url.toString());
 
     return new Response(JSON.stringify([]), {
       status: 200,
@@ -174,13 +175,17 @@ test("Odds API timestamps omit milliseconds for odds queries", async () => {
       to: new Date("2026-10-04T23:59:59.999Z"),
     });
 
-    assert.ok(requestedUrl);
+    const oddsUrl = requestedUrls
+      .map((value) => new URL(value))
+      .find((url) => url.pathname.includes("/odds"));
+
+    assert.ok(oddsUrl);
     assert.equal(
-      requestedUrl.searchParams.get("commenceTimeFrom"),
+      oddsUrl.searchParams.get("commenceTimeFrom"),
       "2026-10-04T00:00:00Z",
     );
     assert.equal(
-      requestedUrl.searchParams.get("commenceTimeTo"),
+      oddsUrl.searchParams.get("commenceTimeTo"),
       "2026-10-04T23:59:59Z",
     );
   } finally {

@@ -279,7 +279,7 @@ export async function getSystemReadiness(): Promise<SystemReadiness> {
         automatedWagering: false,
       },
     };
-  } catch (error) {
+  } catch {
     checks.push({
       key: "database-reachability",
       label: "Database reachability",
