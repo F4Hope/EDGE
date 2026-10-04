@@ -11,7 +11,6 @@ const BASE_URL = "https://v3.football.api-sports.io";
 const PROVIDER = "api-sports";
 const SCOPE = "injuries:football";
 const MIN_REFRESH_MS = 4 * 60 * 60 * 1000;
-const MAX_IDS_PER_REQUEST = 20;
 
 type ApiSportsEnvelope<T> = {
   response?: T[];
@@ -47,14 +46,6 @@ function hasApiErrors(errors: unknown): boolean {
   return Boolean(errors);
 }
 
-function chunks<T>(items: T[], size: number): T[][] {
-  const output: T[][] = [];
-  for (let index = 0; index < items.length; index += size) {
-    output.push(items.slice(index, index + size));
-  }
-  return output;
-}
-
 function normalizedName(value: string | null | undefined): string {
   return (value ?? "")
     .normalize("NFKD")
@@ -63,12 +54,12 @@ function normalizedName(value: string | null | undefined): string {
     .trim();
 }
 
-async function requestInjuries(
+async function requestInjuriesForDate(
   apiKey: string,
-  fixtureIds: string[],
+  date: string,
 ): Promise<ApiSportsInjuryRow[]> {
   const url = new URL("/injuries", BASE_URL);
-  url.searchParams.set("ids", fixtureIds.join("-"));
+  url.searchParams.set("date", date);
   url.searchParams.set("timezone", "UTC");
 
   const response = await fetch(url, {
@@ -105,7 +96,12 @@ async function main() {
     );
   }
 
-  const hours = positiveInt(getArg("hours"), 72, 336, "--hours");
+  const hours = positiveInt(
+    getArg("hours") ?? process.env.API_SPORTS_EVENT_FORWARD_HOURS,
+    24,
+    336,
+    "--hours",
+  );
   const limit = positiveInt(getArg("limit"), 60, 100, "--limit");
   const force = hasFlag("force");
   const db = getDb();
@@ -195,16 +191,21 @@ async function main() {
       fixtureEntries.map((entry) => [entry.fixtureId, entry.event]),
     );
 
+    const queryDates = [
+      ...new Set(
+        fixtureEntries.map((entry) =>
+          entry.event.startTime.toISOString().slice(0, 10),
+        ),
+      ),
+    ].sort();
+
     let apiCalls = 0;
     let providerRows = 0;
     let upserted = 0;
     let skipped = 0;
 
-    for (const batch of chunks(fixtureEntries, MAX_IDS_PER_REQUEST)) {
-      const rows = await requestInjuries(
-        apiKey,
-        batch.map((entry) => entry.fixtureId),
-      );
+    for (const date of queryDates) {
+      const rows = await requestInjuriesForDate(apiKey, date);
       apiCalls += 1;
       providerRows += rows.length;
 
@@ -315,6 +316,7 @@ async function main() {
           providerRows,
           upserted,
           skipped,
+          queryDates,
         },
       },
       create: {
@@ -329,6 +331,7 @@ async function main() {
           providerRows,
           upserted,
           skipped,
+          queryDates,
         },
       },
     });
@@ -339,6 +342,7 @@ async function main() {
       providerRows,
       upserted,
       skipped,
+      queryDates,
       refreshedAt: completedAt.toISOString(),
     });
   } catch (error) {

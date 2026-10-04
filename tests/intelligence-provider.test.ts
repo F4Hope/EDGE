@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import {
   availabilityFingerprint,
   normalizeApiSportsInjury,
@@ -73,4 +74,13 @@ test("rejects incomplete provider rows instead of inventing identity", () => {
   });
 
   assert.equal(signal, null);
+});
+
+test("injury sync uses date queries instead of premium ids batching", async () => {
+  const source = await readFile("scripts/sync-intelligence.ts", "utf8");
+
+  assert.match(source, /requestInjuriesForDate/);
+  assert.match(source, /url\.searchParams\.set\("date", date\)/);
+  assert.match(source, /API_SPORTS_EVENT_FORWARD_HOURS/);
+  assert.doesNotMatch(source, /url\.searchParams\.set\("ids"/);
 });
