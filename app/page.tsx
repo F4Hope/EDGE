@@ -1,14 +1,19 @@
 import Link from "next/link";
 import { EdgeScore } from "@/components/EdgeScore";
 import { MobileShell } from "@/components/MobileShell";
+import { getUiPredictionSummary } from "@/lib/data/uiPredictions";
 
 const sports = [
-  { label: "Football", code: "FT", note: "Awaiting odds + scoring" },
-  { label: "Basketball", code: "BK", note: "Awaiting odds + scoring" },
-  { label: "Tennis", code: "TN", note: "Awaiting odds + scoring" },
+  { label: "Football", code: "FT", note: "Phase 7 baseline enabled" },
+  { label: "Basketball", code: "BK", note: "Phase 7 baseline enabled" },
+  { label: "Tennis", code: "TN", note: "Phase 7 baseline enabled" },
 ];
 
-export default function HomePage() {
+export const dynamic = "force-dynamic";
+
+export default async function HomePage() {
+  const predictionState = await getUiPredictionSummary();
+
   return (
     <MobileShell>
       <section className="hero-section" aria-labelledby="todays-edge-title">
@@ -28,16 +33,15 @@ export default function HomePage() {
 
             <div className="hero-copy">
               <p className="hero-overline">DATA GATE ACTIVE</p>
-              <h1>No scored market opportunity yet.</h1>
+              <h1>{predictionState.count > 0 ? "Baseline forecasts are live." : "Prediction engine is connected."}</h1>
               <p className="hero-description">
-                Event ingestion is ready. EDGE will not manufacture odds, model probability,
-                estimated value, or a recommendation before those engines are connected.
+                Phase 7 now generates transparent market-anchored probabilities. BETTABLE status remains validation-gated until settled forward performance supports it.
               </p>
 
               <div className="metric-strip" aria-label="Current analysis state">
                 <div><span>EVENTS</span><strong>READY</strong></div>
                 <div><span>ODDS</span><strong>PENDING</strong></div>
-                <div><span>MODEL</span><strong>WAITING</strong></div>
+                <div><span>MODEL</span><strong>{predictionState.count > 0 ? `${predictionState.count} FORECASTS` : "READY"}</strong></div>
               </div>
 
               <Link className="primary-link" href="/events">
