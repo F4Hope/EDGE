@@ -1,4 +1,5 @@
 import { getDb } from "@/lib/prisma";
+import { buildEventChangeSignals } from "@/lib/intelligence/eventChanges";
 import type { DataProvider, ProviderEventStatus, SupportedSport } from "@/lib/providers/types";
 
 const statusMap = {
@@ -63,7 +64,24 @@ export async function syncProviderEvents(
       );
     }
 
+    const nextStatus = statusMap[event.status];
+    const observedAt = new Date();
+
     await db.$transaction(async (tx) => {
+      const existingEvent = await tx.event.findUnique({
+        where: {
+          provider_externalId: {
+            provider: provider.name,
+            externalId: event.providerId,
+          },
+        },
+        select: {
+          id: true,
+          startTime: true,
+          status: true,
+        },
+      });
+
       const league = await tx.league.upsert({
         where: {
           sportId_provider_externalId: {
@@ -200,7 +218,7 @@ export async function syncProviderEvents(
           homePlayerId: homePlayer?.id ?? null,
           awayPlayerId: awayPlayer?.id ?? null,
           startTime,
-          status: statusMap[event.status],
+          status: nextStatus,
         },
         create: {
           externalId: event.providerId,
@@ -212,7 +230,7 @@ export async function syncProviderEvents(
           homePlayerId: homePlayer?.id ?? null,
           awayPlayerId: awayPlayer?.id ?? null,
           startTime,
-          status: statusMap[event.status],
+          status: nextStatus,
         },
       });
 
@@ -234,6 +252,71 @@ export async function syncProviderEvents(
           sourceSportKey: event.sourceSportKey ?? null,
         },
       });
+
+      if (existingEvent) {
+        const signalSource = provider.name + ":event-sync";
+
+        if (
+          existingEvent.status === "POSTPONED" &&
+          nextStatus !== "POSTPONED"
+        ) {
+          await tx.intelligenceSignal.updateMany({
+            where: {
+              eventId: savedEvent.id,
+              type: "POSTPONEMENT",
+              source: signalSource,
+              OR: [
+                { expiresAt: null },
+                { expiresAt: { gt: observedAt } },
+              ],
+            },
+            data: { expiresAt: observedAt },
+          });
+        }
+
+        const changeSignals = buildEventChangeSignals(
+          provider.name,
+          event.providerId,
+          {
+            startTime: existingEvent.startTime,
+            status: existingEvent.status,
+          },
+          {
+            startTime,
+            status: nextStatus,
+          },
+          observedAt,
+        );
+
+        for (const signal of changeSignals) {
+          await tx.intelligenceSignal.upsert({
+            where: { fingerprint: signal.fingerprint },
+            update: {
+              eventId: savedEvent.id,
+              type: signal.type,
+              severity: signal.severity,
+              source: signalSource,
+              headline: signal.headline,
+              summary: signal.summary,
+              occurredAt: signal.occurredAt,
+              expiresAt: signal.expiresAt,
+              metadata: signal.metadata,
+            },
+            create: {
+              eventId: savedEvent.id,
+              fingerprint: signal.fingerprint,
+              type: signal.type,
+              severity: signal.severity,
+              source: signalSource,
+              headline: signal.headline,
+              summary: signal.summary,
+              occurredAt: signal.occurredAt,
+              expiresAt: signal.expiresAt,
+              metadata: signal.metadata,
+            },
+          });
+        }
+      }
     });
 
     persisted += 1;

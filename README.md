@@ -155,6 +155,12 @@ GET /api/results
 GET /api/results?eventId=<EDGE_EVENT_ID>
 ```
 
+## Automatic schedule-change intelligence
+
+Normal event synchronization now audits meaningful changes to events that were already stored. A provider start-time move of at least one minute creates a `SCHEDULE_CHANGE` signal; a transition into `POSTPONED` creates a high-severity `POSTPONEMENT` signal.
+
+Signals are created only when an existing event changes, never on first import. They are fingerprinted for deduplication, written in the same database transaction as the event update, and expired when no longer relevant. When a previously postponed event is restored, the active automated postponement signal is closed rather than left stale.
+
 ## Automatic injury and suspension intelligence
 
 When `API_SPORTS_KEY` is configured, EDGE can refresh source-backed Football availability intelligence for upcoming fixtures:

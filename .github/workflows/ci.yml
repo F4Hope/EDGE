@@ -60,6 +60,9 @@ jobs:
       - name: Test provider injury intelligence normalization
         run: npm run test:intelligence-provider
 
+      - name: Test event-change intelligence
+        run: npm run test:event-changes
+
       - name: Test safe data refresh orchestration
         run: npm run test:data-refresh
 
