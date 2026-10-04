@@ -48,6 +48,9 @@ jobs:
       - name: Test local database bootstrap configuration
         run: npm run test:local-db
 
+      - name: Test Codespace recovery configuration
+        run: npm run test:codespace
+
       - name: Test mobile routes
         run: npm run test:ui
 

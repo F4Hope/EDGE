@@ -37,6 +37,16 @@ EDGE also includes installable mobile-app metadata, safe loading/error/not-found
 
 The repository intentionally does not fabricate a `package-lock.json`. Generate it from a successful `npm install` in your Codespace, then commit it to lock transitive dependencies reproducibly.
 
+## Codespace recovery
+
+The repository includes a devcontainer that pins Node 22 and installs Docker-in-Docker support. When a Codespace is rebuilt from the current repository configuration, resume EDGE with:
+
+```bash
+npm run codespace:resume
+```
+
+The resume command verifies Node 22, restores the private local PostgreSQL service, applies the current development schema, seeds reference sports, runs the database smoke test, and validates Prisma. It does not reset or delete database data.
+
 ## Local development
 
 ```bash
