@@ -156,6 +156,12 @@ Useful database command:
 npm run db:studio
 ```
 
+## Browser security policy
+
+Production responses include a Content Security Policy that restricts scripts, connections, forms, frames, objects, fonts, media, workers, and manifests. Browser network connections are limited to same-origin application endpoints; sports-provider credentials and provider API calls remain server-side.
+
+EDGE also sends HSTS, `X-Content-Type-Options`, `X-Frame-Options`, `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy`, Referrer Policy, and Permissions Policy headers. CI boots the production container and verifies the critical runtime headers on the live service.
+
 ## Public API abuse safeguards
 
 Database-backed public GET routes use a lightweight in-process read guard. The guard keeps only a short hashed client key in memory, returns HTTP 429 with `Retry-After` and rate-limit headers after a bounded burst, and caps its in-memory bucket count. Health and version probes are intentionally exempt so deployment monitoring cannot lock itself out.

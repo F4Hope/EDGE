@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { parsePageRequest } from "../lib/production/pagination";
@@ -19,4 +20,20 @@ test("pagination uses safe defaults for invalid input", () => {
 
   assert.equal(page.limit, 50);
   assert.equal(page.cursor, null);
+});
+
+
+test("production security policy includes CSP, HSTS, and cross-origin isolation", async () => {
+  const source = await readFile("next.config.ts", "utf8");
+
+  assert.match(source, /Content-Security-Policy/);
+  assert.match(source, /default-src 'self'/);
+  assert.match(source, /connect-src 'self'/);
+  assert.match(source, /frame-ancestors 'none'/);
+  assert.match(source, /object-src 'none'/);
+  assert.match(source, /Strict-Transport-Security/);
+  assert.match(source, /Cross-Origin-Opener-Policy/);
+  assert.match(source, /Cross-Origin-Resource-Policy/);
+  assert.doesNotMatch(source, /connect-src[^\n]*api-sports/);
+  assert.doesNotMatch(source, /connect-src[^\n]*the-odds-api/);
 });
