@@ -4,6 +4,14 @@ import {
   type SupportedSport,
 } from "@/lib/providers/types";
 
+export type UiEventOddsQuote = {
+  selectionKey: string;
+  selectionName: string;
+  decimalOdds: number;
+  bookmakerName: string | null;
+  capturedAt: string;
+};
+
 export type UiEvent = {
   id: string;
   provider: string;
@@ -14,6 +22,7 @@ export type UiEvent = {
   status: string;
   home: string | null;
   away: string | null;
+  h2hOdds: UiEventOddsQuote[];
 };
 
 export type UiEventCollection = {
@@ -33,12 +42,105 @@ type EventWithRelations = {
   awayTeam: { name: string } | null;
   homePlayer: { fullName: string } | null;
   awayPlayer: { fullName: string } | null;
+  markets: Array<{
+    oddsSnapshots: Array<{
+      bookmakerKey: string | null;
+      bookmakerName: string | null;
+      selectionKey: string;
+      selectionName: string;
+      decimalOdds: unknown;
+      capturedAt: Date;
+    }>;
+  }>;
 };
+
+function normalizeLabel(value: string | null | undefined): string {
+  return (value ?? "")
+    .normalize("NFKD")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function bestH2hOdds(
+  event: EventWithRelations,
+  home: string | null,
+  away: string | null,
+): UiEventOddsQuote[] {
+  const market = event.markets[0];
+  if (!market) return [];
+
+  const latestPerBookmakerSelection = new Map<
+    string,
+    (typeof market.oddsSnapshots)[number]
+  >();
+
+  for (const snapshot of market.oddsSnapshots) {
+    if (snapshot.capturedAt >= event.startTime) continue;
+
+    const identity = [
+      snapshot.bookmakerKey ?? "unknown-bookmaker",
+      snapshot.selectionKey,
+    ].join("|");
+
+    if (!latestPerBookmakerSelection.has(identity)) {
+      latestPerBookmakerSelection.set(identity, snapshot);
+    }
+  }
+
+  const bestPerSelection = new Map<
+    string,
+    (typeof market.oddsSnapshots)[number]
+  >();
+
+  for (const snapshot of latestPerBookmakerSelection.values()) {
+    const current = bestPerSelection.get(snapshot.selectionKey);
+    if (
+      !current ||
+      Number(snapshot.decimalOdds) > Number(current.decimalOdds)
+    ) {
+      bestPerSelection.set(snapshot.selectionKey, snapshot);
+    }
+  }
+
+  const homeLabel = normalizeLabel(home);
+  const awayLabel = normalizeLabel(away);
+
+  function rank(selectionName: string): number {
+    const normalized = normalizeLabel(selectionName);
+    if (homeLabel && normalized === homeLabel) return 0;
+    if (normalized === "draw" || normalized === "tie") return 1;
+    if (awayLabel && normalized === awayLabel) return 2;
+    return 3;
+  }
+
+  return [...bestPerSelection.values()]
+    .map((snapshot) => ({
+      selectionKey: snapshot.selectionKey,
+      selectionName: snapshot.selectionName,
+      decimalOdds: Number(snapshot.decimalOdds),
+      bookmakerName: snapshot.bookmakerName,
+      capturedAt: snapshot.capturedAt.toISOString(),
+    }))
+    .filter(
+      (quote) =>
+        Number.isFinite(quote.decimalOdds) && quote.decimalOdds > 1,
+    )
+    .sort(
+      (a, b) =>
+        rank(a.selectionName) - rank(b.selectionName) ||
+        a.selectionName.localeCompare(b.selectionName),
+    )
+    .slice(0, 3);
+}
 
 function toUiEvent(event: EventWithRelations): UiEvent | null {
   if (!supportedSports.includes(event.sport.key as SupportedSport)) {
     return null;
   }
+
+  const home = event.homeTeam?.name ?? event.homePlayer?.fullName ?? null;
+  const away = event.awayTeam?.name ?? event.awayPlayer?.fullName ?? null;
 
   return {
     id: event.id,
@@ -48,8 +150,9 @@ function toUiEvent(event: EventWithRelations): UiEvent | null {
     country: event.league.country,
     startsAt: event.startTime.toISOString(),
     status: event.status,
-    home: event.homeTeam?.name ?? event.homePlayer?.fullName ?? null,
-    away: event.awayTeam?.name ?? event.awayPlayer?.fullName ?? null,
+    home,
+    away,
+    h2hOdds: bestH2hOdds(event, home, away),
   };
 }
 
@@ -60,6 +163,25 @@ const relationInclude = {
   awayTeam: { select: { name: true } },
   homePlayer: { select: { fullName: true } },
   awayPlayer: { select: { fullName: true } },
+  markets: {
+    where: { key: "h2h" as const, status: "OPEN" as const },
+    orderBy: { updatedAt: "desc" as const },
+    take: 1,
+    include: {
+      oddsSnapshots: {
+        orderBy: { capturedAt: "desc" as const },
+        take: 300,
+        select: {
+          bookmakerKey: true,
+          bookmakerName: true,
+          selectionKey: true,
+          selectionName: true,
+          decimalOdds: true,
+          capturedAt: true,
+        },
+      },
+    },
+  },
 } as const;
 
 export async function getUiEvents(options?: {
