@@ -2,12 +2,17 @@ import { getDb } from "@/lib/prisma";
 import {
   FEATURE_SCHEMA_VERSION,
   type FeatureVector,
+  type ParticipantFormFeatures,
   type ParticipantScheduleFeatures,
 } from "./types";
 import { buildMarketFeatures } from "./market";
 import { buildSportSpecificFeatures } from "./sports";
 import { calculateFeatureQuality } from "./quality";
 import { featureFingerprint } from "./fingerprint";
+import {
+  emptyParticipantForm,
+  summarizeParticipantForm,
+} from "./form";
 import {
   supportedSports,
   type SupportedSport,
@@ -23,7 +28,12 @@ function round(value: number, digits = 4): number {
   return Number(value.toFixed(digits));
 }
 
-async function participantSchedule(
+type ParticipantEvidence = {
+  schedule: ParticipantScheduleFeatures;
+  form: ParticipantFormFeatures;
+};
+
+async function participantEvidence(
   db: EdgeDb,
   input: {
     eventId: string;
@@ -31,13 +41,16 @@ async function participantSchedule(
     teamId?: string | null;
     playerId?: string | null;
   },
-): Promise<ParticipantScheduleFeatures> {
+): Promise<ParticipantEvidence> {
   if (!input.teamId && !input.playerId) {
     return {
-      priorEvents60d: 0,
-      eventsLast7d: 0,
-      restDays: null,
-      backToBack: null,
+      schedule: {
+        priorEvents60d: 0,
+        eventsLast7d: 0,
+        restDays: null,
+        backToBack: null,
+      },
+      form: emptyParticipantForm(),
     };
   }
 
@@ -67,7 +80,19 @@ async function participantSchedule(
     },
     orderBy: { startTime: "desc" },
     take: 60,
-    select: { startTime: true },
+    select: {
+      startTime: true,
+      homeTeamId: true,
+      awayTeamId: true,
+      homePlayerId: true,
+      awayPlayerId: true,
+      result: {
+        select: {
+          status: true,
+          payload: true,
+        },
+      },
+    },
   });
 
   const lastEvent = prior[0]?.startTime ?? null;
@@ -79,11 +104,30 @@ async function participantSchedule(
     (event) => event.startTime.getTime() >= shortWindowStart,
   ).length;
 
+  const participantId = input.teamId ?? input.playerId ?? null;
+  const form = summarizeParticipantForm(
+    prior.map((event) => ({
+      homeParticipantId: input.teamId
+        ? event.homeTeamId
+        : event.homePlayerId,
+      awayParticipantId: input.teamId
+        ? event.awayTeamId
+        : event.awayPlayerId,
+      resultStatus: event.result?.status ?? null,
+      payload: event.result?.payload ?? null,
+    })),
+    participantId,
+    10,
+  );
+
   return {
-    priorEvents60d: prior.length,
-    eventsLast7d,
-    restDays,
-    backToBack: restDays === null ? null : restDays < 2,
+    schedule: {
+      priorEvents60d: prior.length,
+      eventsLast7d,
+      restDays,
+      backToBack: restDays === null ? null : restDays < 2,
+    },
+    form,
   };
 }
 
@@ -144,14 +188,14 @@ export async function calculateEventFeatures(
   const awayParticipant =
     event.awayTeam?.name ?? event.awayPlayer?.fullName ?? null;
 
-  const [homeSchedule, awaySchedule] = await Promise.all([
-    participantSchedule(db, {
+  const [homeEvidence, awayEvidence] = await Promise.all([
+    participantEvidence(db, {
       eventId: event.id,
       eventStart: event.startTime,
       teamId: event.homeTeam?.id,
       playerId: event.homePlayer?.id,
     }),
-    participantSchedule(db, {
+    participantEvidence(db, {
       eventId: event.id,
       eventStart: event.startTime,
       teamId: event.awayTeam?.id,
@@ -159,10 +203,14 @@ export async function calculateEventFeatures(
     }),
   ]);
 
+  const homeSchedule = homeEvidence.schedule;
+  const awaySchedule = awayEvidence.schedule;
   const market = buildMarketFeatures(event.markets, event.startTime);
   const sportSpecific = buildSportSpecificFeatures(sport, {
     home: homeSchedule,
     away: awaySchedule,
+    homeForm: homeEvidence.form,
+    awayForm: awayEvidence.form,
     participantKind,
   });
 
@@ -200,6 +248,10 @@ export async function calculateEventFeatures(
       eventHourUtc: event.startTime.getUTCHours(),
       home: homeSchedule,
       away: awaySchedule,
+    },
+    form: {
+      home: homeEvidence.form,
+      away: awayEvidence.form,
     },
     market,
     sportSpecific,

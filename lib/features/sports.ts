@@ -1,4 +1,5 @@
 import type {
+  ParticipantFormFeatures,
   ParticipantScheduleFeatures,
   SportSpecificFeatureSet,
 } from "./types";
@@ -7,6 +8,8 @@ import type { SupportedSport } from "@/lib/providers/types";
 type SportFeatureInput = {
   home: ParticipantScheduleFeatures;
   away: ParticipantScheduleFeatures;
+  homeForm: ParticipantFormFeatures;
+  awayForm: ParticipantFormFeatures;
   participantKind: "team" | "player";
 };
 
@@ -18,6 +21,38 @@ function addIfAvailable(
 ): void {
   values[key] = value;
   if (value !== null) available.push(key);
+}
+
+function addRecentForm(
+  values: Record<string, string | number | boolean | null>,
+  available: string[],
+  prefix: string,
+  form: ParticipantFormFeatures,
+): boolean {
+  if (form.sampleSize === 0) return false;
+
+  addIfAvailable(values, available, prefix + "RecentMatches", form.sampleSize);
+  addIfAvailable(values, available, prefix + "RecentWins", form.wins);
+  addIfAvailable(values, available, prefix + "RecentDraws", form.draws);
+  addIfAvailable(values, available, prefix + "RecentLosses", form.losses);
+  addIfAvailable(values, available, prefix + "RecentWinRate", form.winRate);
+  addIfAvailable(values, available, prefix + "RecentAverageFor", form.averageFor);
+  addIfAvailable(
+    values,
+    available,
+    prefix + "RecentAverageAgainst",
+    form.averageAgainst,
+  );
+
+  return true;
+}
+
+function without(
+  items: string[],
+  removals: string[],
+): string[] {
+  const removalSet = new Set(removals);
+  return items.filter((item) => !removalSet.has(item));
 }
 
 function footballFeatures(input: SportFeatureInput): SportSpecificFeatureSet {
@@ -35,7 +70,20 @@ function footballFeatures(input: SportFeatureInput): SportSpecificFeatureSet {
   addIfAvailable(values, available, "homeEventsLast7d", input.home.eventsLast7d);
   addIfAvailable(values, available, "awayEventsLast7d", input.away.eventsLast7d);
 
-  const missing = [
+  const homeFormAvailable = addRecentForm(
+    values,
+    available,
+    "home",
+    input.homeForm,
+  );
+  const awayFormAvailable = addRecentForm(
+    values,
+    available,
+    "away",
+    input.awayForm,
+  );
+
+  const baseMissing = [
     "recentForm",
     "goalsScored",
     "goalsConceded",
@@ -51,6 +99,11 @@ function footballFeatures(input: SportFeatureInput): SportSpecificFeatureSet {
     "tacticalMatchup",
     "oddsMovement",
   ];
+
+  const missing =
+    homeFormAvailable && awayFormAvailable
+      ? without(baseMissing, ["recentForm", "goalsScored", "goalsConceded"])
+      : baseMissing;
 
   return { values, available, missing };
 }
@@ -72,7 +125,20 @@ function basketballFeatures(input: SportFeatureInput): SportSpecificFeatureSet {
   addIfAvailable(values, available, "homeEventsLast7d", input.home.eventsLast7d);
   addIfAvailable(values, available, "awayEventsLast7d", input.away.eventsLast7d);
 
-  const missing = [
+  const homeFormAvailable = addRecentForm(
+    values,
+    available,
+    "home",
+    input.homeForm,
+  );
+  const awayFormAvailable = addRecentForm(
+    values,
+    available,
+    "away",
+    input.awayForm,
+  );
+
+  const baseMissing = [
     "offensiveRating",
     "defensiveRating",
     "pace",
@@ -82,6 +148,11 @@ function basketballFeatures(input: SportFeatureInput): SportSpecificFeatureSet {
     "matchup",
     "oddsMovement",
   ];
+
+  const missing =
+    homeFormAvailable && awayFormAvailable
+      ? without(baseMissing, ["recentForm"])
+      : baseMissing;
 
   return { values, available, missing };
 }
@@ -97,7 +168,20 @@ function tennisFeatures(input: SportFeatureInput): SportSpecificFeatureSet {
   addIfAvailable(values, available, "playerABackToBack", input.home.backToBack);
   addIfAvailable(values, available, "playerBBackToBack", input.away.backToBack);
 
-  const missing = [
+  const playerAFormAvailable = addRecentForm(
+    values,
+    available,
+    "playerA",
+    input.homeForm,
+  );
+  const playerBFormAvailable = addRecentForm(
+    values,
+    available,
+    "playerB",
+    input.awayForm,
+  );
+
+  const baseMissing = [
     "ranking",
     "recentForm",
     "playingSurface",
@@ -109,6 +193,11 @@ function tennisFeatures(input: SportFeatureInput): SportSpecificFeatureSet {
     "fitness",
     "oddsMovement",
   ];
+
+  const missing =
+    playerAFormAvailable && playerBFormAvailable
+      ? without(baseMissing, ["recentForm"])
+      : baseMissing;
 
   return { values, available, missing };
 }

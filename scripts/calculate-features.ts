@@ -1,6 +1,7 @@
 import dotenv from "dotenv";
 import { getDb } from "../lib/prisma";
 import { calculateEventFeatures } from "../lib/features/engine";
+import { FEATURE_SCHEMA_VERSION } from "../lib/features/types";
 import {
   supportedSports,
   type SupportedSport,
@@ -112,7 +113,7 @@ async function main() {
       averageDataQuality: Number(
         (qualityTotal / events.length).toFixed(5),
       ),
-      schemaVersion: "features-v1",
+      schemaVersion: FEATURE_SCHEMA_VERSION,
     });
   } finally {
     await db.$disconnect();

@@ -135,20 +135,35 @@ test("sport-specific feature sets expose missing evidence explicitly", () => {
     restDays: 4,
     backToBack: false,
   };
+  const emptyForm = {
+    sampleSize: 0,
+    wins: 0,
+    draws: 0,
+    losses: 0,
+    winRate: null,
+    averageFor: null,
+    averageAgainst: null,
+  };
 
   const football = buildSportSpecificFeatures("football", {
     home: schedule,
     away: schedule,
+    homeForm: emptyForm,
+    awayForm: emptyForm,
     participantKind: "team",
   });
   const basketball = buildSportSpecificFeatures("basketball", {
     home: schedule,
     away: schedule,
+    homeForm: emptyForm,
+    awayForm: emptyForm,
     participantKind: "team",
   });
   const tennis = buildSportSpecificFeatures("tennis", {
     home: schedule,
     away: schedule,
+    homeForm: emptyForm,
+    awayForm: emptyForm,
     participantKind: "player",
   });
 
@@ -178,4 +193,77 @@ test("feature fingerprints are stable for equivalent object key ordering", () =>
 
   assert.equal(first, second);
   assert.notEqual(first, changed);
+});
+
+
+test("settled recent form resolves generic form gaps without hiding unsupported metrics", () => {
+  const schedule = {
+    priorEvents60d: 6,
+    eventsLast7d: 2,
+    restDays: 3,
+    backToBack: false,
+  };
+  const form = {
+    sampleSize: 5,
+    wins: 3,
+    draws: 1,
+    losses: 1,
+    winRate: 0.6,
+    averageFor: 1.8,
+    averageAgainst: 1,
+  };
+
+  const football = buildSportSpecificFeatures("football", {
+    home: schedule,
+    away: schedule,
+    homeForm: form,
+    awayForm: form,
+    participantKind: "team",
+  });
+
+  assert.equal(football.values.homeRecentMatches, 5);
+  assert.equal(football.values.awayRecentWinRate, 0.6);
+  assert.ok(football.available.includes("homeRecentAverageFor"));
+  assert.ok(!football.missing.includes("recentForm"));
+  assert.ok(!football.missing.includes("goalsScored"));
+  assert.ok(football.missing.includes("expectedGoals"));
+  assert.ok(football.missing.includes("headToHead"));
+});
+
+test("one-sided form remains explicitly incomplete", () => {
+  const schedule = {
+    priorEvents60d: 4,
+    eventsLast7d: 1,
+    restDays: 5,
+    backToBack: false,
+  };
+  const form = {
+    sampleSize: 2,
+    wins: 2,
+    draws: 0,
+    losses: 0,
+    winRate: 1,
+    averageFor: 2,
+    averageAgainst: 0.5,
+  };
+  const emptyForm = {
+    sampleSize: 0,
+    wins: 0,
+    draws: 0,
+    losses: 0,
+    winRate: null,
+    averageFor: null,
+    averageAgainst: null,
+  };
+
+  const tennis = buildSportSpecificFeatures("tennis", {
+    home: schedule,
+    away: schedule,
+    homeForm: form,
+    awayForm: emptyForm,
+    participantKind: "player",
+  });
+
+  assert.ok(tennis.available.includes("playerARecentWinRate"));
+  assert.ok(tennis.missing.includes("recentForm"));
 });

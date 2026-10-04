@@ -53,6 +53,9 @@ jobs:
       - name: Test feature engine
         run: npm run test:features
 
+      - name: Test settled recent-form features
+        run: npm run test:form
+
       - name: Test audit and intelligence
         run: npm run test:audit
 

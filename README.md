@@ -14,7 +14,7 @@ Phase 4 expands the premium mobile-first interface into the full application she
 
 Phase 5 adds real featured-market odds ingestion through The Odds API. EDGE stores bookmaker-specific decimal odds snapshots for head-to-head/moneyline, spreads/handicaps, and totals, records provider update timestamps, deduplicates repeated snapshots, tracks quota headers, and attaches cross-provider event aliases only when participant/time identity is unambiguous. Event analysis now displays real stored bookmaker quotes, and the Events page can filter by league, country, market, and odds range.
 
-Phase 6 adds the first transparent Feature Engine. It calculates deterministic model-input snapshots from evidence that EDGE actually has: event identity, schedule/rest context, market coverage, bookmaker breadth, current price consensus/dispersion, and sport-specific availability flags. Missing football, basketball, and tennis inputs are recorded explicitly rather than invented. Each feature snapshot receives a data-quality/completeness score and a stable fingerprint for deduplication. Phase 6 does not generate predictions.
+Phase 6 adds the transparent Feature Engine. The current `features-v2` vector calculates deterministic model-input snapshots from evidence that EDGE actually has: event identity, schedule/rest context, settled recent form, market coverage, bookmaker breadth, current price consensus/dispersion, and sport-specific availability flags. Recent form is derived only from valid FINAL score records within the existing 60-day evidence window, using at most the ten most recent settled samples per participant. Missing football, basketball, and tennis inputs are recorded explicitly rather than invented. Each feature snapshot receives a data-quality/completeness score and a stable fingerprint for deduplication. The Feature Engine does not generate predictions.
 
 Post-Phase-6 audit infrastructure adds sports result ingestion, statistical calibration/accuracy evaluation for any future settled model records, verified news/injury signal ingestion, descriptive odds-movement diagnostics, model-performance reporting with strict INSUFFICIENT DATA behavior, cursor pagination, health checks, and production security headers. Real-money wager selection/ticket automation is intentionally not implemented.
 
@@ -162,6 +162,12 @@ docker run --rm -p 3000:3000 \
 The image does not contain `.env` files. CI builds the production image after the application and migration jobs pass.
 
 The seed only creates the three initial reference sports: Football, Basketball, and Tennis. It does not create fabricated events, odds, predictions, results, or performance statistics.
+
+### Settled recent-form evidence
+
+`features-v2` adds source-backed recent form from EDGE's own settled history. For each participant it records sample size, wins/draws/losses, win rate, and average score for/against when valid FINAL result data exists. Football values represent goals, Basketball values represent points, and Tennis values represent the provider's completed match score units.
+
+If no valid settled sample exists, recent form remains missing and the UI displays `NO SAMPLE`; EDGE does not substitute zeros or infer outcomes from odds.
 
 ## Safe data refresh
 

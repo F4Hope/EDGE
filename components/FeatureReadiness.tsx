@@ -8,6 +8,11 @@ function restLabel(value: number | null): string {
   return value === null ? "UNKNOWN" : `${value.toFixed(1)} DAYS`;
 }
 
+function formLabel(sampleSize: number, winRate: number | null): string {
+  if (sampleSize === 0 || winRate === null) return "NO SAMPLE";
+  return `${sampleSize} · ${Math.round(winRate * 100)}% W`;
+}
+
 export function FeatureReadiness({
   feature,
   computedAt,
@@ -41,6 +46,14 @@ export function FeatureReadiness({
         <div>
           <span>BOOKMAKERS</span>
           <b>{feature.market.bookmakerCount}</b>
+        </div>
+        <div>
+          <span>HOME / A FORM</span>
+          <b>{formLabel(feature.form.home.sampleSize, feature.form.home.winRate)}</b>
+        </div>
+        <div>
+          <span>AWAY / B FORM</span>
+          <b>{formLabel(feature.form.away.sampleSize, feature.form.away.winRate)}</b>
         </div>
       </div>
 
