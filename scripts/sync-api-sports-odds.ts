@@ -16,22 +16,15 @@ function getArg(name: string): string | undefined {
   return process.argv.find((arg) => arg.startsWith(prefix))?.slice(prefix.length);
 }
 
-function parseDate(value: string | undefined): string {
-  const date = value ?? new Date().toISOString().slice(0, 10);
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    throw new Error("--date must use YYYY-MM-DD.");
-  }
-  return date;
-}
-
-function parseMaxPages(value: string | undefined): number {
-  const parsed = Number(
-    value ?? process.env.API_SPORTS_ODDS_MAX_PAGES ?? "45",
-  );
-  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 50) {
-    throw new Error(
-      "API_SPORTS_ODDS_MAX_PAGES must be an integer from 1 to 50.",
-    );
+function positiveInt(
+  value: string | undefined,
+  fallback: number,
+  max: number,
+  label: string,
+): number {
+  const parsed = Number(value ?? fallback);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > max) {
+    throw new Error(`${label} must be an integer from 1 to ${max}.`);
   }
   return parsed;
 }
@@ -56,195 +49,201 @@ async function main() {
     );
   }
 
-  const date = parseDate(getArg("date"));
-  const maxPages = parseMaxPages(getArg("max-pages"));
+  const maxRequests = positiveInt(
+    getArg("max-requests") ?? process.env.API_SPORTS_ODDS_MAX_REQUESTS,
+    40,
+    60,
+    "API_SPORTS_ODDS_MAX_REQUESTS",
+  );
+  const hours = positiveInt(
+    getArg("hours") ?? process.env.API_SPORTS_ODDS_FORWARD_HOURS,
+    24,
+    72,
+    "API_SPORTS_ODDS_FORWARD_HOURS",
+  );
+
   const client = new ApiSportsFootballOddsClient(apiKey);
   const db = getDb();
   const now = new Date();
+  const to = new Date(now.getTime() + hours * 60 * 60 * 1000);
 
-  let pagesFetched = 0;
-  let totalPages = 1;
-  let providerEvents = 0;
-  let matchedEvents = 0;
+  let requestsAttempted = 0;
+  let providerEventsReturned = 0;
   let eventsWithOdds = 0;
   let bookmakers = 0;
   let snapshotsInserted = 0;
   let snapshotsReused = 0;
-  let skippedStarted = 0;
-  let skippedUnmatched = 0;
-  const eventsWithStoredOdds = new Set<string>();
+  let noOddsReturned = 0;
+  let missingProviderId = 0;
 
   try {
-    for (let page = 1; page <= Math.min(totalPages, maxPages); page += 1) {
-      const result = await client.getDatePage(date, page);
-      pagesFetched += 1;
-      totalPages = result.totalPages;
-      providerEvents += result.events.length;
-
-      for (const oddsEvent of result.events) {
-        const source = await db.eventSource.findUnique({
-          where: {
-            provider_externalId: {
-              provider: PROVIDER,
-              externalId: oddsEvent.providerId,
+    const candidates = await db.event.findMany({
+      where: {
+        sport: { key: "football" },
+        startTime: { gt: now, lte: to },
+        status: { notIn: ["COMPLETED", "CANCELLED", "POSTPONED"] },
+        sources: { some: { provider: PROVIDER } },
+        NOT: {
+          markets: {
+            some: {
+              key: "h2h",
+              status: "OPEN",
+              oddsSnapshots: { some: {} },
             },
           },
-          select: { eventId: true },
-        });
+        },
+      },
+      select: {
+        id: true,
+        startTime: true,
+        homeTeam: { select: { name: true } },
+        awayTeam: { select: { name: true } },
+        homePlayer: { select: { fullName: true } },
+        awayPlayer: { select: { fullName: true } },
+        sources: {
+          where: { provider: PROVIDER },
+          select: { externalId: true },
+          take: 1,
+        },
+      },
+      orderBy: { startTime: "asc" },
+      take: maxRequests,
+    });
 
-        if (!source) {
-          skippedUnmatched += 1;
-          continue;
-        }
+    for (const event of candidates) {
+      const providerId = event.sources[0]?.externalId?.trim();
+      if (!providerId) {
+        missingProviderId += 1;
+        continue;
+      }
 
-        const event = await db.event.findUnique({
-          where: { id: source.eventId },
-          select: {
-            id: true,
-            startTime: true,
-            status: true,
-            homeTeam: { select: { name: true } },
-            awayTeam: { select: { name: true } },
-            homePlayer: { select: { fullName: true } },
-            awayPlayer: { select: { fullName: true } },
-          },
-        });
+      requestsAttempted += 1;
+      const oddsEvent = await client.getFixture(providerId);
 
-        if (!event) {
-          skippedUnmatched += 1;
-          continue;
-        }
+      if (!oddsEvent || oddsEvent.bookmakers.length === 0) {
+        noOddsReturned += 1;
+        continue;
+      }
 
-        if (
-          event.startTime <= now ||
-          ["COMPLETED", "CANCELLED", "POSTPONED"].includes(event.status)
-        ) {
-          skippedStarted += 1;
-          continue;
-        }
+      providerEventsReturned += 1;
 
-        const names = participantNames(event);
-        if (!names.home || !names.away) {
-          skippedUnmatched += 1;
-          continue;
-        }
+      const names = participantNames(event);
+      if (!names.home || !names.away) {
+        noOddsReturned += 1;
+        continue;
+      }
 
-        matchedEvents += 1;
+      let market = await db.market.findFirst({
+        where: {
+          eventId: event.id,
+          provider: PROVIDER,
+          key: "h2h",
+        },
+      });
 
-        let market = await db.market.findFirst({
-          where: {
+      if (!market) {
+        market = await db.market.create({
+          data: {
             eventId: event.id,
             provider: PROVIDER,
             key: "h2h",
+            name: MARKET_NAME,
+            status: "OPEN",
           },
         });
+      } else if (market.status !== "OPEN" || market.name !== MARKET_NAME) {
+        market = await db.market.update({
+          where: { id: market.id },
+          data: {
+            status: "OPEN",
+            name: MARKET_NAME,
+          },
+        });
+      }
 
-        if (!market) {
-          market = await db.market.create({
-            data: {
-              eventId: event.id,
-              provider: PROVIDER,
-              key: "h2h",
-              name: MARKET_NAME,
-              status: "OPEN",
-            },
-          });
-        } else if (market.status !== "OPEN" || market.name !== MARKET_NAME) {
-          market = await db.market.update({
-            where: { id: market.id },
-            data: {
-              status: "OPEN",
-              name: MARKET_NAME,
-            },
-          });
-        }
-
-        const providerUpdatedAt = oddsEvent.providerUpdatedAt
-          ? new Date(oddsEvent.providerUpdatedAt)
+      const providerUpdatedAt = oddsEvent.providerUpdatedAt
+        ? new Date(oddsEvent.providerUpdatedAt)
+        : null;
+      const safeProviderUpdatedAt =
+        providerUpdatedAt && !Number.isNaN(providerUpdatedAt.getTime())
+          ? providerUpdatedAt
           : null;
-        const safeProviderUpdatedAt =
-          providerUpdatedAt && !Number.isNaN(providerUpdatedAt.getTime())
-            ? providerUpdatedAt
-            : null;
 
-        let storedForEvent = false;
+      let storedForEvent = false;
 
-        for (const bookmaker of oddsEvent.bookmakers) {
-          bookmakers += 1;
+      for (const bookmaker of oddsEvent.bookmakers) {
+        bookmakers += 1;
 
-          for (const outcome of bookmaker.outcomes) {
-            const selectionName =
-              outcome.side === "home"
-                ? names.home
-                : outcome.side === "away"
-                  ? names.away
-                  : "Draw";
+        for (const outcome of bookmaker.outcomes) {
+          const selectionName =
+            outcome.side === "home"
+              ? names.home
+              : outcome.side === "away"
+                ? names.away
+                : "Draw";
 
-            const selectionKey = makeSelectionKey("h2h", {
-              name: selectionName,
-              price: outcome.price,
-            });
-            const fingerprint = makeSnapshotFingerprint({
+          const selectionKey = makeSelectionKey("h2h", {
+            name: selectionName,
+            price: outcome.price,
+          });
+          const fingerprint = makeSnapshotFingerprint({
+            marketId: market.id,
+            provider: PROVIDER,
+            bookmakerKey: bookmaker.key,
+            selectionKey,
+            decimalOdds: outcome.price,
+            providerUpdatedAt: safeProviderUpdatedAt,
+          });
+
+          const existing = await db.oddsSnapshot.findUnique({
+            where: { fingerprint },
+            select: { id: true },
+          });
+
+          if (existing) {
+            snapshotsReused += 1;
+            storedForEvent = true;
+            continue;
+          }
+
+          await db.oddsSnapshot.create({
+            data: {
               marketId: market.id,
               provider: PROVIDER,
               bookmakerKey: bookmaker.key,
+              bookmakerName: bookmaker.name,
               selectionKey,
+              selectionName,
               decimalOdds: outcome.price,
               providerUpdatedAt: safeProviderUpdatedAt,
-            });
+              fingerprint,
+            },
+          });
 
-            const existing = await db.oddsSnapshot.findUnique({
-              where: { fingerprint },
-              select: { id: true },
-            });
-
-            if (existing) {
-              snapshotsReused += 1;
-              storedForEvent = true;
-              continue;
-            }
-
-            await db.oddsSnapshot.create({
-              data: {
-                marketId: market.id,
-                provider: PROVIDER,
-                bookmakerKey: bookmaker.key,
-                bookmakerName: bookmaker.name,
-                selectionKey,
-                selectionName,
-                decimalOdds: outcome.price,
-                providerUpdatedAt: safeProviderUpdatedAt,
-                fingerprint,
-              },
-            });
-
-            snapshotsInserted += 1;
-            storedForEvent = true;
-          }
+          snapshotsInserted += 1;
+          storedForEvent = true;
         }
+      }
 
-        if (storedForEvent) {
-          eventsWithStoredOdds.add(event.id);
-        }
+      if (storedForEvent) {
+        eventsWithOdds += 1;
       }
     }
 
-    eventsWithOdds = eventsWithStoredOdds.size;
-
-    console.log("API-Sports football H2H odds sync complete.", {
-      date,
-      pagesFetched,
-      totalPages,
-      pageCap: maxPages,
-      pageCapHit: totalPages > maxPages,
-      providerEvents,
-      matchedEvents,
+    console.log("API-Sports targeted football H2H odds sync complete.", {
+      hours,
+      maxRequests,
+      candidates: candidates.length,
+      requestsAttempted,
+      providerEventsReturned,
       eventsWithOdds,
       bookmakers,
       snapshotsInserted,
       snapshotsReused,
-      skippedStarted,
-      skippedUnmatched,
+      noOddsReturned,
+      missingProviderId,
+      from: now.toISOString(),
+      to: to.toISOString(),
     });
   } finally {
     await db.$disconnect();
@@ -252,7 +251,7 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error("EDGE API-Sports football odds sync failed.");
+  console.error("EDGE API-Sports targeted football odds sync failed.");
   console.error(error instanceof Error ? error.message : error);
   process.exitCode = 1;
 });

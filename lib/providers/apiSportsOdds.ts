@@ -144,6 +144,46 @@ export class ApiSportsFootballOddsClient {
     }
   }
 
+  async getFixture(fixtureId: string): Promise<ApiSportsMatchWinnerEvent | null> {
+    const id = fixtureId.trim();
+    if (!id) {
+      throw new Error("API-Sports fixture id is required.");
+    }
+
+    const url = new URL("/odds", BASE_URL);
+    url.searchParams.set("fixture", id);
+    url.searchParams.set("bet", "1");
+
+    const response = await fetch(url, {
+      method: "GET",
+      headers: { "x-apisports-key": this.apiKey },
+      signal: AbortSignal.timeout(15_000),
+      cache: "no-store",
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `API-Sports odds request failed with HTTP ${response.status}.`,
+      );
+    }
+
+    const body = (await response.json()) as ApiSportsEnvelope<ApiSportsFootballOddsRow>;
+    if (hasApiErrors(body.errors)) {
+      throw new Error(
+        `API-Sports odds returned an application error: ${JSON.stringify(body.errors)}`,
+      );
+    }
+    if (!Array.isArray(body.response)) {
+      throw new Error("API-Sports odds returned an invalid response envelope.");
+    }
+
+    return (
+      body.response
+        .map(normalizeApiSportsMatchWinnerRow)
+        .find((event) => event?.providerId === id) ?? null
+    );
+  }
+
   async getDatePage(date: string, page: number): Promise<ApiSportsOddsPage> {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       throw new Error("API-Sports odds date must be YYYY-MM-DD.");

@@ -304,3 +304,77 @@ test("API-Sports Match Winner normalization ignores invalid prices and bets", ()
   assert.ok(normalized);
   assert.equal(normalized.bookmakers.length, 0);
 });
+
+
+test("API-Sports targeted odds requests use fixture id without pagination", async () => {
+  const originalFetch = globalThis.fetch;
+  const requestedUrls: string[] = [];
+
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const url =
+      typeof input === "string"
+        ? new URL(input)
+        : input instanceof URL
+          ? input
+          : new URL(input.url);
+
+    requestedUrls.push(url.toString());
+
+    return new Response(
+      JSON.stringify({
+        errors: [],
+        results: 1,
+        paging: { current: 1, total: 1 },
+        response: [
+          {
+            fixture: {
+              id: 1493152,
+              date: "2026-10-04T22:15:00+00:00",
+            },
+            bookmakers: [
+              {
+                id: 8,
+                name: "Bet365",
+                bets: [
+                  {
+                    id: 1,
+                    name: "Match Winner",
+                    values: [
+                      { value: "Home", odd: "1.85" },
+                      { value: "Draw", odd: "3.10" },
+                      { value: "Away", odd: "5.25" },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }),
+      {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      },
+    );
+  }) as typeof fetch;
+
+  try {
+    const { ApiSportsFootballOddsClient } = await import(
+      "../lib/providers/apiSportsOdds"
+    );
+    const client = new ApiSportsFootballOddsClient("test-key");
+    const result = await client.getFixture("1493152");
+
+    assert.ok(result);
+    assert.equal(result.providerId, "1493152");
+
+    const url = new URL(requestedUrls[0]);
+    assert.equal(url.pathname, "/odds");
+    assert.equal(url.searchParams.get("fixture"), "1493152");
+    assert.equal(url.searchParams.get("bet"), "1");
+    assert.equal(url.searchParams.has("page"), false);
+    assert.equal(url.searchParams.has("date"), false);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
