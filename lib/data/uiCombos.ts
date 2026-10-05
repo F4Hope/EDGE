@@ -52,6 +52,15 @@ export type ComboCandidatePool = {
   diagnostics: ComboCandidateDiagnostics;
 };
 
+const comboResearchSignalTypes = new Set([
+  "INJURY",
+  "SUSPENSION",
+  "LINEUP",
+  "WITHDRAWAL",
+  "WEATHER",
+  "NEWS",
+]);
+
 function record(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object"
     ? (value as Record<string, unknown>)
@@ -216,15 +225,17 @@ export async function getComboCandidatePool(
     if (evidenceSupport <= 1e-9) {
       diagnostics.missingIndependentEvidence += 1;
 
-      const intelligenceSignals = row.event.intelligenceSignals.map((signal) => ({
-        type: signal.type,
-        severity: signal.severity,
-        source: signal.source,
-        headline: signal.headline,
-        affectsHome: signal.affectsHome,
-        affectsAway: signal.affectsAway,
-        participant: signal.participant,
-      }));
+      const intelligenceSignals = row.event.intelligenceSignals
+        .filter((signal) => comboResearchSignalTypes.has(signal.type))
+        .map((signal) => ({
+          type: signal.type,
+          severity: signal.severity,
+          source: signal.source,
+          headline: signal.headline,
+          affectsHome: signal.affectsHome,
+          affectsAway: signal.affectsAway,
+          participant: signal.participant,
+        }));
 
       evidenceResearchQueue.push({
         predictionId: row.id,
