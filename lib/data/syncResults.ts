@@ -5,6 +5,7 @@ import type {
   ResultQuery,
 } from "@/lib/providers/resultTypes";
 import type { SupportedSport } from "@/lib/providers/types";
+import { buildSelectionOutcomes } from "@/lib/results/selectionOutcomes";
 
 type EdgeDb = ReturnType<typeof getDb>;
 
@@ -18,7 +19,11 @@ export type ResultSyncSummary = {
   skipped: number;
 };
 
-function resultPayload(provider: string, result: ProviderResult) {
+function resultPayload(
+  provider: string,
+  result: ProviderResult,
+  selectionOutcomes: Record<string, "win" | "loss"> = {},
+) {
   return {
     source: {
       provider,
@@ -30,6 +35,7 @@ function resultPayload(provider: string, result: ProviderResult) {
       away: result.awayScore,
     },
     winner: result.winner,
+    selectionOutcomes,
   };
 }
 
@@ -68,7 +74,23 @@ export async function syncProviderResults(
           externalId: result.providerId,
         },
       },
-      select: { eventId: true },
+      select: {
+        eventId: true,
+        event: {
+          select: {
+            homeTeam: { select: { name: true } },
+            awayTeam: { select: { name: true } },
+            homePlayer: { select: { fullName: true } },
+            awayPlayer: { select: { fullName: true } },
+            predictions: {
+              select: {
+                selectionKey: true,
+                explanation: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!source) {
@@ -87,6 +109,22 @@ export async function syncProviderResults(
         continue;
       }
 
+      const participants = {
+        home:
+          source.event.homeTeam?.name ??
+          source.event.homePlayer?.fullName ??
+          null,
+        away:
+          source.event.awayTeam?.name ??
+          source.event.awayPlayer?.fullName ??
+          null,
+      };
+      const selectionOutcomes = buildSelectionOutcomes(
+        source.event.predictions,
+        result.winner,
+        participants,
+      );
+
       await db.$transaction([
         db.event.update({
           where: { id: source.eventId },
@@ -99,7 +137,7 @@ export async function syncProviderResults(
             completedAt: result.completedAt
               ? new Date(result.completedAt)
               : null,
-            payload: resultPayload(provider.name, result),
+            payload: resultPayload(provider.name, result, selectionOutcomes),
           },
           create: {
             eventId: source.eventId,
@@ -107,7 +145,7 @@ export async function syncProviderResults(
             completedAt: result.completedAt
               ? new Date(result.completedAt)
               : null,
-            payload: resultPayload(provider.name, result),
+            payload: resultPayload(provider.name, result, selectionOutcomes),
           },
         }),
       ]);
