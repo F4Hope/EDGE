@@ -83,7 +83,10 @@ export function ComboBuilder({
   const [error, setError] = useState<string | null>(null);
   const [building, setBuilding] = useState(false);
 
-  async function build() {
+  async function build(
+    requestedTarget: Target = target,
+    requestedRisk: Risk = risk,
+  ) {
     setBuilding(true);
     setError(null);
 
@@ -93,8 +96,8 @@ export function ComboBuilder({
         headers: { "Content-Type": "application/json" },
         cache: "no-store",
         body: JSON.stringify({
-          targetOdds: target,
-          riskMode: risk,
+          targetOdds: requestedTarget,
+          riskMode: requestedRisk,
         }),
       });
 
@@ -130,9 +133,10 @@ export function ComboBuilder({
               key={item}
               type="button"
               className={item === target ? "selector-button active" : "selector-button"}
+              disabled={building}
               onClick={() => {
                 setTarget(item);
-                setResult(null);
+                void build(item, risk);
               }}
             >
               {item}x
@@ -149,9 +153,10 @@ export function ComboBuilder({
               key={item}
               type="button"
               className={item === risk ? "selector-button active" : "selector-button"}
+              disabled={building}
               onClick={() => {
                 setRisk(item);
-                setResult(null);
+                void build(target, item);
               }}
             >
               {item}
@@ -186,7 +191,7 @@ export function ComboBuilder({
         className="primary-button combo-build-button"
         type="button"
         disabled={building}
-        onClick={build}
+        onClick={() => void build()}
       >
         {building ? "BUILDING COMBO..." : "REBUILD COMBO"}
         <span aria-hidden="true">→</span>
