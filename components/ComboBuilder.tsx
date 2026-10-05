@@ -338,7 +338,8 @@ export function ComboBuilder({
             </div>
           ) : null}
 
-          {result.legs.length > 0 ? (            <>
+          {result.legs.length > 0 ? (
+            <>
               <div className="combo-metrics">
                 <div>
                   <span>MODEL PROB.</span>
