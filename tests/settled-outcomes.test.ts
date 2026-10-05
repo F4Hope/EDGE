@@ -187,7 +187,10 @@ test("model performance derives legacy outcomes and deduplicates prediction revi
               {
                 selectionKey: "alpha",
                 modelProbability: 0.55,
-                explanation: { selectionName: "Alpha" },
+                explanation: {
+                  selectionName: "Alpha",
+                  marketProbability: 0.56,
+                },
                 createdAt: new Date("2026-10-05T16:00:00.000Z"),
                 market,
                 modelRun: completedRun,
@@ -195,7 +198,10 @@ test("model performance derives legacy outcomes and deduplicates prediction revi
               {
                 selectionKey: "alpha",
                 modelProbability: 0.6,
-                explanation: { selectionName: "Alpha" },
+                explanation: {
+                  selectionName: "Alpha",
+                  marketProbability: 0.58,
+                },
                 createdAt: new Date("2026-10-05T18:00:00.000Z"),
                 market,
                 modelRun: completedRun,
@@ -203,7 +209,10 @@ test("model performance derives legacy outcomes and deduplicates prediction revi
               {
                 selectionKey: "beta",
                 modelProbability: 0.4,
-                explanation: { selectionName: "Beta" },
+                explanation: {
+                  selectionName: "Beta",
+                  marketProbability: 0.42,
+                },
                 createdAt: new Date("2026-10-05T18:00:00.000Z"),
                 market,
                 modelRun: completedRun,
@@ -240,6 +249,12 @@ test("model performance derives legacy outcomes and deduplicates prediction revi
   assert.equal(report.evaluation.count, 2);
   assert.equal(report.evaluation.accuracyAtHalf, 1);
   assert.equal(report.evaluation.brierScore, 0.16);
+  assert.equal(report.marketBenchmark.count, 2);
+  assert.equal(report.marketBenchmark.model.brierScore, 0.16);
+  assert.equal(report.marketBenchmark.market.brierScore, 0.1764);
+  assert.equal(report.marketBenchmark.brierDelta, 0.0164);
+  assert.equal(report.marketBenchmark.brierSkillScore, 0.092971);
+  assert.equal(report.marketBenchmark.calibrationDelta, 0.02);
   assert.equal(report.bySport[0]?.count, 2);
   assert.equal(report.byMarket[0]?.count, 2);
   assert.equal(report.byModelVersion[0]?.count, 2);
