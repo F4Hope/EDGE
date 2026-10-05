@@ -1,10 +1,23 @@
 import { getDb } from "@/lib/prisma";
 import type { ComboCandidate } from "@/lib/combo/engine";
+import {
+  independentEvidenceSupport,
+  passesIndependentEvidenceGate,
+} from "@/lib/data/uiOpportunities";
+
+function record(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : null;
+}
 
 function explanationSelectionName(value: unknown): string | null {
-  if (!value || typeof value !== "object") return null;
-  const name = (value as Record<string, unknown>).selectionName;
+  const name = record(value)?.selectionName;
   return typeof name === "string" ? name : null;
+}
+
+function numberValue(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 function participantName(event: {
@@ -56,7 +69,9 @@ export async function getComboCandidates(
             orderBy: { capturedAt: "desc" },
             take: 80,
             select: {
+              provider: true,
               bookmakerKey: true,
+              bookmakerName: true,
               selectionKey: true,
               decimalOdds: true,
               capturedAt: true,
@@ -91,12 +106,35 @@ export async function getComboCandidates(
       }
     }
 
-    const bestOdds = [...latestByBookmaker.values()]
-      .map((snapshot) => Number(snapshot.decimalOdds))
-      .filter((value) => Number.isFinite(value) && value > 1)
-      .sort((a, b) => b - a)[0];
+    const bestSnapshot = [...latestByBookmaker.values()]
+      .filter((snapshot) => {
+        const value = Number(snapshot.decimalOdds);
+        return Number.isFinite(value) && value > 1;
+      })
+      .sort(
+        (a, b) => Number(b.decimalOdds) - Number(a.decimalOdds),
+      )[0];
 
-    if (!bestOdds) continue;
+    if (!bestSnapshot) continue;
+
+    const explanation = record(row.explanation);
+    const marketProbability = numberValue(explanation?.marketProbability);
+    const modelProbability = Number(row.modelProbability);
+    const estimatedValue =
+      row.estimatedValue === null ? null : Number(row.estimatedValue);
+    const evidenceSupport = independentEvidenceSupport(row.explanation);
+
+    if (
+      estimatedValue === null ||
+      estimatedValue <= 0 ||
+      !passesIndependentEvidenceGate({
+        modelProbability,
+        marketProbability,
+        evidenceSupport,
+      })
+    ) {
+      continue;
+    }
 
     candidates.push({
       predictionId: row.id,
@@ -108,16 +146,21 @@ export async function getComboCandidates(
       selectionKey: row.selectionKey,
       selectionName:
         explanationSelectionName(row.explanation) ?? row.selectionKey,
-      decimalOdds: bestOdds,
-      modelProbability: Number(row.modelProbability),
-      estimatedValue:
-        row.estimatedValue === null ? null : Number(row.estimatedValue),
+      decimalOdds: Number(bestSnapshot.decimalOdds),
+      modelProbability,
+      estimatedValue,
       dataQuality:
         row.dataQuality === null ? null : Number(row.dataQuality),
       modelAgreement:
         row.modelAgreement === null ? null : Number(row.modelAgreement),
       risk: row.risk,
       status: row.status,
+      bookmakerName: bestSnapshot.bookmakerName,
+      oddsProvider: bestSnapshot.provider,
+      marketProbability,
+      modelLift:
+        marketProbability === null ? null : modelProbability - marketProbability,
+      evidenceSupport,
     });
   }
 
