@@ -158,5 +158,26 @@ test("combo screen surfaces candidate rejection diagnostics when no legs qualify
   assert.match(component, /candidateDiagnostics/);
   assert.match(component, /NO \+EV/);
   assert.match(component, /NO EVIDENCE/);
-  assert.match(component, /LOW LIFT/);
+  assert.match(component, /INTEL READY/);
+});
+
+
+test("combo exposes positive-EV evidence research candidates without qualifying them", async () => {
+  const [loader, route, page, component] = await Promise.all([
+    readFile("lib/data/uiCombos.ts", "utf8"),
+    readFile("app/api/combos/route.ts", "utf8"),
+    readFile("app/combos/page.tsx", "utf8"),
+    readFile("components/ComboBuilder.tsx", "utf8"),
+  ]);
+
+  assert.match(loader, /evidenceResearchQueue/);
+  assert.match(loader, /evidenceResearchWithActiveIntelligence/);
+  assert.match(loader, /intelligenceSignals/);
+  assert.match(loader, /comboResearchSignalTypes/);
+  assert.match(loader, /evidenceSupport <= 1e-9/);
+  assert.match(route, /evidenceResearchQueue: pool\.evidenceResearchQueue/);
+  assert.match(page, /initialResearchQueue/);
+  assert.match(component, /EVIDENCE RESEARCH QUEUE/);
+  assert.match(component, /INTEL READY/);
+  assert.match(component, /active research signal/);
 });
