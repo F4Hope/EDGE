@@ -102,3 +102,23 @@ test("analysis page leads with a guarded decision summary", async () => {
   assert.match(summary, /ESTIMATED VALUE/);
   assert.match(summary, /MARKET PROBABILITY/);
 });
+
+
+test("opportunities page is model-driven and validation-gated", async () => {
+  const [page, card, data] = await Promise.all([
+    readFile("app/opportunities/page.tsx", "utf8"),
+    readFile("components/OpportunityCard.tsx", "utf8"),
+    readFile("lib/data/uiOpportunities.ts", "utf8"),
+  ]);
+
+  assert.match(page, /Ranked opportunities/);
+  assert.match(page, /ESTIMATED VALUE/);
+  assert.match(page, /BETPAWA CHECK/);
+  assert.match(page, /validation-gated/);
+  assert.match(card, /VALIDATION-GATED ANALYTICAL WATCH/);
+  assert.match(card, /VIEW ANALYSIS/);
+  assert.match(data, /estimatedValue: \{ gt: 0 \}/);
+  assert.match(data, /dataQuality: \{ gte: 0\.5 \}/);
+  assert.match(data, /modelAgreement: \{ gte: 0\.6 \}/);
+  assert.match(data, /rankOneOpportunityPerEvent/);
+});
