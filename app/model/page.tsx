@@ -26,7 +26,7 @@ export default async function ModelPage() {
       <ScreenHeader
         eyebrow="MODEL INTELLIGENCE"
         title="Performance"
-        description="Calibration and accuracy are derived from settled records only. No unsupported strengths or weaknesses are claimed."
+        description="Calibration, accuracy, and event-level market lift are derived from settled records only. No unsupported model advantage is claimed."
       />
 
       <div className="metric-grid">
