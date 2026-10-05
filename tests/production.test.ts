@@ -22,6 +22,13 @@ test("pagination uses safe defaults for invalid input", () => {
   assert.equal(page.cursor, null);
 });
 
+test("production database client is process-wide instead of per request", async () => {
+  const source = await readFile("lib/prisma.ts", "utf8");
+
+  assert.match(source, /if \(globalForPrisma\.edgePrisma\)/);
+  assert.match(source, /globalForPrisma\.edgePrisma = prisma/);
+  assert.doesNotMatch(source, /NODE_ENV\s*!==\s*["']production["']/);
+});
 
 test("production security policy includes CSP, HSTS, and cross-origin isolation", async () => {
   const source = await readFile("next.config.ts", "utf8");
