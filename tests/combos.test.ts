@@ -101,3 +101,16 @@ test("combo candidate loader requires positive value and independent evidence", 
   assert.match(source, /bookmakerName: bestSnapshot\.bookmakerName/);
   assert.match(source, /oddsProvider: bestSnapshot\.provider/);
 });
+
+
+test("combo page defaults to a 2x balanced Today’s Best output", async () => {
+  const [page, component] = await Promise.all([
+    readFile("app/combos/page.tsx", "utf8"),
+    readFile("components/ComboBuilder.tsx", "utf8"),
+  ]);
+
+  assert.match(page, /buildCombo\(candidates, 2, "BALANCED"\)/);
+  assert.match(page, /Today’s Best balanced combo targeting 2x/);
+  assert.match(component, /\?\? 2/);
+  assert.match(component, /TODAY’S BEST/);
+});
