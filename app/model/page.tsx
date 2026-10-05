@@ -10,6 +10,12 @@ function pct(value: number | null): string {
   return value === null ? "—" : `${(value * 100).toFixed(1)}%`;
 }
 
+function signed(value: number | null, digits = 3): string {
+  if (value === null) return "—";
+  const prefix = value > 0 ? "+" : "";
+  return `${prefix}${value.toFixed(digits)}`;
+}
+
 export default async function ModelPage() {
   const state = await getUiHistory();
   const report = state.performance;
@@ -50,6 +56,37 @@ export default async function ModelPage() {
           value={pct(report.evaluation.calibrationError)}
           note="Absolute calibration error"
           state={report.sampleCount > 0 ? "ready" : "pending"}
+        />
+      </div>
+
+      <div className="metric-grid">
+        <MetricPlaceholder
+          label="MARKET BRIER"
+          value={
+            report.marketBenchmark.market.brierScore === null
+              ? "—"
+              : report.marketBenchmark.market.brierScore.toFixed(3)
+          }
+          note={`${report.marketBenchmark.count} paired settled selections`}
+          state={report.marketBenchmark.count > 0 ? "ready" : "pending"}
+        />
+        <MetricPlaceholder
+          label="BRIER Δ"
+          value={signed(report.marketBenchmark.brierDelta)}
+          note="Positive means EDGE beat market baseline"
+          state={report.marketBenchmark.count > 0 ? "ready" : "pending"}
+        />
+        <MetricPlaceholder
+          label="BRIER SKILL"
+          value={pct(report.marketBenchmark.brierSkillScore)}
+          note="Positive = improvement over market consensus"
+          state={report.marketBenchmark.count > 0 ? "ready" : "pending"}
+        />
+        <MetricPlaceholder
+          label="CALIBRATION Δ"
+          value={pct(report.marketBenchmark.calibrationDelta)}
+          note="Positive means lower calibration error than market"
+          state={report.marketBenchmark.count > 0 ? "ready" : "pending"}
         />
       </div>
 
