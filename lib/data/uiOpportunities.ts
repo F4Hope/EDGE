@@ -89,10 +89,11 @@ export function passesIndependentEvidenceGate(input: {
 
   if (input.evidenceSupport <= 1e-9) return false;
 
-  return (
-    Math.abs(input.modelProbability - input.marketProbability) >=
-    MIN_MODEL_MARKET_LIFT
+  const lift = Math.abs(
+    input.modelProbability - input.marketProbability,
   );
+
+  return lift + Number.EPSILON * 16 >= MIN_MODEL_MARKET_LIFT;
 }
 
 function statusRank(status: UiOpportunity["status"]): number {
