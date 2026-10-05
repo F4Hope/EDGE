@@ -145,3 +145,18 @@ test("combo API exposes candidate rejection diagnostics", async () => {
   assert.match(loader, /qualifiedCandidates/);
   assert.match(route, /candidateDiagnostics: pool\.diagnostics/);
 });
+
+
+test("combo screen surfaces candidate rejection diagnostics when no legs qualify", async () => {
+  const [page, component] = await Promise.all([
+    readFile("app/combos/page.tsx", "utf8"),
+    readFile("components/ComboBuilder.tsx", "utf8"),
+  ]);
+
+  assert.match(page, /getComboCandidatePool/);
+  assert.match(page, /initialDiagnostics/);
+  assert.match(component, /candidateDiagnostics/);
+  assert.match(component, /NO \+EV/);
+  assert.match(component, /NO EVIDENCE/);
+  assert.match(component, /LOW LIFT/);
+});
