@@ -96,8 +96,9 @@ test("combo candidate loader requires positive value and independent evidence", 
   const source = await readFile("lib/data/uiCombos.ts", "utf8");
 
   assert.match(source, /estimatedValue <= 0/);
-  assert.match(source, /passesIndependentEvidenceGate/);
   assert.match(source, /independentEvidenceSupport/);
+  assert.match(source, /MIN_MODEL_MARKET_LIFT/);
+  assert.match(source, /evidenceSupport <= 1e-9/);
   assert.match(source, /bookmakerName: bestSnapshot\.bookmakerName/);
   assert.match(source, /oddsProvider: bestSnapshot\.provider/);
 });
