@@ -31,6 +31,18 @@ type ComboLeg = {
   evidenceSupport?: number | null;
 };
 
+type ComboCandidateDiagnostics = {
+  rawPredictionRows: number;
+  latestPredictionCount: number;
+  missingOdds: number;
+  missingEstimatedValue: number;
+  nonPositiveEstimatedValue: number;
+  missingMarketProbability: number;
+  missingIndependentEvidence: number;
+  insufficientModelMarketLift: number;
+  qualifiedCandidates: number;
+};
+
 type ComboResult = {
   status: "TARGET_REACHED" | "BEST_EFFORT" | "NO_QUALIFYING_COMBO";
   targetOdds: number;
@@ -42,6 +54,7 @@ type ComboResult = {
   targetReached: boolean;
   legs: ComboLeg[];
   candidateCount: number;
+  diagnostics?: ComboCandidateDiagnostics;
   message: string;
   methodology: string;
 };
@@ -219,6 +232,27 @@ export function ComboBuilder({
           </div>
 
           <p className="combo-result-message">{result.message}</p>
+
+          {result.diagnostics && result.legs.length === 0 ? (
+            <div className="combo-metrics">
+              <div>
+                <span>PREDICTIONS</span>
+                <strong>{result.diagnostics.latestPredictionCount}</strong>
+              </div>
+              <div>
+                <span>NO +EV</span>
+                <strong>{result.diagnostics.nonPositiveEstimatedValue}</strong>
+              </div>
+              <div>
+                <span>NO EVIDENCE</span>
+                <strong>{result.diagnostics.missingIndependentEvidence}</strong>
+              </div>
+              <div>
+                <span>LOW LIFT</span>
+                <strong>{result.diagnostics.insufficientModelMarketLift}</strong>
+              </div>
+            </div>
+          ) : null}
 
           {result.legs.length > 0 ? (
             <>
