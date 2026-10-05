@@ -70,6 +70,7 @@ export async function POST(request: NextRequest) {
           source: "edge-phase8-combo-engine",
           candidateCount: pool.candidates.length,
           candidateDiagnostics: pool.diagnostics,
+          evidenceResearchQueue: pool.evidenceResearchQueue,
           requestId,
         },
       },
