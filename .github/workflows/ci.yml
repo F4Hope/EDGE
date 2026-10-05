@@ -89,6 +89,9 @@ jobs:
       - name: Test provider injury intelligence normalization
         run: npm run test:intelligence-provider
 
+      - name: Test grounded web intelligence
+        run: npm run test:web-intelligence
+
       - name: Test event-change intelligence
         run: npm run test:event-changes
 
