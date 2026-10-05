@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import {
   buildCombo,
   type ComboCandidate,
@@ -88,4 +89,15 @@ test("builder returns best effort when qualified data cannot reach target", () =
   assert.equal(result.targetReached, false);
   assert.ok((result.actualOdds ?? 0) < 10);
   assert.ok(result.legs.length > 0);
+});
+
+
+test("combo candidate loader requires positive value and independent evidence", async () => {
+  const source = await readFile("lib/data/uiCombos.ts", "utf8");
+
+  assert.match(source, /estimatedValue <= 0/);
+  assert.match(source, /passesIndependentEvidenceGate/);
+  assert.match(source, /independentEvidenceSupport/);
+  assert.match(source, /bookmakerName: bestSnapshot\.bookmakerName/);
+  assert.match(source, /oddsProvider: bestSnapshot\.provider/);
 });

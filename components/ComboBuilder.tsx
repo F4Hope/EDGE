@@ -24,6 +24,11 @@ type ComboLeg = {
   modelAgreement: number | null;
   risk: "LOW" | "MEDIUM" | "HIGH";
   status: "BETTABLE" | "WATCH" | "HIGH_RISK" | "NO_BET";
+  bookmakerName?: string | null;
+  oddsProvider?: string | null;
+  marketProbability?: number | null;
+  modelLift?: number | null;
+  evidenceSupport?: number | null;
 };
 
 type ComboResult = {
@@ -47,14 +52,34 @@ type ApiResponse = {
   requestId?: string;
 };
 
-function percent(value: number | null): string {
-  return value === null ? "—" : `${(value * 100).toFixed(1)}%`;
+function percent(value: number | null | undefined): string {
+  return value === null || value === undefined
+    ? "—"
+    : `${(value * 100).toFixed(1)}%`;
 }
 
-export function ComboBuilder() {
-  const [target, setTarget] = useState<Target>(5);
-  const [risk, setRisk] = useState<Risk>("BALANCED");
-  const [result, setResult] = useState<ComboResult | null>(null);
+function sourceLabel(leg: ComboLeg): string {
+  const bookmaker = leg.bookmakerName ?? "Bookmaker";
+  const provider = leg.oddsProvider
+    ? leg.oddsProvider.replaceAll("-", " ").toUpperCase()
+    : "STORED ODDS";
+  return `${bookmaker} · ${provider}`;
+}
+
+export function ComboBuilder({
+  initialResult,
+}: {
+  initialResult?: ComboResult | null;
+}) {
+  const [target, setTarget] = useState<Target>(
+    (initialResult?.targetOdds as Target | undefined) ?? 5,
+  );
+  const [risk, setRisk] = useState<Risk>(
+    initialResult?.riskMode ?? "BALANCED",
+  );
+  const [result, setResult] = useState<ComboResult | null>(
+    initialResult ?? null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [building, setBuilding] = useState(false);
 
@@ -152,9 +177,9 @@ export function ComboBuilder() {
       </div>
 
       <p className="combo-message">
-        EDGE searches stored pre-event Phase 7 H2H forecasts and bookmaker odds,
-        applies your selected evidence threshold, and never uses more than one
-        selection from the same event.
+        EDGE uses future H2H model outputs with positive estimated value,
+        independent historical evidence, and real stored bookmaker prices.
+        One selection per event is allowed.
       </p>
 
       <button
@@ -163,7 +188,7 @@ export function ComboBuilder() {
         disabled={building}
         onClick={build}
       >
-        {building ? "BUILDING COMBO..." : "BUILD QUALITY COMBO"}
+        {building ? "BUILDING COMBO..." : "REBUILD COMBO"}
         <span aria-hidden="true">→</span>
       </button>
 
@@ -217,10 +242,21 @@ export function ComboBuilder() {
                       <span>{leg.sport.toUpperCase()} · {leg.league}</span>
                       <strong>{leg.selectionName}</strong>
                       <p>{leg.matchup}</p>
+                      <small>{sourceLabel(leg)}</small>
+                      <small>
+                        Model {percent(leg.modelProbability)}
+                        {leg.marketProbability !== null &&
+                        leg.marketProbability !== undefined
+                          ? ` · Market ${percent(leg.marketProbability)}`
+                          : ""}
+                        {leg.modelLift !== null && leg.modelLift !== undefined
+                          ? ` · Lift ${percent(leg.modelLift)}`
+                          : ""}
+                      </small>
                     </div>
                     <div className="combo-leg-metrics">
                       <strong>{leg.decimalOdds.toFixed(2)}</strong>
-                      <span>{percent(leg.modelProbability)}</span>
+                      <span>{percent(leg.estimatedValue)} EV</span>
                     </div>
                   </article>
                 ))}

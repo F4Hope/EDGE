@@ -119,3 +119,22 @@ test("opportunities page requires independent evidence and stays validation-gate
   assert.match(data, /passesIndependentEvidenceGate/);
   assert.match(data, /rankOneOpportunityPerEvent/);
 });
+
+
+test("combo page preloads a live default and exposes price provenance", async () => {
+  const [page, builder, data] = await Promise.all([
+    readFile("app/combos/page.tsx", "utf8"),
+    readFile("components/ComboBuilder.tsx", "utf8"),
+    readFile("lib/data/uiCombos.ts", "utf8"),
+  ]);
+
+  assert.match(page, /getComboCandidates/);
+  assert.match(page, /buildCombo\(candidates, 5, "BALANCED"\)/);
+  assert.match(page, /initialResult=/);
+  assert.match(builder, /initialResult/);
+  assert.match(builder, /bookmakerName/);
+  assert.match(builder, /oddsProvider/);
+  assert.match(builder, /marketProbability/);
+  assert.match(builder, /modelLift/);
+  assert.match(data, /passesIndependentEvidenceGate/);
+});
