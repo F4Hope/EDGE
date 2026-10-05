@@ -94,8 +94,8 @@ export function OpportunityCard({
           <strong>{percent(opportunity.dataQuality, 0)}</strong>
         </div>
         <div>
-          <span>AGREEMENT</span>
-          <strong>{percent(opportunity.modelAgreement, 0)}</strong>
+          <span>MODEL LIFT</span>
+          <strong>{signedPercent(opportunity.modelLift)}</strong>
         </div>
         <div>
           <span>BOOKS</span>
@@ -106,7 +106,7 @@ export function OpportunityCard({
       <div className="opportunity-card-foot">
         <span>
           {validationGated
-            ? "VALIDATION-GATED ANALYTICAL WATCH"
+            ? "INDEPENDENT-EVIDENCE WATCH"
             : "MODEL GATE PASSED"}
         </span>
         <span>VIEW ANALYSIS →</span>
