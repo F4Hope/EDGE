@@ -11,7 +11,7 @@ export default async function CombosPage() {
 
   try {
     const candidates = await getComboCandidates();
-    initialResult = buildCombo(candidates, 5, "BALANCED");
+    initialResult = buildCombo(candidates, 2, "BALANCED");
   } catch {
     initialResult = null;
   }
@@ -21,7 +21,7 @@ export default async function CombosPage() {
       <ScreenHeader
         eyebrow="QUALITY FIRST / TARGET SECOND"
         title="Combo builder"
-        description="EDGE opens with the strongest available 5x balanced combo from qualified model-supported selections and real stored bookmaker prices. Change the target or risk mode to rebuild it."
+        description="EDGE opens with Today’s Best balanced combo targeting 2x from qualified model-supported selections and real stored bookmaker prices. Raise the target only when the evidence pool can support it."
       />
 
       <ComboBuilder initialResult={initialResult} />
