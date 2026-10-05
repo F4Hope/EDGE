@@ -86,6 +86,9 @@ jobs:
       - name: Test result provider normalization
         run: npm run test:results-provider
 
+      - name: Test settled outcomes and event-level market benchmark
+        run: npm run test:settled-outcomes
+
       - name: Test provider injury intelligence normalization
         run: npm run test:intelligence-provider
 
