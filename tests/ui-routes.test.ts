@@ -119,3 +119,15 @@ test("opportunities page requires independent evidence and stays validation-gate
   assert.match(data, /passesIndependentEvidenceGate/);
   assert.match(data, /rankOneOpportunityPerEvent/);
 });
+
+
+test("model performance uses event-level paired market validation", async () => {
+  const source = await readFile("app/model/page.tsx", "utf8");
+
+  assert.match(source, /PAIRED EVENTS/);
+  assert.match(source, /EDGE EVENT BRIER/);
+  assert.match(source, /MARKET EVENT BRIER/);
+  assert.match(source, /95% CI/);
+  assert.match(source, /VALIDATION SIGNAL/);
+  assert.match(source, /validation-gated/);
+});
