@@ -28,6 +28,18 @@ export type ComboCandidate = {
 
 export type ComboLeg = ComboCandidate;
 
+export type ComboCandidateDiagnostics = {
+  rawPredictionRows: number;
+  latestPredictionCount: number;
+  missingOdds: number;
+  missingEstimatedValue: number;
+  nonPositiveEstimatedValue: number;
+  missingMarketProbability: number;
+  missingIndependentEvidence: number;
+  insufficientModelMarketLift: number;
+  qualifiedCandidates: number;
+};
+
 export type ComboBuildResult = {
   status: "TARGET_REACHED" | "BEST_EFFORT" | "NO_QUALIFYING_COMBO";
   targetOdds: number;
@@ -39,6 +51,7 @@ export type ComboBuildResult = {
   targetReached: boolean;
   legs: ComboLeg[];
   candidateCount: number;
+  diagnostics?: ComboCandidateDiagnostics;
   message: string;
   methodology: string;
 };
@@ -198,6 +211,7 @@ export function buildCombo(
   candidates: ComboCandidate[],
   targetOdds: number,
   riskMode: ComboRiskMode,
+  diagnostics?: ComboCandidateDiagnostics,
 ): ComboBuildResult {
   const profile = PROFILES[riskMode];
 
@@ -218,6 +232,7 @@ export function buildCombo(
       targetReached: false,
       legs: [],
       candidateCount: 0,
+      diagnostics,
       message:
         "No stored Phase 7 selections pass the selected risk and evidence gates.",
       methodology:
@@ -285,6 +300,7 @@ export function buildCombo(
       targetReached: false,
       legs: [],
       candidateCount: eligible.length,
+      diagnostics,
       message: "No structurally valid combination could be constructed.",
       methodology:
         "One selection per event; pre-event Phase 7 H2H outputs only.",
@@ -305,6 +321,7 @@ export function buildCombo(
     targetReached,
     legs: best.legs,
     candidateCount: eligible.length,
+    diagnostics,
     message: targetReached
       ? `A qualifying ${riskMode.toLowerCase()} combo reached the requested target.`
       : `The available qualified selections cannot safely reach ${targetOdds}x. Showing the strongest best-effort combination instead.`,
