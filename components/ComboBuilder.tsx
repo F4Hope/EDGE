@@ -72,7 +72,7 @@ export function ComboBuilder({
   initialResult?: ComboResult | null;
 }) {
   const [target, setTarget] = useState<Target>(
-    (initialResult?.targetOdds as Target | undefined) ?? 5,
+    (initialResult?.targetOdds as Target | undefined) ?? 2,
   );
   const [risk, setRisk] = useState<Risk>(
     initialResult?.riskMode ?? "BALANCED",
@@ -162,7 +162,7 @@ export function ComboBuilder({
 
       <div className="combo-summary">
         <div>
-          <span>REQUEST</span>
+          <span>{target === 2 && risk === "BALANCED" ? "TODAY’S BEST" : "REQUEST"}</span>
           <strong>{target}x / {risk}</strong>
         </div>
         <span
