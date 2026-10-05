@@ -23,13 +23,39 @@ export type MarketBenchmark = {
   calibrationDelta: number | null;
 };
 
+export type ConfidenceInterval = {
+  lower: number;
+  upper: number;
+};
+
+export type EventMarketBenchmark = {
+  count: number;
+  modelBrierScore: number | null;
+  marketBrierScore: number | null;
+  brierDelta: number | null;
+  brierSkillScore: number | null;
+  brierDeltaCi95: ConfidenceInterval | null;
+  modelTop1Accuracy: number | null;
+  marketTop1Accuracy: number | null;
+  accuracyDelta: number | null;
+  positiveLiftSupported: boolean | null;
+};
+
 export type ModelPerformanceReport = {
   sampleCount: number;
   evaluation: BinaryEvaluation;
   marketBenchmark: MarketBenchmark;
+  eventMarketBenchmark: EventMarketBenchmark;
   bySport: ModelPerformanceSegment[];
   byMarket: ModelPerformanceSegment[];
   byModelVersion: ModelPerformanceSegment[];
+};
+
+type EventBenchmarkRow = {
+  modelBrier: number;
+  marketBrier: number;
+  modelCorrect: boolean;
+  marketCorrect: boolean;
 };
 
 function segment(
@@ -88,6 +114,124 @@ function skillScore(
   return Number((1 - modelBrier / marketBrier).toFixed(6));
 }
 
+function mean(values: number[]): number | null {
+  if (values.length === 0) return null;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function normalizeProbabilities(values: number[]): number[] | null {
+  if (
+    values.length < 2 ||
+    values.some(
+      (value) => !Number.isFinite(value) || value < 0 || value > 1,
+    )
+  ) {
+    return null;
+  }
+
+  const total = values.reduce((sum, value) => sum + value, 0);
+  if (!Number.isFinite(total) || total <= 0) return null;
+
+  return values.map((value) => value / total);
+}
+
+function multiclassBrier(
+  probabilities: number[],
+  outcomes: Array<0 | 1>,
+): number | null {
+  if (
+    probabilities.length < 2 ||
+    probabilities.length !== outcomes.length
+  ) {
+    return null;
+  }
+
+  return (
+    probabilities.reduce(
+      (sum, probability, index) =>
+        sum + (probability - outcomes[index]) ** 2,
+      0,
+    ) / probabilities.length
+  );
+}
+
+function argMax(values: number[]): number {
+  let bestIndex = 0;
+
+  for (let index = 1; index < values.length; index += 1) {
+    if (values[index] > values[bestIndex]) {
+      bestIndex = index;
+    }
+  }
+
+  return bestIndex;
+}
+
+function confidenceInterval95(values: number[]): ConfidenceInterval | null {
+  if (values.length < 2) return null;
+
+  const average = mean(values);
+  if (average === null) return null;
+
+  const variance =
+    values.reduce((sum, value) => sum + (value - average) ** 2, 0) /
+    (values.length - 1);
+  const standardError = Math.sqrt(variance / values.length);
+  const margin = 1.96 * standardError;
+
+  return {
+    lower: Number((average - margin).toFixed(6)),
+    upper: Number((average + margin).toFixed(6)),
+  };
+}
+
+function evaluateEventBenchmark(
+  rows: EventBenchmarkRow[],
+): EventMarketBenchmark {
+  if (rows.length === 0) {
+    return {
+      count: 0,
+      modelBrierScore: null,
+      marketBrierScore: null,
+      brierDelta: null,
+      brierSkillScore: null,
+      brierDeltaCi95: null,
+      modelTop1Accuracy: null,
+      marketTop1Accuracy: null,
+      accuracyDelta: null,
+      positiveLiftSupported: null,
+    };
+  }
+
+  const modelBrierScore = mean(rows.map((row) => row.modelBrier));
+  const marketBrierScore = mean(rows.map((row) => row.marketBrier));
+  const deltas = rows.map((row) => row.marketBrier - row.modelBrier);
+  const brierDelta = mean(deltas);
+  const ci = confidenceInterval95(deltas);
+  const modelTop1Accuracy =
+    rows.filter((row) => row.modelCorrect).length / rows.length;
+  const marketTop1Accuracy =
+    rows.filter((row) => row.marketCorrect).length / rows.length;
+
+  return {
+    count: rows.length,
+    modelBrierScore:
+      modelBrierScore === null ? null : Number(modelBrierScore.toFixed(6)),
+    marketBrierScore:
+      marketBrierScore === null ? null : Number(marketBrierScore.toFixed(6)),
+    brierDelta:
+      brierDelta === null ? null : Number(brierDelta.toFixed(6)),
+    brierSkillScore: skillScore(modelBrierScore, marketBrierScore),
+    brierDeltaCi95: ci,
+    modelTop1Accuracy: Number(modelTop1Accuracy.toFixed(6)),
+    marketTop1Accuracy: Number(marketTop1Accuracy.toFixed(6)),
+    accuracyDelta: Number(
+      (modelTop1Accuracy - marketTop1Accuracy).toFixed(6),
+    ),
+    positiveLiftSupported: ci === null ? null : ci.lower > 0,
+  };
+}
+
 export async function calculateModelPerformance(
   db: EdgeDb,
 ): Promise<ModelPerformanceReport> {
@@ -120,6 +264,7 @@ export async function calculateModelPerformance(
   const rows: BinaryEvaluationRow[] = [];
   const pairedModelRows: BinaryEvaluationRow[] = [];
   const pairedMarketRows: BinaryEvaluationRow[] = [];
+  const eventBenchmarkRows: EventBenchmarkRow[] = [];
   const sports: Array<{ key: string; row: BinaryEvaluationRow }> = [];
   const markets: Array<{ key: string; row: BinaryEvaluationRow }> = [];
   const versions: Array<{ key: string; row: BinaryEvaluationRow }> = [];
@@ -187,6 +332,78 @@ export async function calculateModelPerformance(
         });
       }
     }
+
+    const groups = new Map<
+      string,
+      Array<(typeof result.event.predictions)[number]>
+    >();
+
+    for (const prediction of latest.values()) {
+      if (prediction.market.key !== "h2h") continue;
+
+      const key = [
+        prediction.market.id,
+        prediction.modelRun.modelVersion,
+      ].join("|");
+      const group = groups.get(key) ?? [];
+      group.push(prediction);
+      groups.set(key, group);
+    }
+
+    for (const group of groups.values()) {
+      const outcomes: Array<0 | 1> = [];
+      const modelRaw: number[] = [];
+      const marketRaw: number[] = [];
+      let valid = true;
+
+      for (const prediction of group) {
+        const outcome = resolveSelectionOutcome(
+          result.payload,
+          {
+            selectionKey: prediction.selectionKey,
+            explanation: prediction.explanation,
+          },
+          participants,
+        );
+        const modelProbability = Number(prediction.modelProbability);
+        const baselineProbability = marketProbability(prediction.explanation);
+
+        if (
+          outcome === null ||
+          baselineProbability === null ||
+          !Number.isFinite(modelProbability) ||
+          modelProbability < 0 ||
+          modelProbability > 1
+        ) {
+          valid = false;
+          break;
+        }
+
+        outcomes.push(outcome);
+        modelRaw.push(modelProbability);
+        marketRaw.push(baselineProbability);
+      }
+
+      if (!valid || outcomes.length < 2) continue;
+      if (outcomes.filter((outcome) => outcome === 1).length !== 1) continue;
+
+      const model = normalizeProbabilities(modelRaw);
+      const market = normalizeProbabilities(marketRaw);
+      if (!model || !market) continue;
+
+      const modelBrier = multiclassBrier(model, outcomes);
+      const marketBrier = multiclassBrier(market, outcomes);
+      if (modelBrier === null || marketBrier === null) continue;
+
+      const winnerIndex = outcomes.indexOf(1);
+
+      eventBenchmarkRows.push({
+        modelBrier,
+        marketBrier,
+        modelCorrect: argMax(model) === winnerIndex,
+        marketCorrect: argMax(market) === winnerIndex,
+      });
+    }
   }
 
   const evaluation = evaluateBinaryProbabilities(rows);
@@ -213,6 +430,7 @@ export async function calculateModelPerformance(
         pairedModel.calibrationError,
       ),
     },
+    eventMarketBenchmark: evaluateEventBenchmark(eventBenchmarkRows),
     bySport: segment(sports),
     byMarket: segment(markets),
     byModelVersion: segment(versions),
