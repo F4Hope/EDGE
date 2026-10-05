@@ -40,6 +40,38 @@ function isoOffset(base: Date, hours: number): string {
   return new Date(base.getTime() + hours * 60 * 60 * 1000).toISOString();
 }
 
+function endOfUtcDay(base: Date): Date {
+  return new Date(
+    Date.UTC(
+      base.getUTCFullYear(),
+      base.getUTCMonth(),
+      base.getUTCDate(),
+      23,
+      59,
+      59,
+      999,
+    ),
+  );
+}
+
+export function apiSportsEventTo(
+  now: Date,
+  forwardHours: number,
+  allowFutureDates =
+    process.env.API_SPORTS_ALLOW_FUTURE_DATES === "true",
+): string {
+  const requested = new Date(
+    now.getTime() + forwardHours * 60 * 60 * 1000,
+  );
+
+  if (allowFutureDates) {
+    return requested.toISOString();
+  }
+
+  const todayEnd = endOfUtcDay(now);
+  return (requested < todayEnd ? requested : todayEnd).toISOString();
+}
+
 function main() {
   if (!process.env.DATABASE_URL) {
     throw new Error(
@@ -65,16 +97,22 @@ function main() {
       24,
     );
 
+    const eventTo = apiSportsEventTo(now, eventForwardHours);
+    const futureDatesAllowed =
+      process.env.API_SPORTS_ALLOW_FUTURE_DATES === "true";
+
     console.log(
       "Refreshing football/basketball events from API-Sports " +
         "(" +
         eventForwardHours +
-        "h forward)...",
+        "h requested; future UTC dates " +
+        (futureDatesAllowed ? "enabled" : "disabled") +
+        ")...",
     );
     run("data:sync", [
       "--provider=api-sports",
       "--sports=football,basketball",
-      "--to=" + isoOffset(now, eventForwardHours),
+      "--to=" + eventTo,
     ]);
 
     console.log(

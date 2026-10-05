@@ -50,7 +50,7 @@ export default async function OpportunitiesPage({
       <ScreenHeader
         eyebrow="RANKED INTELLIGENCE"
         title="Opportunities"
-        description="Future model outputs ranked by decision quality after odds, value, risk, data-quality, and agreement gates. The current baseline remains validation-gated."
+        description="Future model outputs are ranked only when historical evidence moves EDGE away from the market baseline. Pure market mirrors are excluded from the model watchlist."
         action={
           <span
             className={
@@ -111,14 +111,17 @@ export default async function OpportunitiesPage({
           <div className="ladder-row ready">
             <span>02</span><strong>FEATURE VECTOR</strong><em>≥ 50% QUALITY</em>
           </div>
-          <div className="ladder-row ready">
-            <span>03</span><strong>MODEL AGREEMENT</strong><em>≥ 60%</em>
-          </div>
-          <div className="ladder-row ready">
-            <span>04</span><strong>ESTIMATED VALUE</strong><em>POSITIVE</em>
+          <div className="ladder-row">
+            <span>03</span><strong>HISTORICAL EVIDENCE</strong><em>FORM / H2H / REST</em>
           </div>
           <div className="ladder-row">
-            <span>05</span><strong>BETPAWA CHECK</strong><em>UNCONFIRMED</em>
+            <span>04</span><strong>MODEL VS MARKET</strong><em>≥ 0.25 PP LIFT</em>
+          </div>
+          <div className="ladder-row ready">
+            <span>05</span><strong>ESTIMATED VALUE</strong><em>POSITIVE</em>
+          </div>
+          <div className="ladder-row">
+            <span>06</span><strong>BETPAWA CHECK</strong><em>UNCONFIRMED</em>
           </div>
         </div>
       </section>
@@ -152,10 +155,12 @@ export default async function OpportunitiesPage({
               ))}
             </div>
             <p className="opportunity-methodology">
-              Ranking order: model status, lower risk, estimated value, model
-              agreement, data quality, then model probability. One selection is
-              shown per event. Current outputs remain analytical WATCH results
-              unless a future validated model explicitly enables BETTABLE.
+              Ranking requires nonzero historical evidence and measurable model
+              separation from the market. After that gate, order is model status,
+              lower risk, larger model lift, estimated value, agreement, data
+              quality, then model probability. One selection is shown per event.
+              BETTABLE remains disabled until settled forward validation beats the
+              market benchmark.
             </p>
           </>
         ) : (
@@ -168,7 +173,7 @@ export default async function OpportunitiesPage({
             }
             description={
               state.message ??
-              "EDGE needs a future event with H2H odds, a current feature vector, and a qualified model output before it will rank an opportunity."
+              "EDGE needs future H2H odds plus historical form, H2H, or rest evidence that moves the model away from the market before it will rank an opportunity."
             }
             action={
               <Link className="secondary-link" href="/events">

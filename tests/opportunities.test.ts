@@ -2,6 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   compareOpportunityPriority,
+  MIN_MODEL_MARKET_LIFT,
+  passesIndependentEvidenceGate,
   rankOneOpportunityPerEvent,
   type UiOpportunity,
 } from "../lib/data/uiOpportunities";
@@ -25,6 +27,8 @@ function candidate(
     modelVersion: "market-evidence-v1",
     modelProbability: 0.52,
     marketProbability: 0.5,
+    modelLift: 0.02,
+    evidenceSupport: 0.04,
     bestDecimalOdds: 2.05,
     estimatedEdge: 0.03,
     estimatedValue: 0.066,
@@ -106,5 +110,37 @@ test("ranked opportunities keep only the highest-priority selection per event", 
   assert.equal(
     ranked.find((item) => item.eventId === "same-event")?.selectionName,
     "Stronger",
+  );
+});
+
+
+test("pure market mirrors do not qualify as model opportunities", () => {
+  assert.equal(
+    passesIndependentEvidenceGate({
+      modelProbability: 0.5,
+      marketProbability: 0.5,
+      evidenceSupport: 0,
+    }),
+    false,
+  );
+});
+
+test("independent evidence must create measurable market separation", () => {
+  assert.equal(
+    passesIndependentEvidenceGate({
+      modelProbability: 0.501,
+      marketProbability: 0.5,
+      evidenceSupport: 0.05,
+    }),
+    false,
+  );
+
+  assert.equal(
+    passesIndependentEvidenceGate({
+      modelProbability: 0.5 + MIN_MODEL_MARKET_LIFT,
+      marketProbability: 0.5,
+      evidenceSupport: 0.05,
+    }),
+    true,
   );
 });

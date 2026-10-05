@@ -4,6 +4,8 @@ import {
   type SupportedSport,
 } from "@/lib/providers/types";
 
+export const MIN_MODEL_MARKET_LIFT = 0.0025;
+
 export type UiOpportunity = {
   predictionId: string;
   eventId: string;
@@ -16,7 +18,9 @@ export type UiOpportunity = {
   selectionName: string;
   modelVersion: string;
   modelProbability: number;
-  marketProbability: number | null;
+  marketProbability: number;
+  modelLift: number;
+  evidenceSupport: number;
   bestDecimalOdds: number;
   estimatedEdge: number | null;
   estimatedValue: number;
@@ -55,6 +59,43 @@ function booleanValue(value: unknown): boolean | null {
   return typeof value === "boolean" ? value : null;
 }
 
+function absolute(value: number | null): number {
+  return value === null ? 0 : Math.abs(value);
+}
+
+export function independentEvidenceSupport(explanation: unknown): number {
+  const evidence = record(record(explanation)?.evidence);
+  if (!evidence) return 0;
+
+  return (
+    absolute(numberValue(evidence.formAdjustment)) +
+    absolute(numberValue(evidence.headToHeadAdjustment)) +
+    absolute(numberValue(evidence.restAdjustment))
+  );
+}
+
+export function passesIndependentEvidenceGate(input: {
+  modelProbability: number;
+  marketProbability: number | null;
+  evidenceSupport: number;
+}): boolean {
+  if (
+    input.marketProbability === null ||
+    !Number.isFinite(input.modelProbability) ||
+    !Number.isFinite(input.marketProbability)
+  ) {
+    return false;
+  }
+
+  if (input.evidenceSupport <= 1e-9) return false;
+
+  const lift = Math.abs(
+    input.modelProbability - input.marketProbability,
+  );
+
+  return lift + Number.EPSILON * 16 >= MIN_MODEL_MARKET_LIFT;
+}
+
 function statusRank(status: UiOpportunity["status"]): number {
   return status === "BETTABLE" ? 2 : 1;
 }
@@ -70,6 +111,7 @@ export function compareOpportunityPriority(
   return (
     statusRank(b.status) - statusRank(a.status) ||
     riskRank(b.risk) - riskRank(a.risk) ||
+    Math.abs(b.modelLift) - Math.abs(a.modelLift) ||
     b.estimatedValue - a.estimatedValue ||
     b.modelAgreement - a.modelAgreement ||
     b.dataQuality - a.dataQuality ||
@@ -168,12 +210,14 @@ export async function getUiOpportunities(options?: {
       const bestDecimalOdds = numberValue(explanation?.bestDecimalOdds);
       const marketProbability = numberValue(explanation?.marketProbability);
       const bookmakerCount = numberValue(explanation?.bookmakerCount);
+      const modelProbability = Number(row.modelProbability);
       const estimatedValue =
         row.estimatedValue === null ? null : Number(row.estimatedValue);
       const dataQuality =
         row.dataQuality === null ? null : Number(row.dataQuality);
       const modelAgreement =
         row.modelAgreement === null ? null : Number(row.modelAgreement);
+      const evidenceSupport = independentEvidenceSupport(row.explanation);
 
       if (
         bestDecimalOdds === null ||
@@ -184,11 +228,18 @@ export async function getUiOpportunities(options?: {
         dataQuality < 0.5 ||
         modelAgreement === null ||
         modelAgreement < 0.6 ||
+        !passesIndependentEvidenceGate({
+          modelProbability,
+          marketProbability,
+          evidenceSupport,
+        }) ||
         (row.risk !== "LOW" && row.risk !== "MEDIUM") ||
         (row.status !== "WATCH" && row.status !== "BETTABLE")
       ) {
         continue;
       }
+
+      const modelLift = modelProbability - marketProbability!;
 
       candidates.push({
         predictionId: row.id,
@@ -203,8 +254,10 @@ export async function getUiOpportunities(options?: {
         startsAt: row.event.startTime.toISOString(),
         selectionName,
         modelVersion: row.modelRun.modelVersion,
-        modelProbability: Number(row.modelProbability),
-        marketProbability,
+        modelProbability,
+        marketProbability: marketProbability!,
+        modelLift,
+        evidenceSupport,
         bestDecimalOdds,
         estimatedEdge:
           row.estimatedEdge === null ? null : Number(row.estimatedEdge),
@@ -227,7 +280,7 @@ export async function getUiOpportunities(options?: {
       available: true,
       message:
         opportunities.length === 0
-          ? "No future model outputs currently pass the opportunity gates."
+          ? "No future model output currently combines independent historical evidence with sufficient model-market separation and the remaining opportunity gates."
           : null,
       qualifiedPredictions: candidates.length,
     };

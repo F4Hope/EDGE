@@ -38,14 +38,12 @@ test("mobile UI preserves explicit uncertainty language", async () => {
   assert.match(history, /INSUFFICIENT DATA/);
 });
 
-
 test("history surface exposes source-backed settled results", async () => {
   const source = await readFile("app/history/page.tsx", "utf8");
   assert.match(source, /Settled results/);
   assert.match(source, /SOURCE-BACKED/);
   assert.match(source, /No settled model sample exists yet/);
 });
-
 
 test("setup center is reachable from More and treated as a More destination", async () => {
   const [more, nav, setup] = await Promise.all([
@@ -60,7 +58,6 @@ test("setup center is reachable from More and treated as a More destination", as
   assert.match(setup, /not a model-confidence or prediction-quality score/);
 });
 
-
 test("events defaults to priced fixtures and preserves all-fixtures inspection", async () => {
   const source = await readFile("app/events/page.tsx", "utf8");
 
@@ -69,7 +66,6 @@ test("events defaults to priced fixtures and preserves all-fixtures inspection",
   assert.match(source, /coverage = first\(params\.coverage\) === "all" \? "all" : "odds"/);
   assert.match(source, /requireOdds: coverage === "odds"/);
 });
-
 
 test("event cards expose canonical odds roles, source and freshness", async () => {
   const [card, data] = await Promise.all([
@@ -85,7 +81,6 @@ test("event cards expose canonical odds roles, source and freshness", async () =
   assert.match(card, /quote\.provider/);
   assert.match(data, /provider: snapshot\.provider/);
 });
-
 
 test("analysis page leads with a guarded decision summary", async () => {
   const [analysis, summary] = await Promise.all([
@@ -103,8 +98,7 @@ test("analysis page leads with a guarded decision summary", async () => {
   assert.match(summary, /MARKET PROBABILITY/);
 });
 
-
-test("opportunities page is model-driven and validation-gated", async () => {
+test("opportunities page requires independent evidence and stays validation-gated", async () => {
   const [page, card, data] = await Promise.all([
     readFile("app/opportunities/page.tsx", "utf8"),
     readFile("components/OpportunityCard.tsx", "utf8"),
@@ -113,12 +107,15 @@ test("opportunities page is model-driven and validation-gated", async () => {
 
   assert.match(page, /Ranked opportunities/);
   assert.match(page, /ESTIMATED VALUE/);
-  assert.match(page, /BETPAWA CHECK/);
-  assert.match(page, /validation-gated/);
-  assert.match(card, /VALIDATION-GATED ANALYTICAL WATCH/);
+  assert.match(page, /HISTORICAL EVIDENCE/);
+  assert.match(page, /MODEL VS MARKET/);
+  assert.match(page, /BETTABLE remains disabled/);
+  assert.match(card, /INDEPENDENT-EVIDENCE WATCH/);
+  assert.match(card, /MODEL LIFT/);
   assert.match(card, /VIEW ANALYSIS/);
   assert.match(data, /estimatedValue: \{ gt: 0 \}/);
   assert.match(data, /dataQuality: \{ gte: 0\.5 \}/);
   assert.match(data, /modelAgreement: \{ gte: 0\.6 \}/);
+  assert.match(data, /passesIndependentEvidenceGate/);
   assert.match(data, /rankOneOpportunityPerEvent/);
 });
