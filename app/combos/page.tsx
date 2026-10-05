@@ -2,7 +2,7 @@ import { ComboBuilder } from "@/components/ComboBuilder";
 import { MobileShell } from "@/components/MobileShell";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { buildCombo } from "@/lib/combo/engine";
-import { getComboCandidates } from "@/lib/data/uiCombos";
+import { getComboCandidatePool } from "@/lib/data/uiCombos";
 
 export const dynamic = "force-dynamic";
 
@@ -10,8 +10,8 @@ export default async function CombosPage() {
   let initialResult = null;
 
   try {
-    const candidates = await getComboCandidates();
-    initialResult = buildCombo(candidates, 2, "BALANCED");
+    const { candidates, diagnostics } = await getComboCandidatePool();
+    initialResult = buildCombo(candidates, 2, "BALANCED", diagnostics);
   } catch {
     initialResult = null;
   }
