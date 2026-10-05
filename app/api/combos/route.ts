@@ -5,7 +5,7 @@ import {
   COMBO_TARGETS,
   type ComboRiskMode,
 } from "@/lib/combo/engine";
-import { getComboCandidates } from "@/lib/data/uiCombos";
+import { getComboCandidatePool } from "@/lib/data/uiCombos";
 import {
   ApiRequestError,
   apiFailure,
@@ -59,8 +59,8 @@ export async function POST(request: NextRequest) {
 
     const targetOdds = parseTarget(body.targetOdds);
     const riskMode = parseRisk(body.riskMode);
-    const candidates = await getComboCandidates();
-    const combo = buildCombo(candidates, targetOdds, riskMode);
+    const pool = await getComboCandidatePool();
+    const combo = buildCombo(pool.candidates, targetOdds, riskMode);
 
     return apiJson(
       requestId,
@@ -68,7 +68,8 @@ export async function POST(request: NextRequest) {
         data: combo,
         meta: {
           source: "edge-phase8-combo-engine",
-          candidateCount: candidates.length,
+          candidateCount: pool.candidates.length,
+          candidateDiagnostics: pool.diagnostics,
           requestId,
         },
       },

@@ -2,18 +2,21 @@ import { ComboBuilder } from "@/components/ComboBuilder";
 import { MobileShell } from "@/components/MobileShell";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { buildCombo } from "@/lib/combo/engine";
-import { getComboCandidates } from "@/lib/data/uiCombos";
+import { getComboCandidatePool } from "@/lib/data/uiCombos";
 
 export const dynamic = "force-dynamic";
 
 export default async function CombosPage() {
   let initialResult = null;
+  let initialDiagnostics = null;
 
   try {
-    const candidates = await getComboCandidates();
-    initialResult = buildCombo(candidates, 2, "BALANCED");
+    const pool = await getComboCandidatePool();
+    initialResult = buildCombo(pool.candidates, 2, "BALANCED");
+    initialDiagnostics = pool.diagnostics;
   } catch {
     initialResult = null;
+    initialDiagnostics = null;
   }
 
   return (
@@ -24,7 +27,10 @@ export default async function CombosPage() {
         description="EDGE opens with Today’s Best balanced combo targeting 2x from qualified model-supported selections and real stored bookmaker prices. Raise the target only when the evidence pool can support it."
       />
 
-      <ComboBuilder initialResult={initialResult} />
+      <ComboBuilder
+        initialResult={initialResult}
+        initialDiagnostics={initialDiagnostics}
+      />
 
       <section className="principle-card compact-principle">
         <span className="principle-index">COMBO RULE</span>

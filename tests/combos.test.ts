@@ -96,8 +96,9 @@ test("combo candidate loader requires positive value and independent evidence", 
   const source = await readFile("lib/data/uiCombos.ts", "utf8");
 
   assert.match(source, /estimatedValue <= 0/);
-  assert.match(source, /passesIndependentEvidenceGate/);
   assert.match(source, /independentEvidenceSupport/);
+  assert.match(source, /MIN_MODEL_MARKET_LIFT/);
+  assert.match(source, /evidenceSupport <= 1e-9/);
   assert.match(source, /bookmakerName: bestSnapshot\.bookmakerName/);
   assert.match(source, /oddsProvider: bestSnapshot\.provider/);
 });
@@ -109,7 +110,7 @@ test("combo page defaults to a 2x balanced Today’s Best output", async () => {
     readFile("components/ComboBuilder.tsx", "utf8"),
   ]);
 
-  assert.match(page, /buildCombo\(candidates, 2, "BALANCED"\)/);
+  assert.match(page, /buildCombo\(pool\.candidates, 2, "BALANCED"\)/);
   assert.match(page, /Today’s Best balanced combo targeting 2x/);
   assert.match(component, /\?\? 2/);
   assert.match(component, /TODAY’S BEST/);
@@ -126,4 +127,36 @@ test("combo controls rebuild immediately with the selected target and risk", asy
   assert.match(source, /void build\(item, risk\)/);
   assert.match(source, /void build\(target, item\)/);
   assert.match(source, /disabled=\{building\}/);
+});
+
+
+test("combo API exposes candidate rejection diagnostics", async () => {
+  const [loader, route] = await Promise.all([
+    readFile("lib/data/uiCombos.ts", "utf8"),
+    readFile("app/api/combos/route.ts", "utf8"),
+  ]);
+
+  assert.match(loader, /export type ComboCandidateDiagnostics/);
+  assert.match(loader, /missingStoredOdds/);
+  assert.match(loader, /nonPositiveEstimatedValue/);
+  assert.match(loader, /missingMarketProbability/);
+  assert.match(loader, /missingIndependentEvidence/);
+  assert.match(loader, /insufficientModelMarketLift/);
+  assert.match(loader, /qualifiedCandidates/);
+  assert.match(route, /candidateDiagnostics: pool\.diagnostics/);
+});
+
+
+test("combo screen surfaces candidate rejection diagnostics when no legs qualify", async () => {
+  const [page, component] = await Promise.all([
+    readFile("app/combos/page.tsx", "utf8"),
+    readFile("components/ComboBuilder.tsx", "utf8"),
+  ]);
+
+  assert.match(page, /getComboCandidatePool/);
+  assert.match(page, /initialDiagnostics/);
+  assert.match(component, /candidateDiagnostics/);
+  assert.match(component, /NO \+EV/);
+  assert.match(component, /NO EVIDENCE/);
+  assert.match(component, /LOW LIFT/);
 });
