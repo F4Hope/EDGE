@@ -9,14 +9,17 @@ export const dynamic = "force-dynamic";
 export default async function CombosPage() {
   let initialResult = null;
   let initialDiagnostics = null;
+  let initialResearchQueue = null;
 
   try {
     const pool = await getComboCandidatePool();
     initialResult = buildCombo(pool.candidates, 2, "BALANCED");
     initialDiagnostics = pool.diagnostics;
+    initialResearchQueue = pool.evidenceResearchQueue;
   } catch {
     initialResult = null;
     initialDiagnostics = null;
+    initialResearchQueue = null;
   }
 
   return (
@@ -30,6 +33,7 @@ export default async function CombosPage() {
       <ComboBuilder
         initialResult={initialResult}
         initialDiagnostics={initialDiagnostics}
+        initialResearchQueue={initialResearchQueue}
       />
 
       <section className="principle-card compact-principle">
