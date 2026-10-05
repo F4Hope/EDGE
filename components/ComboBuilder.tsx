@@ -31,6 +31,18 @@ type ComboLeg = {
   evidenceSupport?: number | null;
 };
 
+type ComboCandidateDiagnostics = {
+  queriedPredictions: number;
+  latestPredictions: number;
+  duplicatesCollapsed: number;
+  missingStoredOdds: number;
+  nonPositiveEstimatedValue: number;
+  missingMarketProbability: number;
+  missingIndependentEvidence: number;
+  insufficientModelMarketLift: number;
+  qualifiedCandidates: number;
+};
+
 type ComboResult = {
   status: "TARGET_REACHED" | "BEST_EFFORT" | "NO_QUALIFYING_COMBO";
   targetOdds: number;
@@ -48,6 +60,9 @@ type ComboResult = {
 
 type ApiResponse = {
   data?: ComboResult;
+  meta?: {
+    candidateDiagnostics?: ComboCandidateDiagnostics;
+  };
   error?: string;
   requestId?: string;
 };
@@ -68,8 +83,10 @@ function sourceLabel(leg: ComboLeg): string {
 
 export function ComboBuilder({
   initialResult,
+  initialDiagnostics,
 }: {
   initialResult?: ComboResult | null;
+  initialDiagnostics?: ComboCandidateDiagnostics | null;
 }) {
   const [target, setTarget] = useState<Target>(
     (initialResult?.targetOdds as Target | undefined) ?? 2,
@@ -80,6 +97,8 @@ export function ComboBuilder({
   const [result, setResult] = useState<ComboResult | null>(
     initialResult ?? null,
   );
+  const [diagnostics, setDiagnostics] =
+    useState<ComboCandidateDiagnostics | null>(initialDiagnostics ?? null);
   const [error, setError] = useState<string | null>(null);
   const [building, setBuilding] = useState(false);
 
@@ -107,6 +126,7 @@ export function ComboBuilder({
       }
 
       setResult(payload.data);
+      setDiagnostics(payload.meta?.candidateDiagnostics ?? null);
     } catch (caught) {
       setResult(null);
       setError(
@@ -219,6 +239,27 @@ export function ComboBuilder({
           </div>
 
           <p className="combo-result-message">{result.message}</p>
+
+          {diagnostics && result.legs.length === 0 ? (
+            <div className="combo-metrics">
+              <div>
+                <span>LATEST</span>
+                <strong>{diagnostics.latestPredictions}</strong>
+              </div>
+              <div>
+                <span>NO +EV</span>
+                <strong>{diagnostics.nonPositiveEstimatedValue}</strong>
+              </div>
+              <div>
+                <span>NO EVIDENCE</span>
+                <strong>{diagnostics.missingIndependentEvidence}</strong>
+              </div>
+              <div>
+                <span>LOW LIFT</span>
+                <strong>{diagnostics.insufficientModelMarketLift}</strong>
+              </div>
+            </div>
+          ) : null}
 
           {result.legs.length > 0 ? (
             <>
