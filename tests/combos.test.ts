@@ -173,10 +173,11 @@ test("combo exposes positive-EV evidence research candidates without qualifying 
   assert.match(loader, /evidenceResearchQueue/);
   assert.match(loader, /evidenceResearchWithActiveIntelligence/);
   assert.match(loader, /intelligenceSignals/);
+  assert.match(loader, /comboResearchSignalTypes/);
   assert.match(loader, /evidenceSupport <= 1e-9/);
   assert.match(route, /evidenceResearchQueue: pool\.evidenceResearchQueue/);
   assert.match(page, /initialResearchQueue/);
   assert.match(component, /EVIDENCE RESEARCH QUEUE/);
   assert.match(component, /INTEL READY/);
-  assert.match(component, /active intelligence signal/);
+  assert.match(component, /active research signal/);
 });
