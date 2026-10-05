@@ -19,13 +19,14 @@ function signed(value: number | null, digits = 3): string {
 export default async function ModelPage() {
   const state = await getUiHistory();
   const report = state.performance;
+  const eventBenchmark = report.eventMarketBenchmark;
 
   return (
     <MobileShell>
       <ScreenHeader
         eyebrow="MODEL INTELLIGENCE"
         title="Performance"
-        description="Calibration and accuracy are derived from settled records only. No unsupported strengths or weaknesses are claimed."
+        description="Calibration, accuracy, and event-level market lift are derived from settled records only. No unsupported model advantage is claimed."
       />
 
       <div className="metric-grid">
@@ -61,31 +62,93 @@ export default async function ModelPage() {
 
       <div className="metric-grid">
         <MetricPlaceholder
-          label="MARKET BRIER"
+          label="PAIRED EVENTS"
+          value={String(eventBenchmark.count)}
+          note="Settled H2H markets scored once per event"
+          state={eventBenchmark.count > 0 ? "ready" : "pending"}
+        />
+        <MetricPlaceholder
+          label="EDGE EVENT BRIER"
           value={
-            report.marketBenchmark.market.brierScore === null
+            eventBenchmark.modelBrierScore === null
               ? "—"
-              : report.marketBenchmark.market.brierScore.toFixed(3)
+              : eventBenchmark.modelBrierScore.toFixed(3)
           }
-          note={`${report.marketBenchmark.count} paired settled selections`}
-          state={report.marketBenchmark.count > 0 ? "ready" : "pending"}
+          note="Multiclass event-level probability error"
+          state={eventBenchmark.count > 0 ? "ready" : "pending"}
         />
         <MetricPlaceholder
-          label="BRIER Δ"
-          value={signed(report.marketBenchmark.brierDelta)}
-          note="Positive means EDGE beat market baseline"
-          state={report.marketBenchmark.count > 0 ? "ready" : "pending"}
+          label="MARKET EVENT BRIER"
+          value={
+            eventBenchmark.marketBrierScore === null
+              ? "—"
+              : eventBenchmark.marketBrierScore.toFixed(3)
+          }
+          note="Paired de-vigged market baseline"
+          state={eventBenchmark.count > 0 ? "ready" : "pending"}
         />
         <MetricPlaceholder
-          label="BRIER SKILL"
-          value={pct(report.marketBenchmark.brierSkillScore)}
+          label="EVENT BRIER SKILL"
+          value={pct(eventBenchmark.brierSkillScore)}
           note="Positive = improvement over market consensus"
-          state={report.marketBenchmark.count > 0 ? "ready" : "pending"}
+          state={eventBenchmark.count > 0 ? "ready" : "pending"}
+        />
+      </div>
+
+      <section className="split-card">
+        <div>
+          <span className="empty-status">PAIRED BRIER LIFT</span>
+          <strong>{signed(eventBenchmark.brierDelta)}</strong>
+          <p>
+            {eventBenchmark.brierDeltaCi95
+              ? `95% CI ${signed(eventBenchmark.brierDeltaCi95.lower)} to ${signed(eventBenchmark.brierDeltaCi95.upper)}`
+              : "At least two paired settled events are required for a confidence interval."}
+          </p>
+        </div>
+        <div>
+          <span className="empty-status">VALIDATION SIGNAL</span>
+          <strong>
+            {eventBenchmark.positiveLiftSupported === true
+              ? "POSITIVE"
+              : eventBenchmark.positiveLiftSupported === false
+                ? "UNPROVEN"
+                : "PENDING"}
+          </strong>
+          <p>
+            {eventBenchmark.positiveLiftSupported === true
+              ? "The current 95% interval for event-level Brier improvement is entirely above zero."
+              : "EDGE remains validation-gated until event-level market improvement is supported by settled evidence."}
+          </p>
+        </div>
+      </section>
+
+      <div className="metric-grid">
+        <MetricPlaceholder
+          label="EDGE TOP-1"
+          value={pct(eventBenchmark.modelTop1Accuracy)}
+          note="Highest-probability selection won"
+          state={eventBenchmark.count > 0 ? "ready" : "pending"}
         />
         <MetricPlaceholder
-          label="CALIBRATION Δ"
-          value={pct(report.marketBenchmark.calibrationDelta)}
-          note="Positive means lower calibration error than market"
+          label="MARKET TOP-1"
+          value={pct(eventBenchmark.marketTop1Accuracy)}
+          note="Market favorite won"
+          state={eventBenchmark.count > 0 ? "ready" : "pending"}
+        />
+        <MetricPlaceholder
+          label="TOP-1 Δ"
+          value={pct(eventBenchmark.accuracyDelta)}
+          note="EDGE minus market top-1 accuracy"
+          state={eventBenchmark.count > 0 ? "ready" : "pending"}
+        />
+        <MetricPlaceholder
+          label="SELECTION BRIER"
+          value={
+            report.marketBenchmark.model.brierScore === null
+              ? "—"
+              : report.marketBenchmark.model.brierScore.toFixed(3)
+          }
+          note={`${report.marketBenchmark.count} paired selection outcomes`}
           state={report.marketBenchmark.count > 0 ? "ready" : "pending"}
         />
       </div>
