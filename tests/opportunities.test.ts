@@ -10,16 +10,18 @@ function candidate(
   overrides: Partial<UiOpportunity> &
     Pick<UiOpportunity, "eventId" | "selectionName">,
 ): UiOpportunity {
+  const { eventId, selectionName, ...rest } = overrides;
+
   return {
-    predictionId: `${overrides.eventId}:${overrides.selectionName}`,
-    eventId: overrides.eventId,
+    predictionId: `${eventId}:${selectionName}`,
+    eventId,
     sport: "football",
     league: "Test League",
     country: "Test",
     home: "Home",
     away: "Away",
     startsAt: "2026-10-06T18:00:00.000Z",
-    selectionName: overrides.selectionName,
+    selectionName,
     modelVersion: "market-evidence-v1",
     modelProbability: 0.52,
     marketProbability: 0.5,
@@ -34,7 +36,7 @@ function candidate(
     validationState: "UNVALIDATED_BASELINE",
     bettableEnabled: false,
     createdAt: "2026-10-05T08:00:00.000Z",
-    ...overrides,
+    ...rest,
   };
 }
 
