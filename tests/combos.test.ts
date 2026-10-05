@@ -158,7 +158,7 @@ test("combo screen surfaces candidate rejection diagnostics when no legs qualify
   assert.match(component, /candidateDiagnostics/);
   assert.match(component, /NO \+EV/);
   assert.match(component, /NO EVIDENCE/);
-  assert.match(component, /LOW LIFT/);
+  assert.match(component, /INTEL READY/);
 });
 
 
