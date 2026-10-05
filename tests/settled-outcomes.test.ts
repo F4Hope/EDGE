@@ -255,7 +255,99 @@ test("model performance derives legacy outcomes and deduplicates prediction revi
   assert.equal(report.marketBenchmark.brierDelta, 0.0164);
   assert.equal(report.marketBenchmark.brierSkillScore, 0.092971);
   assert.equal(report.marketBenchmark.calibrationDelta, 0.02);
+  assert.equal(report.eventMarketBenchmark.count, 1);
+  assert.equal(report.eventMarketBenchmark.modelBrierScore, 0.16);
+  assert.equal(report.eventMarketBenchmark.marketBrierScore, 0.1764);
+  assert.equal(report.eventMarketBenchmark.brierDelta, 0.0164);
+  assert.equal(report.eventMarketBenchmark.brierSkillScore, 0.092971);
+  assert.equal(report.eventMarketBenchmark.brierDeltaCi95, null);
+  assert.equal(report.eventMarketBenchmark.modelTop1Accuracy, 1);
+  assert.equal(report.eventMarketBenchmark.marketTop1Accuracy, 1);
+  assert.equal(report.eventMarketBenchmark.accuracyDelta, 0);
+  assert.equal(report.eventMarketBenchmark.positiveLiftSupported, null);
   assert.equal(report.bySport[0]?.count, 2);
   assert.equal(report.byMarket[0]?.count, 2);
   assert.equal(report.byModelVersion[0]?.count, 2);
+});
+
+
+test("event market benchmark counts a three-way H2H market as one settled event", async () => {
+  const eventStart = new Date("2026-10-06T20:00:00.000Z");
+  const market = { id: "market-3way", key: "h2h" };
+  const modelRun = {
+    modelVersion: "market-evidence-v1",
+    status: "COMPLETED",
+  };
+
+  const predictions = [
+    {
+      selectionKey: "home",
+      modelProbability: 0.5,
+      explanation: {
+        selectionName: "Alpha",
+        marketProbability: 0.46,
+      },
+      createdAt: new Date("2026-10-06T18:00:00.000Z"),
+      market,
+      modelRun,
+    },
+    {
+      selectionKey: "draw",
+      modelProbability: 0.25,
+      explanation: {
+        selectionName: "Draw",
+        marketProbability: 0.29,
+      },
+      createdAt: new Date("2026-10-06T18:00:00.000Z"),
+      market,
+      modelRun,
+    },
+    {
+      selectionKey: "away",
+      modelProbability: 0.25,
+      explanation: {
+        selectionName: "Beta",
+        marketProbability: 0.25,
+      },
+      createdAt: new Date("2026-10-06T18:00:00.000Z"),
+      market,
+      modelRun,
+    },
+  ];
+
+  const db = {
+    result: {
+      findMany: async () => [
+        {
+          status: "FINAL",
+          payload: {
+            winner: "home",
+            selectionOutcomes: {
+              home: "win",
+              draw: "loss",
+              away: "loss",
+            },
+          },
+          event: {
+            startTime: eventStart,
+            sport: { key: "football" },
+            homeTeam: { name: "Alpha" },
+            awayTeam: { name: "Beta" },
+            homePlayer: null,
+            awayPlayer: null,
+            predictions,
+          },
+        },
+      ],
+    },
+  };
+
+  const report = await calculateModelPerformance(db as never);
+
+  assert.equal(report.sampleCount, 3);
+  assert.equal(report.marketBenchmark.count, 3);
+  assert.equal(report.eventMarketBenchmark.count, 1);
+  assert.equal(report.eventMarketBenchmark.brierDeltaCi95, null);
+  assert.equal(report.eventMarketBenchmark.modelTop1Accuracy, 1);
+  assert.equal(report.eventMarketBenchmark.marketTop1Accuracy, 1);
 });
