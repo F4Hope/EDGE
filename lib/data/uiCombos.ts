@@ -5,6 +5,33 @@ import {
   MIN_MODEL_MARKET_LIFT,
 } from "@/lib/data/uiOpportunities";
 
+export type ComboEvidenceSignal = {
+  type: string;
+  severity: string;
+  source: string;
+  headline: string;
+  affectsHome: boolean | null;
+  affectsAway: boolean | null;
+  participant: string | null;
+};
+
+export type ComboEvidenceResearchCandidate = {
+  predictionId: string;
+  eventId: string;
+  sport: string;
+  league: string;
+  startsAt: string;
+  matchup: string;
+  selectionName: string;
+  decimalOdds: number;
+  modelProbability: number;
+  marketProbability: number;
+  estimatedValue: number;
+  bookmakerName: string | null;
+  oddsProvider: string;
+  intelligenceSignals: ComboEvidenceSignal[];
+};
+
 export type ComboCandidateDiagnostics = {
   queriedPredictions: number;
   latestPredictions: number;
@@ -13,12 +40,15 @@ export type ComboCandidateDiagnostics = {
   nonPositiveEstimatedValue: number;
   missingMarketProbability: number;
   missingIndependentEvidence: number;
+  evidenceResearchCandidates: number;
+  evidenceResearchWithActiveIntelligence: number;
   insufficientModelMarketLift: number;
   qualifiedCandidates: number;
 };
 
 export type ComboCandidatePool = {
   candidates: ComboCandidate[];
+  evidenceResearchQueue: ComboEvidenceResearchCandidate[];
   diagnostics: ComboCandidateDiagnostics;
 };
 
@@ -78,6 +108,22 @@ export async function getComboCandidatePool(
           awayTeam: { select: { name: true } },
           homePlayer: { select: { fullName: true } },
           awayPlayer: { select: { fullName: true } },
+          intelligenceSignals: {
+            where: {
+              OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+            },
+            orderBy: { occurredAt: "desc" },
+            take: 20,
+            select: {
+              type: true,
+              severity: true,
+              source: true,
+              headline: true,
+              affectsHome: true,
+              affectsAway: true,
+              participant: true,
+            },
+          },
         },
       },
       market: {
@@ -113,11 +159,14 @@ export async function getComboCandidatePool(
     nonPositiveEstimatedValue: 0,
     missingMarketProbability: 0,
     missingIndependentEvidence: 0,
+    evidenceResearchCandidates: 0,
+    evidenceResearchWithActiveIntelligence: 0,
     insufficientModelMarketLift: 0,
     qualifiedCandidates: 0,
   };
 
   const candidates: ComboCandidate[] = [];
+  const evidenceResearchQueue: ComboEvidenceResearchCandidate[] = [];
 
   for (const row of latestPrediction.values()) {
     const latestByBookmaker = new Map<
@@ -166,6 +215,39 @@ export async function getComboCandidatePool(
 
     if (evidenceSupport <= 1e-9) {
       diagnostics.missingIndependentEvidence += 1;
+
+      const intelligenceSignals = row.event.intelligenceSignals.map((signal) => ({
+        type: signal.type,
+        severity: signal.severity,
+        source: signal.source,
+        headline: signal.headline,
+        affectsHome: signal.affectsHome,
+        affectsAway: signal.affectsAway,
+        participant: signal.participant,
+      }));
+
+      evidenceResearchQueue.push({
+        predictionId: row.id,
+        eventId: row.eventId,
+        sport: row.event.sport.key,
+        league: row.event.league.name,
+        startsAt: row.event.startTime.toISOString(),
+        matchup: participantName(row.event),
+        selectionName:
+          explanationSelectionName(row.explanation) ?? row.selectionKey,
+        decimalOdds: Number(bestSnapshot.decimalOdds),
+        modelProbability,
+        marketProbability,
+        estimatedValue,
+        bookmakerName: bestSnapshot.bookmakerName,
+        oddsProvider: bestSnapshot.provider,
+        intelligenceSignals,
+      });
+
+      diagnostics.evidenceResearchCandidates += 1;
+      if (intelligenceSignals.length > 0) {
+        diagnostics.evidenceResearchWithActiveIntelligence += 1;
+      }
       continue;
     }
 
@@ -204,7 +286,14 @@ export async function getComboCandidatePool(
 
   diagnostics.qualifiedCandidates = candidates.length;
 
-  return { candidates, diagnostics };
+  evidenceResearchQueue.sort(
+    (a, b) =>
+      b.intelligenceSignals.length - a.intelligenceSignals.length ||
+      b.estimatedValue - a.estimatedValue ||
+      a.startsAt.localeCompare(b.startsAt),
+  );
+
+  return { candidates, evidenceResearchQueue, diagnostics };
 }
 
 export async function getComboCandidates(
