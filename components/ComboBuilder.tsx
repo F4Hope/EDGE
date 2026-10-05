@@ -31,6 +31,33 @@ type ComboLeg = {
   evidenceSupport?: number | null;
 };
 
+type ComboEvidenceSignal = {
+  type: string;
+  severity: string;
+  source: string;
+  headline: string;
+  affectsHome: boolean | null;
+  affectsAway: boolean | null;
+  participant: string | null;
+};
+
+type ComboEvidenceResearchCandidate = {
+  predictionId: string;
+  eventId: string;
+  sport: string;
+  league: string;
+  startsAt: string;
+  matchup: string;
+  selectionName: string;
+  decimalOdds: number;
+  modelProbability: number;
+  marketProbability: number;
+  estimatedValue: number;
+  bookmakerName: string | null;
+  oddsProvider: string;
+  intelligenceSignals: ComboEvidenceSignal[];
+};
+
 type ComboCandidateDiagnostics = {
   queriedPredictions: number;
   latestPredictions: number;
@@ -39,6 +66,8 @@ type ComboCandidateDiagnostics = {
   nonPositiveEstimatedValue: number;
   missingMarketProbability: number;
   missingIndependentEvidence: number;
+  evidenceResearchCandidates: number;
+  evidenceResearchWithActiveIntelligence: number;
   insufficientModelMarketLift: number;
   qualifiedCandidates: number;
 };
@@ -62,6 +91,7 @@ type ApiResponse = {
   data?: ComboResult;
   meta?: {
     candidateDiagnostics?: ComboCandidateDiagnostics;
+    evidenceResearchQueue?: ComboEvidenceResearchCandidate[];
   };
   error?: string;
   requestId?: string;
@@ -84,9 +114,11 @@ function sourceLabel(leg: ComboLeg): string {
 export function ComboBuilder({
   initialResult,
   initialDiagnostics,
+  initialResearchQueue,
 }: {
   initialResult?: ComboResult | null;
   initialDiagnostics?: ComboCandidateDiagnostics | null;
+  initialResearchQueue?: ComboEvidenceResearchCandidate[] | null;
 }) {
   const [target, setTarget] = useState<Target>(
     (initialResult?.targetOdds as Target | undefined) ?? 2,
@@ -99,6 +131,9 @@ export function ComboBuilder({
   );
   const [diagnostics, setDiagnostics] =
     useState<ComboCandidateDiagnostics | null>(initialDiagnostics ?? null);
+  const [researchQueue, setResearchQueue] = useState<
+    ComboEvidenceResearchCandidate[]
+  >(initialResearchQueue ?? []);
   const [error, setError] = useState<string | null>(null);
   const [building, setBuilding] = useState(false);
 
@@ -127,8 +162,10 @@ export function ComboBuilder({
 
       setResult(payload.data);
       setDiagnostics(payload.meta?.candidateDiagnostics ?? null);
+      setResearchQueue(payload.meta?.evidenceResearchQueue ?? []);
     } catch (caught) {
       setResult(null);
+      setResearchQueue([]);
       setError(
         caught instanceof Error
           ? caught.message
@@ -255,14 +292,53 @@ export function ComboBuilder({
                 <strong>{diagnostics.missingIndependentEvidence}</strong>
               </div>
               <div>
-                <span>LOW LIFT</span>
-                <strong>{diagnostics.insufficientModelMarketLift}</strong>
+                <span>INTEL READY</span>
+                <strong>{diagnostics.evidenceResearchWithActiveIntelligence}</strong>
               </div>
             </div>
           ) : null}
 
-          {result.legs.length > 0 ? (
-            <>
+          {result.legs.length === 0 && researchQueue.length > 0 ? (
+            <div className="combo-leg-list">
+              <div className="combo-result-heading">
+                <div>
+                  <span>EVIDENCE RESEARCH QUEUE</span>
+                  <strong>{researchQueue.length} selections need support</strong>
+                </div>
+              </div>
+              {researchQueue.slice(0, 5).map((candidate, index) => (
+                <article className="combo-leg" key={candidate.predictionId}>
+                  <div className="combo-leg-index">
+                    {String(index + 1).padStart(2, "0")}
+                  </div>
+                  <div className="combo-leg-copy">
+                    <span>{candidate.sport.toUpperCase()} · {candidate.league}</span>
+                    <strong>{candidate.selectionName}</strong>
+                    <p>{candidate.matchup}</p>
+                    <small>
+                      {candidate.bookmakerName ?? "Bookmaker"} ·{" "}
+                      {candidate.oddsProvider.replaceAll("-", " ").toUpperCase()}
+                    </small>
+                    <small>
+                      Model {percent(candidate.modelProbability)} · Market{" "}
+                      {percent(candidate.marketProbability)}
+                    </small>
+                    <small>
+                      {candidate.intelligenceSignals.length > 0
+                        ? candidate.intelligenceSignals.length + " active intelligence signal(s)"
+                        : "No active injury/lineup intelligence yet"}
+                    </small>
+                  </div>
+                  <div className="combo-leg-metrics">
+                    <strong>{candidate.decimalOdds.toFixed(2)}</strong>
+                    <span>{percent(candidate.estimatedValue)} EV</span>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : null}
+
+          {result.legs.length > 0 ? (            <>
               <div className="combo-metrics">
                 <div>
                   <span>MODEL PROB.</span>
