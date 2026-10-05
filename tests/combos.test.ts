@@ -127,3 +127,25 @@ test("combo controls rebuild immediately with the selected target and risk", asy
   assert.match(source, /void build\(target, item\)/);
   assert.match(source, /disabled=\{building\}/);
 });
+
+
+test("combo candidate diagnostics expose the first blocking gate", async () => {
+  const [source, page, api, component] = await Promise.all([
+    readFile("lib/data/uiCombos.ts", "utf8"),
+    readFile("app/combos/page.tsx", "utf8"),
+    readFile("app/api/combos/route.ts", "utf8"),
+    readFile("components/ComboBuilder.tsx", "utf8"),
+  ]);
+
+  assert.match(source, /missingOdds/);
+  assert.match(source, /nonPositiveEstimatedValue/);
+  assert.match(source, /missingMarketProbability/);
+  assert.match(source, /missingIndependentEvidence/);
+  assert.match(source, /insufficientModelMarketLift/);
+  assert.match(source, /qualifiedCandidates/);
+  assert.match(page, /getComboCandidatePool/);
+  assert.match(api, /diagnostics/);
+  assert.match(component, /NO \+EV/);
+  assert.match(component, /NO EVIDENCE/);
+  assert.match(component, /LOW LIFT/);
+});
