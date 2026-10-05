@@ -17,6 +17,23 @@ export function IntelligencePanel({
           </div>
           <h3>{signal.headline}</h3>
           {signal.summary ? <p>{signal.summary}</p> : null}
+
+          {signal.citations.length > 0 ? (
+            <div className="intelligence-citations" aria-label="Grounded sources">
+              {signal.citations.map((citation, index) => (
+                <a
+                  key={citation.url}
+                  href={citation.url}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  SOURCE {index + 1}
+                  {citation.title ? ` · ${citation.title}` : ""}
+                </a>
+              ))}
+            </div>
+          ) : null}
+
           <footer>
             <span>{signal.source}</span>
             <span>{new Date(signal.occurredAt).toLocaleString("en")}</span>
