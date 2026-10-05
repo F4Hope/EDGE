@@ -1,4 +1,5 @@
 import type { getDb } from "@/lib/prisma";
+import { resolveSelectionOutcome } from "@/lib/results/selectionOutcomes";
 import {
   evaluateBinaryProbabilities,
   type BinaryEvaluation,
@@ -20,22 +21,6 @@ export type ModelPerformanceReport = {
   byMarket: ModelPerformanceSegment[];
   byModelVersion: ModelPerformanceSegment[];
 };
-
-function selectionOutcome(
-  payload: unknown,
-  selectionKey: string,
-): 0 | 1 | null {
-  if (!payload || typeof payload !== "object") return null;
-  const record = payload as Record<string, unknown>;
-  const outcomes = record.selectionOutcomes;
-
-  if (!outcomes || typeof outcomes !== "object") return null;
-  const value = (outcomes as Record<string, unknown>)[selectionKey];
-
-  if (value === true || value === 1 || value === "win") return 1;
-  if (value === false || value === 0 || value === "loss") return 0;
-  return null;
-}
 
 function segment(
   rows: Array<{ key: string; row: BinaryEvaluationRow }>,
@@ -66,10 +51,19 @@ export async function calculateModelPerformance(
       event: {
         include: {
           sport: { select: { key: true } },
+          homeTeam: { select: { name: true } },
+          awayTeam: { select: { name: true } },
+          homePlayer: { select: { fullName: true } },
+          awayPlayer: { select: { fullName: true } },
           predictions: {
             include: {
-              market: { select: { key: true } },
-              modelRun: { select: { modelVersion: true } },
+              market: { select: { id: true, key: true } },
+              modelRun: {
+                select: {
+                  modelVersion: true,
+                  status: true,
+                },
+              },
             },
           },
         },
@@ -83,10 +77,46 @@ export async function calculateModelPerformance(
   const versions: Array<{ key: string; row: BinaryEvaluationRow }> = [];
 
   for (const result of results) {
+    const participants = {
+      home:
+        result.event.homeTeam?.name ??
+        result.event.homePlayer?.fullName ??
+        null,
+      away:
+        result.event.awayTeam?.name ??
+        result.event.awayPlayer?.fullName ??
+        null,
+    };
+
+    const latest = new Map<
+      string,
+      (typeof result.event.predictions)[number]
+    >();
+
     for (const prediction of result.event.predictions) {
-      const outcome = selectionOutcome(
-        result.payload,
+      if (prediction.modelRun.status !== "COMPLETED") continue;
+      if (prediction.createdAt >= result.event.startTime) continue;
+
+      const key = [
+        prediction.market.id,
         prediction.selectionKey,
+        prediction.modelRun.modelVersion,
+      ].join("|");
+      const existing = latest.get(key);
+
+      if (!existing || prediction.createdAt > existing.createdAt) {
+        latest.set(key, prediction);
+      }
+    }
+
+    for (const prediction of latest.values()) {
+      const outcome = resolveSelectionOutcome(
+        result.payload,
+        {
+          selectionKey: prediction.selectionKey,
+          explanation: prediction.explanation,
+        },
+        participants,
       );
       if (outcome === null) continue;
 
