@@ -19,6 +19,11 @@ export type ComboCandidate = {
   modelAgreement: number | null;
   risk: "LOW" | "MEDIUM" | "HIGH";
   status: "BETTABLE" | "WATCH" | "HIGH_RISK" | "NO_BET";
+  bookmakerName?: string | null;
+  oddsProvider?: string | null;
+  marketProbability?: number | null;
+  modelLift?: number | null;
+  evidenceSupport?: number | null;
 };
 
 export type ComboLeg = ComboCandidate;
