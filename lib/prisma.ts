@@ -23,9 +23,7 @@ export function getDb(): PrismaClient {
   const adapter = new PrismaPg({ connectionString });
   const prisma = new PrismaClient({ adapter });
 
-  if (process.env.NODE_ENV !== "production") {
-    globalForPrisma.edgePrisma = prisma;
-  }
+  globalForPrisma.edgePrisma = prisma;
 
   return prisma;
 }
