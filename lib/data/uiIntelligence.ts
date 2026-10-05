@@ -7,6 +7,11 @@ const severityRank = {
   LOW: 1,
 } as const;
 
+export type UiIntelligenceCitation = {
+  url: string;
+  title: string | null;
+};
+
 export type UiIntelligenceSignal = {
   id: string;
   type: string;
@@ -19,7 +24,52 @@ export type UiIntelligenceSignal = {
   participant: string | null;
   occurredAt: string;
   expiresAt: string | null;
+  citations: UiIntelligenceCitation[];
 };
+
+function record(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function safeCitationUrl(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:"
+      ? url.toString()
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function metadataCitations(value: unknown): UiIntelligenceCitation[] {
+  const metadata = record(value);
+  const citations = Array.isArray(metadata?.citations)
+    ? metadata.citations
+    : [];
+
+  const unique = new Map<string, UiIntelligenceCitation>();
+
+  for (const rawCitation of citations) {
+    const citation = record(rawCitation);
+    const url = safeCitationUrl(citation?.url);
+    if (!url) continue;
+
+    unique.set(url, {
+      url,
+      title:
+        typeof citation?.title === "string" && citation.title.trim()
+          ? citation.title.trim()
+          : null,
+    });
+  }
+
+  return [...unique.values()].slice(0, 6);
+}
 
 export async function getUiIntelligenceForEvent(
   eventId: string,
@@ -52,6 +102,7 @@ export async function getUiIntelligenceForEvent(
         participant: row.participant,
         occurredAt: row.occurredAt.toISOString(),
         expiresAt: row.expiresAt?.toISOString() ?? null,
+        citations: metadataCitations(row.metadata),
       }))
       .sort(
         (a, b) =>
