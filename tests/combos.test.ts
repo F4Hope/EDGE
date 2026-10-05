@@ -127,3 +127,20 @@ test("combo controls rebuild immediately with the selected target and risk", asy
   assert.match(source, /void build\(target, item\)/);
   assert.match(source, /disabled=\{building\}/);
 });
+
+
+test("combo API exposes candidate rejection diagnostics", async () => {
+  const [loader, route] = await Promise.all([
+    readFile("lib/data/uiCombos.ts", "utf8"),
+    readFile("app/api/combos/route.ts", "utf8"),
+  ]);
+
+  assert.match(loader, /export type ComboCandidateDiagnostics/);
+  assert.match(loader, /missingStoredOdds/);
+  assert.match(loader, /nonPositiveEstimatedValue/);
+  assert.match(loader, /missingMarketProbability/);
+  assert.match(loader, /missingIndependentEvidence/);
+  assert.match(loader, /insufficientModelMarketLift/);
+  assert.match(loader, /qualifiedCandidates/);
+  assert.match(route, /candidateDiagnostics: pool\.diagnostics/);
+});
