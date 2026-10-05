@@ -65,6 +65,17 @@ function minDate(left: Date, right: Date): Date {
 }
 
 async function main() {
+  const enabled =
+    process.env.WEB_INTELLIGENCE_ENABLED?.trim().toLowerCase() === "true";
+
+  if (!enabled) {
+    console.log("Web intelligence sync skipped.", {
+      reason: "WEB_INTELLIGENCE_ENABLED is not true",
+      source: GOOGLE_SEARCH_INTELLIGENCE_SOURCE,
+    });
+    return;
+  }
+
   const apiKey = process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) {
     console.log("Web intelligence sync skipped.", {
@@ -84,8 +95,8 @@ async function main() {
   );
   const maxEvents = positiveInt(
     getArg("max-events") ?? process.env.WEB_INTELLIGENCE_MAX_EVENTS,
-    6,
-    20,
+    4,
+    12,
     "WEB_INTELLIGENCE_MAX_EVENTS",
   );
   const freshnessHours = positiveInt(
