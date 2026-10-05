@@ -138,3 +138,18 @@ test("combo page preloads a live default and exposes price provenance", async ()
   assert.match(builder, /modelLift/);
   assert.match(data, /passesIndependentEvidenceGate/);
 });
+
+
+test("intelligence panel exposes grounded source citations", async () => {
+  const [panel, data] = await Promise.all([
+    readFile("components/IntelligencePanel.tsx", "utf8"),
+    readFile("lib/data/uiIntelligence.ts", "utf8"),
+  ]);
+
+  assert.match(panel, /Grounded sources/);
+  assert.match(panel, /citation\.url/);
+  assert.match(panel, /SOURCE \{index \+ 1\}/);
+  assert.match(data, /metadataCitations/);
+  assert.match(data, /https:/);
+  assert.match(data, /http:/);
+});

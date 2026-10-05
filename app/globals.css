@@ -2909,3 +2909,33 @@ button {
     border-top: 1px solid rgba(244, 240, 231, 0.06);
   }
 }
+
+
+/* Grounded intelligence citations */
+
+.intelligence-citations {
+  margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.intelligence-citations a {
+  display: inline-flex;
+  max-width: 100%;
+  padding: 6px 8px;
+  border: 1px solid rgba(200, 169, 107, 0.14);
+  border-radius: 999px;
+  color: var(--champagne);
+  font-size: 6px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.intelligence-citations a:hover {
+  border-color: rgba(200, 169, 107, 0.3);
+}
