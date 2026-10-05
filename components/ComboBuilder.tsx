@@ -191,7 +191,7 @@ export function ComboBuilder({
         className="primary-button combo-build-button"
         type="button"
         disabled={building}
-        onClick={build}
+        onClick={() => void build()}
       >
         {building ? "BUILDING COMBO..." : "REBUILD COMBO"}
         <span aria-hidden="true">→</span>
