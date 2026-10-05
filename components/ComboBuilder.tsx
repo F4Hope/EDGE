@@ -325,7 +325,7 @@ export function ComboBuilder({
                     </small>
                     <small>
                       {candidate.intelligenceSignals.length > 0
-                        ? candidate.intelligenceSignals.length + " active intelligence signal(s)"
+                        ? candidate.intelligenceSignals.length + " active research signal(s)"
                         : "No active injury/lineup intelligence yet"}
                     </small>
                   </div>
