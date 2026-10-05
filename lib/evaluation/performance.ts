@@ -14,9 +14,19 @@ export type ModelPerformanceSegment = {
   evaluation: BinaryEvaluation;
 };
 
+export type MarketBenchmark = {
+  count: number;
+  model: BinaryEvaluation;
+  market: BinaryEvaluation;
+  brierDelta: number | null;
+  brierSkillScore: number | null;
+  calibrationDelta: number | null;
+};
+
 export type ModelPerformanceReport = {
   sampleCount: number;
   evaluation: BinaryEvaluation;
+  marketBenchmark: MarketBenchmark;
   bySport: ModelPerformanceSegment[];
   byMarket: ModelPerformanceSegment[];
   byModelVersion: ModelPerformanceSegment[];
@@ -40,6 +50,42 @@ function segment(
       evaluation: evaluateBinaryProbabilities(values),
     }))
     .sort((a, b) => b.count - a.count || a.key.localeCompare(b.key));
+}
+
+function marketProbability(value: unknown): number | null {
+  if (!value || typeof value !== "object") return null;
+  const probability = (value as Record<string, unknown>).marketProbability;
+  return typeof probability === "number" &&
+    Number.isFinite(probability) &&
+    probability >= 0 &&
+    probability <= 1
+    ? probability
+    : null;
+}
+
+function difference(
+  marketValue: number | null,
+  modelValue: number | null,
+): number | null {
+  return marketValue === null || modelValue === null
+    ? null
+    : Number((marketValue - modelValue).toFixed(6));
+}
+
+function skillScore(
+  modelBrier: number | null,
+  marketBrier: number | null,
+): number | null {
+  if (
+    modelBrier === null ||
+    marketBrier === null ||
+    !Number.isFinite(marketBrier) ||
+    marketBrier <= 0
+  ) {
+    return null;
+  }
+
+  return Number((1 - modelBrier / marketBrier).toFixed(6));
 }
 
 export async function calculateModelPerformance(
@@ -72,6 +118,8 @@ export async function calculateModelPerformance(
   });
 
   const rows: BinaryEvaluationRow[] = [];
+  const pairedModelRows: BinaryEvaluationRow[] = [];
+  const pairedMarketRows: BinaryEvaluationRow[] = [];
   const sports: Array<{ key: string; row: BinaryEvaluationRow }> = [];
   const markets: Array<{ key: string; row: BinaryEvaluationRow }> = [];
   const versions: Array<{ key: string; row: BinaryEvaluationRow }> = [];
@@ -129,12 +177,42 @@ export async function calculateModelPerformance(
       sports.push({ key: result.event.sport.key, row });
       markets.push({ key: prediction.market.key, row });
       versions.push({ key: prediction.modelRun.modelVersion, row });
+
+      const baselineProbability = marketProbability(prediction.explanation);
+      if (baselineProbability !== null) {
+        pairedModelRows.push(row);
+        pairedMarketRows.push({
+          probability: baselineProbability,
+          outcome,
+        });
+      }
     }
   }
 
+  const evaluation = evaluateBinaryProbabilities(rows);
+  const pairedModel = evaluateBinaryProbabilities(pairedModelRows);
+  const pairedMarket = evaluateBinaryProbabilities(pairedMarketRows);
+
   return {
     sampleCount: rows.length,
-    evaluation: evaluateBinaryProbabilities(rows),
+    evaluation,
+    marketBenchmark: {
+      count: pairedModelRows.length,
+      model: pairedModel,
+      market: pairedMarket,
+      brierDelta: difference(
+        pairedMarket.brierScore,
+        pairedModel.brierScore,
+      ),
+      brierSkillScore: skillScore(
+        pairedModel.brierScore,
+        pairedMarket.brierScore,
+      ),
+      calibrationDelta: difference(
+        pairedMarket.calibrationError,
+        pairedModel.calibrationError,
+      ),
+    },
     bySport: segment(sports),
     byMarket: segment(markets),
     byModelVersion: segment(versions),
