@@ -110,7 +110,7 @@ test("combo page defaults to a 2x balanced Today’s Best output", async () => {
     readFile("components/ComboBuilder.tsx", "utf8"),
   ]);
 
-  assert.match(page, /buildCombo\(candidates, 2, "BALANCED"\)/);
+  assert.match(page, /buildCombo\(pool\.candidates, 2, "BALANCED"\)/);
   assert.match(page, /Today’s Best balanced combo targeting 2x/);
   assert.match(component, /\?\? 2/);
   assert.match(component, /TODAY’S BEST/);
