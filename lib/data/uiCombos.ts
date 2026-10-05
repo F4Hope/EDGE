@@ -1,5 +1,8 @@
 import { getDb } from "@/lib/prisma";
-import type { ComboCandidate } from "@/lib/combo/engine";
+import type {
+  ComboCandidate,
+  ComboCandidateDiagnostics,
+} from "@/lib/combo/engine";
 import {
   independentEvidenceSupport,
   passesIndependentEvidenceGate,
@@ -31,9 +34,12 @@ function participantName(event: {
   return `${home} vs ${away}`;
 }
 
-export async function getComboCandidates(
+export async function getComboCandidatePool(
   hours = 168,
-): Promise<ComboCandidate[]> {
+): Promise<{
+  candidates: ComboCandidate[];
+  diagnostics: ComboCandidateDiagnostics;
+}> {
   const db = getDb();
   const now = new Date();
   const to = new Date(now.getTime() + Math.min(hours, 24 * 14) * 60 * 60 * 1000);
@@ -89,6 +95,17 @@ export async function getComboCandidates(
   }
 
   const candidates: ComboCandidate[] = [];
+  const diagnostics: ComboCandidateDiagnostics = {
+    rawPredictionRows: rows.length,
+    latestPredictionCount: latestPrediction.size,
+    missingOdds: 0,
+    missingEstimatedValue: 0,
+    nonPositiveEstimatedValue: 0,
+    missingMarketProbability: 0,
+    missingIndependentEvidence: 0,
+    insufficientModelMarketLift: 0,
+    qualifiedCandidates: 0,
+  };
 
   for (const row of latestPrediction.values()) {
     const latestByBookmaker = new Map<
@@ -115,7 +132,10 @@ export async function getComboCandidates(
         (a, b) => Number(b.decimalOdds) - Number(a.decimalOdds),
       )[0];
 
-    if (!bestSnapshot) continue;
+    if (!bestSnapshot) {
+      diagnostics.missingOdds += 1;
+      continue;
+    }
 
     const explanation = record(row.explanation);
     const marketProbability = numberValue(explanation?.marketProbability);
@@ -124,15 +144,30 @@ export async function getComboCandidates(
       row.estimatedValue === null ? null : Number(row.estimatedValue);
     const evidenceSupport = independentEvidenceSupport(row.explanation);
 
+    if (estimatedValue === null) {
+      diagnostics.missingEstimatedValue += 1;
+      continue;
+    }
+    if (estimatedValue <= 0) {
+      diagnostics.nonPositiveEstimatedValue += 1;
+      continue;
+    }
+    if (marketProbability === null) {
+      diagnostics.missingMarketProbability += 1;
+      continue;
+    }
+    if (evidenceSupport <= 1e-9) {
+      diagnostics.missingIndependentEvidence += 1;
+      continue;
+    }
     if (
-      estimatedValue === null ||
-      estimatedValue <= 0 ||
       !passesIndependentEvidenceGate({
         modelProbability,
         marketProbability,
         evidenceSupport,
       })
     ) {
+      diagnostics.insufficientModelMarketLift += 1;
       continue;
     }
 
@@ -164,5 +199,13 @@ export async function getComboCandidates(
     });
   }
 
-  return candidates;
+  diagnostics.qualifiedCandidates = candidates.length;
+
+  return { candidates, diagnostics };
+}
+
+export async function getComboCandidates(
+  hours = 168,
+): Promise<ComboCandidate[]> {
+  return (await getComboCandidatePool(hours)).candidates;
 }
