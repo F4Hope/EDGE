@@ -1,3 +1,4 @@
+import "./settled-outcomes.test";
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
