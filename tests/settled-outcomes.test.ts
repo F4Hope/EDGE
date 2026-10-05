@@ -351,3 +351,98 @@ test("event market benchmark counts a three-way H2H market as one settled event"
   assert.equal(report.eventMarketBenchmark.modelTop1Accuracy, 1);
   assert.equal(report.eventMarketBenchmark.marketTop1Accuracy, 1);
 });
+
+
+test("event benchmark reports supported positive lift when paired event deltas are consistently positive", async () => {
+  const market = { id: "market-paired", key: "h2h" };
+  const modelRun = {
+    modelVersion: "market-evidence-v1",
+    status: "COMPLETED",
+  };
+
+  const makePredictions = (
+    createdAt: string,
+    modelHome: number,
+    marketHome: number,
+  ) => [
+    {
+      selectionKey: "home",
+      modelProbability: modelHome,
+      explanation: {
+        selectionName: "Alpha",
+        marketProbability: marketHome,
+      },
+      createdAt: new Date(createdAt),
+      market,
+      modelRun,
+    },
+    {
+      selectionKey: "away",
+      modelProbability: 1 - modelHome,
+      explanation: {
+        selectionName: "Beta",
+        marketProbability: 1 - marketHome,
+      },
+      createdAt: new Date(createdAt),
+      market,
+      modelRun,
+    },
+  ];
+
+  const db = {
+    result: {
+      findMany: async () => [
+        {
+          status: "FINAL",
+          payload: {
+            winner: "home",
+            selectionOutcomes: { home: "win", away: "loss" },
+          },
+          event: {
+            startTime: new Date("2026-10-07T20:00:00.000Z"),
+            sport: { key: "football" },
+            homeTeam: { name: "Alpha" },
+            awayTeam: { name: "Beta" },
+            homePlayer: null,
+            awayPlayer: null,
+            predictions: makePredictions(
+              "2026-10-07T18:00:00.000Z",
+              0.6,
+              0.55,
+            ),
+          },
+        },
+        {
+          status: "FINAL",
+          payload: {
+            winner: "home",
+            selectionOutcomes: { home: "win", away: "loss" },
+          },
+          event: {
+            startTime: new Date("2026-10-08T20:00:00.000Z"),
+            sport: { key: "football" },
+            homeTeam: { name: "Alpha" },
+            awayTeam: { name: "Beta" },
+            homePlayer: null,
+            awayPlayer: null,
+            predictions: makePredictions(
+              "2026-10-08T18:00:00.000Z",
+              0.65,
+              0.6,
+            ),
+          },
+        },
+      ],
+    },
+  };
+
+  const report = await calculateModelPerformance(db as never);
+
+  assert.equal(report.eventMarketBenchmark.count, 2);
+  assert.equal(report.eventMarketBenchmark.brierDelta, 0.04);
+  assert.deepEqual(report.eventMarketBenchmark.brierDeltaCi95, {
+    lower: 0.0351,
+    upper: 0.0449,
+  });
+  assert.equal(report.eventMarketBenchmark.positiveLiftSupported, true);
+});
