@@ -114,3 +114,16 @@ test("combo page defaults to a 2x balanced Today’s Best output", async () => {
   assert.match(component, /\?\? 2/);
   assert.match(component, /TODAY’S BEST/);
 });
+
+
+test("combo controls rebuild immediately with the selected target and risk", async () => {
+  const source = await readFile("components/ComboBuilder.tsx", "utf8");
+
+  assert.match(source, /async function build\(\s*requestedTarget: Target = target,/);
+  assert.match(source, /requestedRisk: Risk = risk/);
+  assert.match(source, /targetOdds: requestedTarget/);
+  assert.match(source, /riskMode: requestedRisk/);
+  assert.match(source, /void build\(item, risk\)/);
+  assert.match(source, /void build\(target, item\)/);
+  assert.match(source, /disabled=\{building\}/);
+});
