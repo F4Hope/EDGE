@@ -2,8 +2,25 @@ import { getDb } from "@/lib/prisma";
 import type { ComboCandidate } from "@/lib/combo/engine";
 import {
   independentEvidenceSupport,
-  passesIndependentEvidenceGate,
+  MIN_MODEL_MARKET_LIFT,
 } from "@/lib/data/uiOpportunities";
+
+export type ComboCandidateDiagnostics = {
+  queriedPredictions: number;
+  latestPredictions: number;
+  duplicatesCollapsed: number;
+  missingStoredOdds: number;
+  nonPositiveEstimatedValue: number;
+  missingMarketProbability: number;
+  missingIndependentEvidence: number;
+  insufficientModelMarketLift: number;
+  qualifiedCandidates: number;
+};
+
+export type ComboCandidatePool = {
+  candidates: ComboCandidate[];
+  diagnostics: ComboCandidateDiagnostics;
+};
 
 function record(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object"
@@ -31,9 +48,9 @@ function participantName(event: {
   return `${home} vs ${away}`;
 }
 
-export async function getComboCandidates(
+export async function getComboCandidatePool(
   hours = 168,
-): Promise<ComboCandidate[]> {
+): Promise<ComboCandidatePool> {
   const db = getDb();
   const now = new Date();
   const to = new Date(now.getTime() + Math.min(hours, 24 * 14) * 60 * 60 * 1000);
@@ -88,6 +105,18 @@ export async function getComboCandidates(
     if (!latestPrediction.has(key)) latestPrediction.set(key, row);
   }
 
+  const diagnostics: ComboCandidateDiagnostics = {
+    queriedPredictions: rows.length,
+    latestPredictions: latestPrediction.size,
+    duplicatesCollapsed: rows.length - latestPrediction.size,
+    missingStoredOdds: 0,
+    nonPositiveEstimatedValue: 0,
+    missingMarketProbability: 0,
+    missingIndependentEvidence: 0,
+    insufficientModelMarketLift: 0,
+    qualifiedCandidates: 0,
+  };
+
   const candidates: ComboCandidate[] = [];
 
   for (const row of latestPrediction.values()) {
@@ -111,11 +140,12 @@ export async function getComboCandidates(
         const value = Number(snapshot.decimalOdds);
         return Number.isFinite(value) && value > 1;
       })
-      .sort(
-        (a, b) => Number(b.decimalOdds) - Number(a.decimalOdds),
-      )[0];
+      .sort((a, b) => Number(b.decimalOdds) - Number(a.decimalOdds))[0];
 
-    if (!bestSnapshot) continue;
+    if (!bestSnapshot) {
+      diagnostics.missingStoredOdds += 1;
+      continue;
+    }
 
     const explanation = record(row.explanation);
     const marketProbability = numberValue(explanation?.marketProbability);
@@ -124,15 +154,24 @@ export async function getComboCandidates(
       row.estimatedValue === null ? null : Number(row.estimatedValue);
     const evidenceSupport = independentEvidenceSupport(row.explanation);
 
-    if (
-      estimatedValue === null ||
-      estimatedValue <= 0 ||
-      !passesIndependentEvidenceGate({
-        modelProbability,
-        marketProbability,
-        evidenceSupport,
-      })
-    ) {
+    if (estimatedValue === null || estimatedValue <= 0) {
+      diagnostics.nonPositiveEstimatedValue += 1;
+      continue;
+    }
+
+    if (marketProbability === null) {
+      diagnostics.missingMarketProbability += 1;
+      continue;
+    }
+
+    if (evidenceSupport <= 1e-9) {
+      diagnostics.missingIndependentEvidence += 1;
+      continue;
+    }
+
+    const modelLift = Math.abs(modelProbability - marketProbability);
+    if (modelLift + Number.EPSILON * 16 < MIN_MODEL_MARKET_LIFT) {
+      diagnostics.insufficientModelMarketLift += 1;
       continue;
     }
 
@@ -158,11 +197,18 @@ export async function getComboCandidates(
       bookmakerName: bestSnapshot.bookmakerName,
       oddsProvider: bestSnapshot.provider,
       marketProbability,
-      modelLift:
-        marketProbability === null ? null : modelProbability - marketProbability,
+      modelLift: modelProbability - marketProbability,
       evidenceSupport,
     });
   }
 
-  return candidates;
+  diagnostics.qualifiedCandidates = candidates.length;
+
+  return { candidates, diagnostics };
+}
+
+export async function getComboCandidates(
+  hours = 168,
+): Promise<ComboCandidate[]> {
+  return (await getComboCandidatePool(hours)).candidates;
 }
