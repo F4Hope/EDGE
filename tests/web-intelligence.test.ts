@@ -22,9 +22,7 @@ test("parses Google Search queries, grounded citations, and intelligence JSON", 
         content: [
           {
             type: "text",
-            text: ```json
-{"signals":[{"type":"INJURY","severity":"HIGH","headline":"Key player ruled out","summary":"Club update confirms the player is unavailable.","affectsHome":true,"affectsAway":false,"participant":"Example Player"}]}
-```,
+            text: "```json\n{\"signals\":[{\"type\":\"INJURY\",\"severity\":\"HIGH\",\"headline\":\"Key player ruled out\",\"summary\":\"Club update confirms the player is unavailable.\",\"affectsHome\":true,\"affectsAway\":false,\"participant\":\"Example Player\"}]}\n```",
             annotations: [
               {
                 type: "url_citation",
