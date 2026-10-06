@@ -48,10 +48,17 @@ export type ApiSportsMatchWinnerOutcome = {
   price: number;
 };
 
+export type ApiSportsTotalsOutcome = {
+  side: "over" | "under";
+  point: number;
+  price: number;
+};
+
 export type ApiSportsMatchWinnerBookmaker = {
   key: string;
   name: string;
   outcomes: ApiSportsMatchWinnerOutcome[];
+  totalsOutcomes: ApiSportsTotalsOutcome[];
 };
 
 export type ApiSportsMatchWinnerEvent = {
@@ -89,6 +96,24 @@ function normalizeSide(value: unknown): ApiSportsMatchWinnerOutcome["side"] | nu
   return null;
 }
 
+function normalizeTotal(value: unknown): {
+  side: ApiSportsTotalsOutcome["side"];
+  point: number;
+} | null {
+  const match = String(value ?? "")
+    .trim()
+    .match(/^(over|under)\s+([0-9]+(?:\.[0-9]+)?)$/i);
+  if (!match) return null;
+
+  const point = Number(match[2]);
+  if (!Number.isFinite(point) || point < 0) return null;
+
+  return {
+    side: match[1].toLowerCase() as ApiSportsTotalsOutcome["side"],
+    point,
+  };
+}
+
 export function normalizeApiSportsMatchWinnerRow(
   row: ApiSportsFootballOddsRow,
 ): ApiSportsMatchWinnerEvent | null {
@@ -109,21 +134,34 @@ export function normalizeApiSportsMatchWinnerRow(
         bet.id === 1 ||
         String(bet.name ?? "").trim().toLowerCase() === "match winner",
     );
-    if (!matchWinner) continue;
+    const totals = (bookmaker.bets ?? []).find(
+      (bet) =>
+        bet.id === 5 ||
+        String(bet.name ?? "").trim().toLowerCase() === "goals over/under",
+    );
 
     const outcomes: ApiSportsMatchWinnerOutcome[] = [];
-    for (const value of matchWinner.values ?? []) {
+    for (const value of matchWinner?.values ?? []) {
       const side = normalizeSide(value.value);
       const price = numericOdd(value.odd);
       if (!side || price === null) continue;
       outcomes.push({ side, price });
     }
 
-    if (outcomes.length >= 2) {
+    const totalsOutcomes: ApiSportsTotalsOutcome[] = [];
+    for (const value of totals?.values ?? []) {
+      const total = normalizeTotal(value.value);
+      const price = numericOdd(value.odd);
+      if (!total || price === null) continue;
+      totalsOutcomes.push({ ...total, price });
+    }
+
+    if (outcomes.length >= 2 || totalsOutcomes.length >= 2) {
       bookmakers.push({
         key: `api-sports:${bookmakerId}`,
         name: bookmakerName,
         outcomes,
+        totalsOutcomes,
       });
     }
   }
@@ -152,7 +190,6 @@ export class ApiSportsFootballOddsClient {
 
     const url = new URL("/odds", BASE_URL);
     url.searchParams.set("fixture", id);
-    url.searchParams.set("bet", "1");
 
     const response = await fetch(url, {
       method: "GET",
