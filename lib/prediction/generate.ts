@@ -78,7 +78,7 @@ export async function generatePredictionsForEvent(
       },
       markets: {
         where: {
-          key: { in: ["h2h", "totals", "spreads"] },
+          key: { in: ["h2h", "totals", "spreads", "double_chance"] },
           status: "OPEN",
         },
         include: {
