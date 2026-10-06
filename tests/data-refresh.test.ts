@@ -51,3 +51,18 @@ test("data refresh directs Codespaces to local database bootstrap when needed", 
 
   assert.match(source, /npm run db:local first/);
 });
+
+
+test("data refresh keeps result settlement mandatory after event discovery failure", async () => {
+  const source = await readFile("scripts/refresh-data.ts", "utf8");
+
+  assert.match(source, /runBestEffort\(/);
+  assert.match(source, /API-Sports event discovery/);
+  assert.match(source, /stored event identities so result settlement can still run/);
+  assert.match(source, /run\("results:sync"/);
+
+  const eventIndex = source.indexOf('runBestEffort(\n      "data:sync"');
+  const resultIndex = source.indexOf('run("results:sync"');
+  assert.ok(eventIndex >= 0);
+  assert.ok(resultIndex > eventIndex);
+});

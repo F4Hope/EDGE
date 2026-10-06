@@ -26,3 +26,18 @@ test("history refresh requires database and API-Sports credentials", async () =>
   assert.match(source, /DATABASE_URL is not configured/);
   assert.match(source, /API_SPORTS_KEY is not configured/);
 });
+
+
+test("history refresh still settles known events when backfill fails", async () => {
+  const source = await readFile("scripts/refresh-history.ts", "utf8");
+
+  assert.match(source, /runBestEffort\(/);
+  assert.match(source, /API-Sports historical event backfill/);
+  assert.match(source, /stored event identities so result settlement can still run/);
+  assert.match(source, /run\("results:sync"/);
+
+  const backfillIndex = source.indexOf('runBestEffort(\n    "data:sync"');
+  const resultIndex = source.indexOf('run("results:sync"');
+  assert.ok(backfillIndex >= 0);
+  assert.ok(resultIndex > backfillIndex);
+});
