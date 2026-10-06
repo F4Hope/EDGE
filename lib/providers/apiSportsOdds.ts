@@ -110,9 +110,23 @@ function normalizeDoubleChance(
     .toLowerCase()
     .replace(/\s+/g, "");
 
-  if (normalized === "home/draw" || normalized === "1x") return "home_draw";
-  if (normalized === "home/away" || normalized === "12") return "home_away";
-  if (normalized === "draw/away" || normalized === "x2") return "draw_away";
+  if (
+    normalized === "home/draw" ||
+    normalized === "homeordraw" ||
+    normalized === "1x"
+  ) return "home_draw";
+  if (
+    normalized === "home/away" ||
+    normalized === "homeoraway" ||
+    normalized === "12"
+  ) return "home_away";
+  if (
+    normalized === "draw/away" ||
+    normalized === "away/draw" ||
+    normalized === "draworaway" ||
+    normalized === "awayordraw" ||
+    normalized === "x2"
+  ) return "draw_away";
   return null;
 }
 
