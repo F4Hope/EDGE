@@ -128,8 +128,8 @@ test("combo page preloads a live default and exposes price provenance", async ()
     readFile("lib/data/uiCombos.ts", "utf8"),
   ]);
 
-  assert.match(page, /getComboCandidates/);
-  assert.match(page, /buildCombo\(candidates, 5, "BALANCED"\)/);
+  assert.match(page, /getComboCandidatePool/);
+  assert.match(page, /buildCombo\(pool\.candidates, 2, "BALANCED"\)/);
   assert.match(page, /initialResult=/);
   assert.match(builder, /initialResult/);
   assert.match(builder, /bookmakerName/);
