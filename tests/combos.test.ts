@@ -218,7 +218,10 @@ test("combo pool supports winner totals and handicap markets without research bl
     readFile("components/ComboBuilder.tsx", "utf8"),
   ]);
 
-  assert.match(loader, /key: \{ in: \["h2h", "totals", "spreads"\] \}/);
+  assert.match(
+    loader,
+    /key: \{ in: \["h2h", "totals", "spreads", "double_chance"\] \}/,
+  );
   assert.match(loader, /marketKey: row\.market\.key/);
   assert.match(loader, /selectionLabel/);
   assert.doesNotMatch(
@@ -228,6 +231,7 @@ test("combo pool supports winner totals and handicap markets without research bl
   assert.match(component, /MATCH WINNER/);
   assert.match(component, /TOTAL GOALS/);
   assert.match(component, /HANDICAP/);
+  assert.match(component, /DOUBLE CHANCE/);
 });
 
 
@@ -467,4 +471,14 @@ test("balanced combo accepts today's short-priced target-fit favorites at the lo
     result.legs.map((leg) => leg.decimalOdds).sort((a, b) => a - b),
     [1.78, 1.88],
   );
+});
+
+
+test("combo loader renders participant-friendly double chance selections", async () => {
+  const source = await readFile("lib/data/uiCombos.ts", "utf8");
+
+  assert.match(source, /marketKey === "double_chance"/);
+  assert.match(source, /\$\{home\} or Draw/);
+  assert.match(source, /\$\{home\} or \$\{away\}/);
+  assert.match(source, /Draw or \$\{away\}/);
 });
