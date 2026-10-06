@@ -6,6 +6,7 @@ import {
   type ComboRiskMode,
 } from "@/lib/combo/engine";
 import { getComboCandidatePool } from "@/lib/data/uiCombos";
+import { recordComboBuild } from "@/lib/data/comboAudit";
 import {
   ApiRequestError,
   apiFailure,
@@ -61,6 +62,13 @@ export async function POST(request: NextRequest) {
     const riskMode = parseRisk(body.riskMode);
     const pool = await getComboCandidatePool();
     const combo = buildCombo(pool.candidates, targetOdds, riskMode);
+    const comboAuditId = await recordComboBuild(combo).catch((error) => {
+      console.error("EDGE combo audit write failed.", {
+        requestId,
+        message: error instanceof Error ? error.message : String(error),
+      });
+      return null;
+    });
 
     return apiJson(
       requestId,
@@ -71,6 +79,7 @@ export async function POST(request: NextRequest) {
           candidateCount: pool.candidates.length,
           candidateDiagnostics: pool.diagnostics,
           evidenceResearchQueue: pool.evidenceResearchQueue,
+          comboAuditId,
           requestId,
         },
       },

@@ -5,6 +5,7 @@ import {
   buildCombo,
   type ComboCandidate,
 } from "../lib/combo/engine";
+import { recordComboBuild } from "../lib/data/comboAudit";
 
 function candidate(
   index: number,
@@ -560,4 +561,115 @@ test("risk profiles enforce win-probability floors", async () => {
   assert.match(engine, /BALANCED:[\s\S]*minProbability: 0\.5/);
   assert.match(engine, /AGGRESSIVE:[\s\S]*minProbability: 0\.35/);
   assert.match(engine, /b\.probability - a\.probability/);
+});
+
+
+test("combo audit persists the displayed legs and odds", async () => {
+  const result = buildCombo(
+    [
+      candidate(101, {
+        eventId: "audit-a",
+        decimalOdds: 1.6,
+        modelProbability: 0.72,
+      }),
+      candidate(102, {
+        eventId: "audit-b",
+        decimalOdds: 1.7,
+        modelProbability: 0.7,
+      }),
+    ],
+    2,
+    "BALANCED",
+  );
+
+  let createArgs: unknown = null;
+  const db = {
+    combo: {
+      create: async (args: unknown) => {
+        createArgs = args;
+        return { id: "combo-audit-1" };
+      },
+    },
+  };
+
+  const auditId = await recordComboBuild(result, db as never);
+
+  assert.equal(auditId, "combo-audit-1");
+  const payload = createArgs as {
+    data: {
+      targetOdds: number;
+      actualOdds: number;
+      riskMode: string;
+      status: string;
+      selections: {
+        create: Array<{
+          position: number;
+          selection: {
+            create: {
+              predictionId: string;
+              oddsAtSelection: number;
+              status: string;
+            };
+          };
+        }>;
+      };
+    };
+  };
+
+  assert.equal(payload.data.targetOdds, 2);
+  assert.equal(payload.data.actualOdds, result.actualOdds);
+  assert.equal(payload.data.riskMode, "BALANCED");
+  assert.equal(payload.data.status, "READY");
+  assert.deepEqual(
+    payload.data.selections.create.map((row) => ({
+      position: row.position,
+      predictionId: row.selection.create.predictionId,
+      odds: row.selection.create.oddsAtSelection,
+      status: row.selection.create.status,
+    })),
+    [
+      {
+        position: 1,
+        predictionId: "prediction-101",
+        odds: 1.6,
+        status: "ACTIVE",
+      },
+      {
+        position: 2,
+        predictionId: "prediction-102",
+        odds: 1.7,
+        status: "ACTIVE",
+      },
+    ],
+  );
+});
+
+test("combo audit skips no-qualifying output", async () => {
+  const result = buildCombo([], 2, "BALANCED");
+  let writes = 0;
+  const db = {
+    combo: {
+      create: async () => {
+        writes += 1;
+        return { id: "unexpected" };
+      },
+    },
+  };
+
+  const auditId = await recordComboBuild(result, db as never);
+
+  assert.equal(auditId, null);
+  assert.equal(writes, 0);
+});
+
+test("combo page and API both record displayed combo builds", async () => {
+  const [page, route] = await Promise.all([
+    readFile("app/combos/page.tsx", "utf8"),
+    readFile("app/api/combos/route.ts", "utf8"),
+  ]);
+
+  assert.match(page, /recordComboBuild\(initialResult\)/);
+  assert.match(route, /recordComboBuild\(combo\)/);
+  assert.match(route, /comboAuditId/);
+  assert.match(route, /EDGE combo audit write failed/);
 });
