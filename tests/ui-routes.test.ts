@@ -116,7 +116,7 @@ test("opportunities page requires independent evidence and stays validation-gate
   assert.match(data, /estimatedValue: \{ gt: 0 \}/);
   assert.match(data, /dataQuality: \{ gte: 0\.5 \}/);
   assert.match(data, /modelAgreement: \{ gte: 0\.6 \}/);
-  assert.match(data, /passesIndependentEvidenceGate/);
+  assert.match(data, /independentEvidenceSupport/);
   assert.match(data, /rankOneOpportunityPerEvent/);
 });
 
