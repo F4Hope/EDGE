@@ -332,3 +332,122 @@ test("handicap market scoring uses the stored line instead of treating it as mon
   assert.ok(home);
   assert.ok(home.evidence.scoringAdjustment > 0);
 });
+
+
+test("double chance probabilities are derived from overlapping H2H outcomes", () => {
+  const dcFeature = feature();
+  dcFeature.market.markets = [
+    {
+      key: "h2h",
+      snapshotCount: 9,
+      bookmakerCount: 3,
+      currentQuoteCount: 9,
+      meanRelativePriceDispersion: 0.01,
+      selections: [
+        {
+          selectionName: "Alpha FC",
+          point: null,
+          bookmakerCount: 3,
+          meanDecimalOdds: 1.8,
+          bestDecimalOdds: 1.82,
+          meanImpliedProbability: 1 / 1.8,
+        },
+        {
+          selectionName: "Draw",
+          point: null,
+          bookmakerCount: 3,
+          meanDecimalOdds: 3.5,
+          bestDecimalOdds: 3.6,
+          meanImpliedProbability: 1 / 3.5,
+        },
+        {
+          selectionName: "Beta FC",
+          point: null,
+          bookmakerCount: 3,
+          meanDecimalOdds: 4.8,
+          bestDecimalOdds: 5.0,
+          meanImpliedProbability: 1 / 4.8,
+        },
+      ],
+    },
+  ];
+
+  const h2h = buildMarketPredictionCandidates(
+    dcFeature,
+    dcFeature.market.markets[0],
+  );
+  const doubleChance = buildMarketPredictionCandidates(dcFeature, {
+    key: "double_chance",
+    snapshotCount: 9,
+    bookmakerCount: 3,
+    currentQuoteCount: 9,
+    meanRelativePriceDispersion: 0.01,
+    selections: [
+      {
+        selectionName: "Home/Draw",
+        point: null,
+        bookmakerCount: 3,
+        meanDecimalOdds: 1.22,
+        bestDecimalOdds: 1.24,
+        meanImpliedProbability: 1 / 1.22,
+      },
+      {
+        selectionName: "Home/Away",
+        point: null,
+        bookmakerCount: 3,
+        meanDecimalOdds: 1.3,
+        bestDecimalOdds: 1.32,
+        meanImpliedProbability: 1 / 1.3,
+      },
+      {
+        selectionName: "Draw/Away",
+        point: null,
+        bookmakerCount: 3,
+        meanDecimalOdds: 1.95,
+        bestDecimalOdds: 2.0,
+        meanImpliedProbability: 1 / 1.95,
+      },
+    ],
+  });
+
+  assert.equal(doubleChance.length, 3);
+
+  const home = h2h.find((candidate) => candidate.selectionName === "Alpha FC");
+  const draw = h2h.find((candidate) => candidate.selectionName === "Draw");
+  const away = h2h.find((candidate) => candidate.selectionName === "Beta FC");
+  const homeDraw = doubleChance.find(
+    (candidate) => candidate.selectionName === "Home/Draw",
+  );
+  const homeAway = doubleChance.find(
+    (candidate) => candidate.selectionName === "Home/Away",
+  );
+  const drawAway = doubleChance.find(
+    (candidate) => candidate.selectionName === "Draw/Away",
+  );
+
+  assert.ok(home && draw && away && homeDraw && homeAway && drawAway);
+  assert.ok(
+    Math.abs(
+      homeDraw.modelProbability -
+        (home.modelProbability + draw.modelProbability),
+    ) < 0.00001,
+  );
+  assert.ok(
+    Math.abs(
+      homeAway.modelProbability -
+        (home.modelProbability + away.modelProbability),
+    ) < 0.00001,
+  );
+  assert.ok(
+    Math.abs(
+      drawAway.modelProbability -
+        (draw.modelProbability + away.modelProbability),
+    ) < 0.00001,
+  );
+
+  const total = doubleChance.reduce(
+    (sum, candidate) => sum + candidate.modelProbability,
+    0,
+  );
+  assert.ok(total > 1.9 && total < 2.1);
+});
