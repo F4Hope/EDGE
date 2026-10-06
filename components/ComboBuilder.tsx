@@ -68,6 +68,7 @@ type ComboCandidateDiagnostics = {
   duplicatesCollapsed: number;
   missingStoredOdds: number;
   nonPositiveEstimatedValue: number;
+  belowEstimatedValueFloor: number;
   missingMarketProbability: number;
   missingIndependentEvidence: number;
   evidenceResearchCandidates: number;
@@ -384,8 +385,12 @@ export function ComboBuilder({
                 <strong>{diagnostics.latestPredictions}</strong>
               </div>
               <div>
-                <span>NO +EV</span>
+                <span>≤0 EV</span>
                 <strong>{diagnostics.nonPositiveEstimatedValue}</strong>
+              </div>
+              <div>
+                <span>BELOW FLOOR</span>
+                <strong>{diagnostics.belowEstimatedValueFloor}</strong>
               </div>
               <div>
                 <span>NO EVIDENCE</span>
