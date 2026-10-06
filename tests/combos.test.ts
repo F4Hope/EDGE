@@ -284,7 +284,7 @@ test("combo output requires at least two different events", () => {
 });
 
 
-test("balanced combo can use positive-value medium-risk legs across different events down to 20 percent", () => {
+test("balanced combo requires at least 50 percent model probability per leg", () => {
   const result = buildCombo(
     [
       candidate(41, {
@@ -300,7 +300,7 @@ test("balanced combo can use positive-value medium-risk legs across different ev
       candidate(42, {
         eventId: "event-b",
         decimalOdds: 3.14,
-        modelProbability: 0.287047,
+        modelProbability: 0.507047,
         estimatedValue: 0.004664,
         dataQuality: 0.63529,
         modelAgreement: 1,
@@ -317,7 +317,7 @@ test("balanced combo can use positive-value medium-risk legs across different ev
   assert.equal(new Set(result.legs.map((leg) => leg.eventId)).size, 2);
 });
 
-test("balanced mode still rejects sub-20-percent long shots", () => {
+test("balanced mode rejects sub-50-percent long shots", () => {
   const result = buildCombo(
     [
       candidate(51, {
@@ -333,7 +333,7 @@ test("balanced mode still rejects sub-20-percent long shots", () => {
       candidate(52, {
         eventId: "event-b",
         decimalOdds: 7.5,
-        modelProbability: 0.1518,
+        modelProbability: 0.49,
         estimatedValue: 0.1385,
         dataQuality: 0.63529,
         modelAgreement: 1,
@@ -494,4 +494,70 @@ test("research backlog is probability-ranked and explicitly not presented as bet
   assert.match(component, /RESEARCH BACKLOG — NOT BET PICKS/);
   assert.match(component, /rejected research candidates, not recommended bets/);
   assert.match(component, /LOW WIN PROBABILITY/);
+});
+
+
+test("balanced combo prefers higher combined win probability before target closeness", () => {
+  const result = buildCombo(
+    [
+      candidate(91, {
+        eventId: "safe-a",
+        decimalOdds: 1.6,
+        modelProbability: 0.8,
+        estimatedValue: 0.02,
+        dataQuality: 0.82,
+        modelAgreement: 0.9,
+        risk: "MEDIUM",
+        status: "WATCH",
+      }),
+      candidate(92, {
+        eventId: "safe-b",
+        decimalOdds: 1.6,
+        modelProbability: 0.78,
+        estimatedValue: 0.01,
+        dataQuality: 0.82,
+        modelAgreement: 0.9,
+        risk: "MEDIUM",
+        status: "WATCH",
+      }),
+      candidate(93, {
+        eventId: "riskier-a",
+        decimalOdds: 1.42,
+        modelProbability: 0.55,
+        estimatedValue: -0.02,
+        dataQuality: 0.7,
+        modelAgreement: 0.8,
+        risk: "MEDIUM",
+        status: "WATCH",
+      }),
+      candidate(94, {
+        eventId: "riskier-b",
+        decimalOdds: 1.42,
+        modelProbability: 0.55,
+        estimatedValue: -0.02,
+        dataQuality: 0.7,
+        modelAgreement: 0.8,
+        risk: "MEDIUM",
+        status: "WATCH",
+      }),
+    ],
+    2,
+    "BALANCED",
+  );
+
+  assert.equal(result.status, "TARGET_REACHED");
+  assert.deepEqual(
+    result.legs.map((leg) => leg.eventId).sort(),
+    ["safe-a", "safe-b"],
+  );
+  assert.equal(result.actualOdds, 2.56);
+});
+
+test("risk profiles enforce win-probability floors", async () => {
+  const engine = await readFile("lib/combo/engine.ts", "utf8");
+
+  assert.match(engine, /LOW:[\s\S]*minProbability: 0\.6/);
+  assert.match(engine, /BALANCED:[\s\S]*minProbability: 0\.5/);
+  assert.match(engine, /AGGRESSIVE:[\s\S]*minProbability: 0\.35/);
+  assert.match(engine, /b\.probability - a\.probability/);
 });
