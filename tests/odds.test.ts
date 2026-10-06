@@ -49,7 +49,7 @@ test("normalizes featured decimal odds and ignores unsupported markets", () => {
   assert.equal(event.bookmakers[0].markets[0].outcomes[0].price, 1.8);
 });
 
-test("selection keys distinguish handicap and totals lines", () => {
+test("selection keys distinguish featured and double chance markets", () => {
   assert.equal(
     makeSelectionKey("spreads", { name: "Alpha FC", price: 1.91, point: -1.5 }),
     "spreads:alpha-fc:-1.5",
@@ -57,6 +57,10 @@ test("selection keys distinguish handicap and totals lines", () => {
   assert.equal(
     makeSelectionKey("totals", { name: "Over", price: 1.88, point: 2.5 }),
     "totals:over:2.5",
+  );
+  assert.equal(
+    makeSelectionKey("double_chance", { name: "Home/Draw", price: 1.22 }),
+    "double_chance:home-draw:na",
   );
 });
 
