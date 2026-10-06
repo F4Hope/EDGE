@@ -40,6 +40,7 @@ export type ComboCandidateDiagnostics = {
   duplicatesCollapsed: number;
   missingStoredOdds: number;
   nonPositiveEstimatedValue: number;
+  belowEstimatedValueFloor: number;
   missingMarketProbability: number;
   missingIndependentEvidence: number;
   evidenceResearchCandidates: number;
@@ -53,6 +54,8 @@ export type ComboCandidatePool = {
   evidenceResearchQueue: ComboEvidenceResearchCandidate[];
   diagnostics: ComboCandidateDiagnostics;
 };
+
+const MIN_COMBO_ESTIMATED_VALUE = -0.05;
 
 const comboResearchSignalTypes = new Set([
   "INJURY",
@@ -183,6 +186,7 @@ export async function getComboCandidatePool(
     duplicatesCollapsed: rows.length - latestPrediction.size,
     missingStoredOdds: 0,
     nonPositiveEstimatedValue: 0,
+    belowEstimatedValueFloor: 0,
     missingMarketProbability: 0,
     missingIndependentEvidence: 0,
     evidenceResearchCandidates: 0,
@@ -237,8 +241,17 @@ export async function getComboCandidatePool(
       row.estimatedValue === null ? null : Number(row.estimatedValue);
     const evidenceSupport = independentEvidenceSupport(row.explanation);
 
-    if (estimatedValue === null || estimatedValue <= 0) {
+    if (estimatedValue === null) {
+      diagnostics.belowEstimatedValueFloor += 1;
+      continue;
+    }
+
+    if (estimatedValue <= 0) {
       diagnostics.nonPositiveEstimatedValue += 1;
+    }
+
+    if (estimatedValue < MIN_COMBO_ESTIMATED_VALUE) {
+      diagnostics.belowEstimatedValueFloor += 1;
       continue;
     }
 
