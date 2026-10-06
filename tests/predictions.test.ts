@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   buildH2hPredictionCandidates,
+  buildMarketPredictionCandidates,
   PREDICTION_MODEL_VERSION,
 } from "../lib/prediction/model";
 import type { FeatureVector } from "../lib/features/types";
@@ -93,7 +94,7 @@ function feature(): FeatureVector {
 }
 
 test("prediction model version is explicit and stable", () => {
-  assert.equal(PREDICTION_MODEL_VERSION, "market-evidence-v1");
+  assert.equal(PREDICTION_MODEL_VERSION, "market-evidence-v2");
 });
 
 test("H2H candidates are normalized and evidence shifts probability conservatively", () => {
@@ -193,7 +194,7 @@ function uiPrediction(
     marketKey: "h2h",
     selectionKey: selectionName.toLowerCase(),
     selectionName,
-    modelVersion: "market-evidence-v1",
+    modelVersion: "market-evidence-v2",
     modelProbability: 0.5,
     impliedProbability: 0.5,
     estimatedEdge: 0,
@@ -260,4 +261,74 @@ test("WATCH model view outranks a higher-value NO_BET output", () => {
   });
 
   assert.equal(pickPrimaryPrediction([noBet, watch])?.selectionName, "Watch");
+});
+
+
+test("goal totals use recent scoring evidence to move Over/Under probabilities", () => {
+  const candidates = buildMarketPredictionCandidates(feature(), {
+    key: "totals",
+    snapshotCount: 6,
+    bookmakerCount: 3,
+    currentQuoteCount: 6,
+    meanRelativePriceDispersion: 0.01,
+    selections: [
+      {
+        selectionName: "Over",
+        point: 2.5,
+        bookmakerCount: 3,
+        meanDecimalOdds: 1.95,
+        bestDecimalOdds: 2.02,
+        meanImpliedProbability: 1 / 1.95,
+      },
+      {
+        selectionName: "Under",
+        point: 2.5,
+        bookmakerCount: 3,
+        meanDecimalOdds: 1.95,
+        bestDecimalOdds: 2.0,
+        meanImpliedProbability: 1 / 1.95,
+      },
+    ],
+  });
+
+  const over = candidates.find((candidate) => candidate.selectionName === "Over");
+  const under = candidates.find((candidate) => candidate.selectionName === "Under");
+  assert.ok(over);
+  assert.ok(under);
+  assert.ok(over.modelProbability > over.marketProbability);
+  assert.ok(under.modelProbability < under.marketProbability);
+  assert.ok(over.evidence.scoringAdjustment > 0);
+});
+
+test("handicap market scoring uses the stored line instead of treating it as moneyline", () => {
+  const candidates = buildMarketPredictionCandidates(feature(), {
+    key: "spreads",
+    snapshotCount: 6,
+    bookmakerCount: 3,
+    currentQuoteCount: 6,
+    meanRelativePriceDispersion: 0.01,
+    selections: [
+      {
+        selectionName: "Alpha FC",
+        point: -0.5,
+        bookmakerCount: 3,
+        meanDecimalOdds: 1.95,
+        bestDecimalOdds: 2.0,
+        meanImpliedProbability: 1 / 1.95,
+      },
+      {
+        selectionName: "Beta FC",
+        point: 0.5,
+        bookmakerCount: 3,
+        meanDecimalOdds: 1.95,
+        bestDecimalOdds: 2.0,
+        meanImpliedProbability: 1 / 1.95,
+      },
+    ],
+  });
+
+  assert.equal(candidates.length, 2);
+  const home = candidates.find((candidate) => candidate.selectionName === "Alpha FC");
+  assert.ok(home);
+  assert.ok(home.evidence.scoringAdjustment > 0);
 });

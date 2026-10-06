@@ -17,6 +17,8 @@ function candidate(
     league: "League " + index,
     startsAt: "2026-10-05T18:00:00.000Z",
     matchup: "Home " + index + " vs Away " + index,
+    marketKey: "h2h",
+    point: null,
     selectionKey: "home",
     selectionName: "Home " + index,
     decimalOdds: 1.8,
@@ -202,4 +204,23 @@ test("combo research action is read-only and review gated", async () => {
   assert.match(component, /\/api\/combos\/research/);
   assert.match(component, /Discovery only/);
   assert.match(component, /does not approve the leg/);
+});
+
+
+test("combo pool supports winner totals and handicap markets without research blocking", async () => {
+  const [loader, component] = await Promise.all([
+    readFile("lib/data/uiCombos.ts", "utf8"),
+    readFile("components/ComboBuilder.tsx", "utf8"),
+  ]);
+
+  assert.match(loader, /key: \{ in: \["h2h", "totals", "spreads"\] \}/);
+  assert.match(loader, /marketKey: row\.market\.key/);
+  assert.match(loader, /selectionLabel/);
+  assert.doesNotMatch(
+    loader,
+    /insufficientModelMarketLift \+= 1;\s*continue;/,
+  );
+  assert.match(component, /MATCH WINNER/);
+  assert.match(component, /TOTAL GOALS/);
+  assert.match(component, /HANDICAP/);
 });

@@ -4,7 +4,7 @@ import type {
   MarketSelectionFeatures,
 } from "@/lib/features/types";
 
-export const PREDICTION_MODEL_VERSION = "market-evidence-v1";
+export const PREDICTION_MODEL_VERSION = "market-evidence-v2";
 
 export type PredictionRisk = "LOW" | "MEDIUM" | "HIGH";
 export type PredictionStatus = "WATCH" | "NO_BET";
@@ -14,6 +14,7 @@ export type PredictionEvidence = {
   formAdjustment: number;
   headToHeadAdjustment: number;
   restAdjustment: number;
+  scoringAdjustment: number;
   totalAdjustment: number;
   dataQuality: number;
 };
@@ -54,7 +55,7 @@ function normalizedLabel(value: string | null): string {
     .trim();
 }
 
-type SelectionRole = "home" | "away" | "draw" | "unknown";
+type SelectionRole = "home" | "away" | "draw" | "over" | "under" | "unknown";
 
 function selectionRole(
   selectionName: string,
@@ -67,6 +68,8 @@ function selectionRole(
   if (label === "draw" || label === "tie" || label === "x") return "draw";
   if (label === "home" || label === "1") return "home";
   if (label === "away" || label === "2") return "away";
+  if (label === "over" || label.startsWith("over ")) return "over";
+  if (label === "under" || label.startsWith("under ")) return "under";
   if (home && label === home) return "home";
   if (away && label === away) return "away";
   return "unknown";
@@ -133,6 +136,35 @@ function evidenceAdjustment(feature: FeatureVector): {
   };
 }
 
+function scoringEstimate(feature: FeatureVector): {
+  total: number | null;
+  margin: number | null;
+  support: number;
+} {
+  const home = feature.form.home;
+  const away = feature.form.away;
+  const samples = Math.min(home.sampleSize, away.sampleSize);
+  const sampleSupport = support(samples);
+
+  if (
+    home.averageFor === null ||
+    home.averageAgainst === null ||
+    away.averageFor === null ||
+    away.averageAgainst === null
+  ) {
+    return { total: null, margin: null, support: sampleSupport };
+  }
+
+  const expectedHome = (home.averageFor + away.averageAgainst) / 2;
+  const expectedAway = (away.averageFor + home.averageAgainst) / 2;
+
+  return {
+    total: expectedHome + expectedAway,
+    margin: expectedHome - expectedAway,
+    support: sampleSupport,
+  };
+}
+
 function consensusProbabilities(
   selections: MarketSelectionFeatures[],
 ): number[] | null {
@@ -149,26 +181,104 @@ function consensusProbabilities(
   return raw.map((value) => value / total);
 }
 
+function selectionAdjustment(
+  feature: FeatureVector,
+  marketKey: string,
+  selection: MarketSelectionFeatures,
+): {
+  total: number;
+  form: number;
+  headToHead: number;
+  rest: number;
+  scoring: number;
+} {
+  const role = selectionRole(selection.selectionName, feature);
+  const evidence = evidenceAdjustment(feature);
+  const scoring = scoringEstimate(feature);
+  const quality = clamp(feature.quality.overall, 0, 1);
+
+  if (marketKey === "h2h") {
+    const total =
+      role === "home" ? evidence.home : role === "away" ? evidence.away : 0;
+    return {
+      total,
+      form: evidence.form,
+      headToHead: evidence.headToHead,
+      rest: evidence.rest,
+      scoring: 0,
+    };
+  }
+
+  if (
+    marketKey === "totals" &&
+    selection.point !== null &&
+    scoring.total !== null &&
+    (role === "over" || role === "under")
+  ) {
+    const raw =
+      clamp((scoring.total - selection.point) / 3, -0.35, 0.35) *
+      scoring.support *
+      quality;
+    const total = role === "over" ? raw : -raw;
+    return {
+      total,
+      form: 0,
+      headToHead: 0,
+      rest: 0,
+      scoring: total,
+    };
+  }
+
+  if (
+    marketKey === "spreads" &&
+    selection.point !== null &&
+    scoring.margin !== null &&
+    (role === "home" || role === "away")
+  ) {
+    const expectedMargin = role === "home" ? scoring.margin : -scoring.margin;
+    const scoringAdjustment =
+      clamp((expectedMargin + selection.point) / 4, -0.28, 0.28) *
+      scoring.support *
+      quality;
+    const sideAdjustment =
+      (role === "home" ? evidence.home : evidence.away) * 0.45;
+    const total = clamp(sideAdjustment + scoringAdjustment, -0.35, 0.35);
+
+    return {
+      total,
+      form: evidence.form * 0.45,
+      headToHead: evidence.headToHead * 0.45,
+      rest: evidence.rest * 0.45,
+      scoring: scoringAdjustment,
+    };
+  }
+
+  return {
+    total: 0,
+    form: 0,
+    headToHead: 0,
+    rest: 0,
+    scoring: 0,
+  };
+}
+
 function adjustedProbabilities(
   feature: FeatureVector,
+  marketKey: string,
   selections: MarketSelectionFeatures[],
   consensus: number[],
 ): {
   probabilities: number[];
-  evidence: ReturnType<typeof evidenceAdjustment>;
+  adjustments: ReturnType<typeof selectionAdjustment>[];
 } {
-  const evidence = evidenceAdjustment(feature);
+  const adjustments = selections.map((selection) =>
+    selectionAdjustment(feature, marketKey, selection),
+  );
 
-  const logits = selections.map((selection, index) => {
-    const role = selectionRole(selection.selectionName, feature);
-    const adjustment =
-      role === "home"
-        ? evidence.home
-        : role === "away"
-          ? evidence.away
-          : 0;
-    return Math.log(Math.max(consensus[index], 1e-9)) + adjustment;
-  });
+  const logits = selections.map(
+    (_selection, index) =>
+      Math.log(Math.max(consensus[index], 1e-9)) + adjustments[index].total,
+  );
 
   const maxLogit = Math.max(...logits);
   const weights = logits.map((value) => Math.exp(value - maxLogit));
@@ -176,7 +286,7 @@ function adjustedProbabilities(
 
   return {
     probabilities: weights.map((value) => value / total),
-    evidence,
+    adjustments,
   };
 }
 
@@ -192,13 +302,10 @@ function candidateRisk(
   return "MEDIUM";
 }
 
-export function buildH2hPredictionCandidates(
-  feature: FeatureVector,
+function lineGroups(
   market: MarketCoverageFeatures,
-): PredictionCandidate[] {
-  if (market.key !== "h2h") return [];
-
-  const selections = market.selections.filter(
+): MarketSelectionFeatures[][] {
+  const valid = market.selections.filter(
     (selection) =>
       Number.isFinite(selection.bestDecimalOdds) &&
       selection.bestDecimalOdds > 1 &&
@@ -206,58 +313,97 @@ export function buildH2hPredictionCandidates(
       selection.meanImpliedProbability > 0,
   );
 
-  const consensus = consensusProbabilities(selections);
-  if (!consensus) return [];
+  if (market.key === "h2h") return valid.length >= 2 ? [valid] : [];
 
-  const adjusted = adjustedProbabilities(feature, selections, consensus);
+  const groups = new Map<string, MarketSelectionFeatures[]>();
+  for (const selection of valid) {
+    if (selection.point === null) continue;
+    const key =
+      market.key === "spreads"
+        ? Math.abs(selection.point).toFixed(4)
+        : selection.point.toFixed(4);
+    const group = groups.get(key) ?? [];
+    group.push(selection);
+    groups.set(key, group);
+  }
+
+  return [...groups.values()].filter((group) => group.length >= 2);
+}
+
+export function buildMarketPredictionCandidates(
+  feature: FeatureVector,
+  market: MarketCoverageFeatures,
+): PredictionCandidate[] {
+  if (!["h2h", "totals", "spreads"].includes(market.key)) return [];
+
   const quality = clamp(feature.quality.overall, 0, 1);
+  const candidates: PredictionCandidate[] = [];
 
-  return selections.map((selection, index) => {
-    const marketProbability = consensus[index];
-    const modelProbability = adjusted.probabilities[index];
-    const impliedProbability = 1 / selection.bestDecimalOdds;
-    const estimatedEdge = modelProbability - impliedProbability;
-    const estimatedValue =
-      modelProbability * selection.bestDecimalOdds - 1;
-    const modelAgreement = clamp(
-      1 - Math.abs(modelProbability - marketProbability) * 3,
-      0,
-      1,
-    );
-    const risk = candidateRisk(
-      quality,
-      selection.bookmakerCount,
-      modelAgreement,
+  for (const selections of lineGroups(market)) {
+    const consensus = consensusProbabilities(selections);
+    if (!consensus) continue;
+
+    const adjusted = adjustedProbabilities(
+      feature,
+      market.key,
+      selections,
+      consensus,
     );
 
-    return {
-      selectionName: selection.selectionName,
-      point: selection.point,
-      bookmakerCount: selection.bookmakerCount,
-      bestDecimalOdds: round(selection.bestDecimalOdds, 4),
-      marketProbability: round(marketProbability),
-      modelProbability: round(modelProbability),
-      impliedProbability: round(impliedProbability),
-      estimatedEdge: round(estimatedEdge),
-      estimatedValue: round(estimatedValue),
-      dataQuality: round(quality, 5),
-      modelAgreement: round(modelAgreement, 5),
-      risk,
-      status: risk === "HIGH" ? "NO_BET" : "WATCH",
-      evidence: {
-        marketAnchor: round(marketProbability),
-        formAdjustment: adjusted.evidence.form,
-        headToHeadAdjustment: adjusted.evidence.headToHead,
-        restAdjustment: adjusted.evidence.rest,
-        totalAdjustment: round(
-          selectionRole(selection.selectionName, feature) === "home"
-            ? adjusted.evidence.home
-            : selectionRole(selection.selectionName, feature) === "away"
-              ? adjusted.evidence.away
-              : 0,
-        ),
+    selections.forEach((selection, index) => {
+      const marketProbability = consensus[index];
+      const modelProbability = adjusted.probabilities[index];
+      const impliedProbability = 1 / selection.bestDecimalOdds;
+      const estimatedEdge = modelProbability - impliedProbability;
+      const estimatedValue =
+        modelProbability * selection.bestDecimalOdds - 1;
+      const modelAgreement = clamp(
+        1 - Math.abs(modelProbability - marketProbability) * 3,
+        0,
+        1,
+      );
+      const risk = candidateRisk(
+        quality,
+        selection.bookmakerCount,
+        modelAgreement,
+      );
+      const evidence = adjusted.adjustments[index];
+
+      candidates.push({
+        selectionName: selection.selectionName,
+        point: selection.point,
+        bookmakerCount: selection.bookmakerCount,
+        bestDecimalOdds: round(selection.bestDecimalOdds, 4),
+        marketProbability: round(marketProbability),
+        modelProbability: round(modelProbability),
+        impliedProbability: round(impliedProbability),
+        estimatedEdge: round(estimatedEdge),
+        estimatedValue: round(estimatedValue),
         dataQuality: round(quality, 5),
-      },
-    };
-  });
+        modelAgreement: round(modelAgreement, 5),
+        risk,
+        status: risk === "HIGH" ? "NO_BET" : "WATCH",
+        evidence: {
+          marketAnchor: round(marketProbability),
+          formAdjustment: round(evidence.form),
+          headToHeadAdjustment: round(evidence.headToHead),
+          restAdjustment: round(evidence.rest),
+          scoringAdjustment: round(evidence.scoring),
+          totalAdjustment: round(evidence.total),
+          dataQuality: round(quality, 5),
+        },
+      });
+    });
+  }
+
+  return candidates;
+}
+
+export function buildH2hPredictionCandidates(
+  feature: FeatureVector,
+  market: MarketCoverageFeatures,
+): PredictionCandidate[] {
+  return market.key === "h2h"
+    ? buildMarketPredictionCandidates(feature, market)
+    : [];
 }

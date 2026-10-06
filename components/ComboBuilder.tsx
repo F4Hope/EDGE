@@ -15,6 +15,8 @@ type ComboLeg = {
   league: string;
   startsAt: string;
   matchup: string;
+  marketKey: string;
+  point: number | null;
   selectionKey: string;
   selectionName: string;
   decimalOdds: number;
@@ -48,6 +50,8 @@ type ComboEvidenceResearchCandidate = {
   league: string;
   startsAt: string;
   matchup: string;
+  marketKey: string;
+  point: number | null;
   selectionName: string;
   decimalOdds: number;
   modelProbability: number;
@@ -138,6 +142,13 @@ function percent(value: number | null | undefined): string {
   return value === null || value === undefined
     ? "—"
     : `${(value * 100).toFixed(1)}%`;
+}
+
+function marketLabel(marketKey: string): string {
+  if (marketKey === "h2h") return "MATCH WINNER";
+  if (marketKey === "totals") return "TOTAL GOALS";
+  if (marketKey === "spreads") return "HANDICAP";
+  return marketKey.replaceAll("_", " ").toUpperCase();
 }
 
 function sourceLabel(leg: ComboLeg): string {
@@ -327,9 +338,10 @@ export function ComboBuilder({
       </div>
 
       <p className="combo-message">
-        EDGE uses future H2H model outputs with positive estimated value,
-        independent historical evidence, and real stored bookmaker prices.
-        One selection per event is allowed.
+        EDGE builds immediately from future positive-value model selections and
+        real stored bookmaker prices. Independent form, H2H, injury and news
+        evidence improves ranking and review confidence but does not block the
+        Combo from showing a playable selection. One selection per event is allowed.
       </p>
 
       <button
@@ -400,7 +412,10 @@ export function ComboBuilder({
                     {String(index + 1).padStart(2, "0")}
                   </div>
                   <div className="combo-leg-copy">
-                    <span>{candidate.sport.toUpperCase()} · {candidate.league}</span>
+                    <span>
+                      {candidate.sport.toUpperCase()} · {candidate.league} ·{" "}
+                      {marketLabel(candidate.marketKey)}
+                    </span>
                     <strong>{candidate.selectionName}</strong>
                     <p>{candidate.matchup}</p>
                     <small>
@@ -513,7 +528,10 @@ export function ComboBuilder({
                       {String(index + 1).padStart(2, "0")}
                     </div>
                     <div className="combo-leg-copy">
-                      <span>{leg.sport.toUpperCase()} · {leg.league}</span>
+                      <span>
+                        {leg.sport.toUpperCase()} · {leg.league} ·{" "}
+                        {marketLabel(leg.marketKey)}
+                      </span>
                       <strong>{leg.selectionName}</strong>
                       <p>{leg.matchup}</p>
                       <small>{sourceLabel(leg)}</small>

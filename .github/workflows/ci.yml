@@ -56,6 +56,15 @@ jobs:
       - name: Test feature engine
         run: npm run test:features
 
+      - name: Test prediction model
+        run: npm run test:predictions
+
+      - name: Test opportunities
+        run: npm run test:opportunities
+
+      - name: Test combo engine
+        run: npm run test:combos
+
       - name: Test settled recent-form features
         run: npm run test:form
 

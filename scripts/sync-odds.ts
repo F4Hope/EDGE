@@ -65,7 +65,7 @@ function parseSports(value: string | undefined): SupportedSport[] {
 }
 
 function parseMarkets(value: string | undefined): FeaturedMarketKey[] {
-  const requested = parseCsv(value ?? process.env.ODDS_API_MARKETS ?? "h2h");
+  const requested = parseCsv(value ?? process.env.ODDS_API_MARKETS ?? "h2h,totals,spreads");
   const invalid = requested.filter(
     (market) => !featuredMarketKeys.includes(market as FeaturedMarketKey),
   );

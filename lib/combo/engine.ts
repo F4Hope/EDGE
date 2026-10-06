@@ -10,6 +10,8 @@ export type ComboCandidate = {
   league: string;
   startsAt: string;
   matchup: string;
+  marketKey: string;
+  point: number | null;
   selectionKey: string;
   selectionName: string;
   decimalOdds: number;
@@ -219,9 +221,9 @@ export function buildCombo(
       legs: [],
       candidateCount: 0,
       message:
-        "No stored Phase 7 selections pass the selected risk and evidence gates.",
+        "No stored priced selections pass the selected risk and model-quality gates.",
       methodology:
-        "Pre-event H2H predictions only; NO_BET/HIGH_RISK outputs are excluded.",
+        "Pre-event priced model selections only; NO_BET/HIGH_RISK outputs are excluded.",
     };
   }
 
@@ -287,7 +289,7 @@ export function buildCombo(
       candidateCount: eligible.length,
       message: "No structurally valid combination could be constructed.",
       methodology:
-        "One selection per event; pre-event Phase 7 H2H outputs only.",
+        "One selection per event; pre-event featured-market outputs only.",
     };
   }
 

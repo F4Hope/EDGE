@@ -70,7 +70,8 @@ export function independentEvidenceSupport(explanation: unknown): number {
   return (
     absolute(numberValue(evidence.formAdjustment)) +
     absolute(numberValue(evidence.headToHeadAdjustment)) +
-    absolute(numberValue(evidence.restAdjustment))
+    absolute(numberValue(evidence.restAdjustment)) +
+    absolute(numberValue(evidence.scoringAdjustment))
   );
 }
 
