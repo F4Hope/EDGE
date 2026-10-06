@@ -22,6 +22,8 @@ export type ComboEvidenceResearchCandidate = {
   league: string;
   startsAt: string;
   matchup: string;
+  marketKey: string;
+  point: number | null;
   selectionName: string;
   decimalOdds: number;
   modelProbability: number;
@@ -76,6 +78,21 @@ function numberValue(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+function selectionLabel(
+  marketKey: string,
+  selectionName: string,
+  point: number | null,
+): string {
+  if (point === null || !Number.isFinite(point)) return selectionName;
+  if (selectionName.includes(String(point))) return selectionName;
+  if (marketKey === "totals") return `${selectionName} ${point}`;
+  if (marketKey === "spreads") {
+    const signed = point > 0 ? `+${point}` : String(point);
+    return `${selectionName} ${signed}`;
+  }
+  return selectionName;
+}
+
 function participantName(event: {
   homeTeam: { name: string } | null;
   awayTeam: { name: string } | null;
@@ -101,13 +118,13 @@ export async function getComboCandidatePool(
         status: { notIn: ["CANCELLED", "POSTPONED", "COMPLETED"] },
       },
       market: {
-        key: "h2h",
+        key: { in: ["h2h", "totals", "spreads"] },
         status: "OPEN",
       },
       status: { in: ["BETTABLE", "WATCH"] },
     },
     orderBy: { createdAt: "desc" },
-    take: 250,
+    take: 1000,
     include: {
       event: {
         include: {
@@ -207,6 +224,14 @@ export async function getComboCandidatePool(
 
     const explanation = record(row.explanation);
     const marketProbability = numberValue(explanation?.marketProbability);
+    const point = numberValue(explanation?.point);
+    const rawSelectionName =
+      explanationSelectionName(row.explanation) ?? row.selectionKey;
+    const selectionName = selectionLabel(
+      row.market.key,
+      rawSelectionName,
+      point,
+    );
     const modelProbability = Number(row.modelProbability);
     const estimatedValue =
       row.estimatedValue === null ? null : Number(row.estimatedValue);
@@ -244,8 +269,9 @@ export async function getComboCandidatePool(
         league: row.event.league.name,
         startsAt: row.event.startTime.toISOString(),
         matchup: participantName(row.event),
-        selectionName:
-          explanationSelectionName(row.explanation) ?? row.selectionKey,
+        marketKey: row.market.key,
+        point,
+        selectionName,
         decimalOdds: Number(bestSnapshot.decimalOdds),
         modelProbability,
         marketProbability,
@@ -273,9 +299,10 @@ export async function getComboCandidatePool(
       league: row.event.league.name,
       startsAt: row.event.startTime.toISOString(),
       matchup: participantName(row.event),
+      marketKey: row.market.key,
+      point,
       selectionKey: row.selectionKey,
-      selectionName:
-        explanationSelectionName(row.explanation) ?? row.selectionKey,
+      selectionName,
       decimalOdds: Number(bestSnapshot.decimalOdds),
       modelProbability,
       estimatedValue,
