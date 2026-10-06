@@ -65,7 +65,7 @@ const PROFILES: Record<ComboRiskMode, RiskProfile> = {
   },
   BALANCED: {
     allowedRisks: ["LOW", "MEDIUM"],
-    minProbability: 0.3,
+    minProbability: 0.2,
     minDataQuality: 0.55,
     minAgreement: 0.5,
     minEstimatedValue: 0,
@@ -73,7 +73,7 @@ const PROFILES: Record<ComboRiskMode, RiskProfile> = {
   },
   AGGRESSIVE: {
     allowedRisks: ["LOW", "MEDIUM"],
-    minProbability: 0.2,
+    minProbability: 0.05,
     minDataQuality: 0.55,
     minAgreement: 0.35,
     minEstimatedValue: 0,
