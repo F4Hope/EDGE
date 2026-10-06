@@ -94,10 +94,13 @@ test("builder returns best effort when qualified data cannot reach target", () =
 });
 
 
-test("combo candidate loader requires positive value and independent evidence", async () => {
+test("combo candidate loader admits small target-fit margin drag and tracks its floor", async () => {
   const source = await readFile("lib/data/uiCombos.ts", "utf8");
 
+  assert.match(source, /MIN_COMBO_ESTIMATED_VALUE = -0\.05/);
   assert.match(source, /estimatedValue <= 0/);
+  assert.match(source, /estimatedValue < MIN_COMBO_ESTIMATED_VALUE/);
+  assert.match(source, /belowEstimatedValueFloor/);
   assert.match(source, /independentEvidenceSupport/);
   assert.match(source, /MIN_MODEL_MARKET_LIFT/);
   assert.match(source, /evidenceSupport <= 1e-9/);
@@ -141,6 +144,7 @@ test("combo API exposes candidate rejection diagnostics", async () => {
   assert.match(loader, /export type ComboCandidateDiagnostics/);
   assert.match(loader, /missingStoredOdds/);
   assert.match(loader, /nonPositiveEstimatedValue/);
+  assert.match(loader, /belowEstimatedValueFloor/);
   assert.match(loader, /missingMarketProbability/);
   assert.match(loader, /missingIndependentEvidence/);
   assert.match(loader, /insufficientModelMarketLift/);
@@ -158,7 +162,8 @@ test("combo screen surfaces candidate rejection diagnostics when no legs qualify
   assert.match(page, /getComboCandidatePool/);
   assert.match(page, /initialDiagnostics/);
   assert.match(component, /candidateDiagnostics/);
-  assert.match(component, /NO \+EV/);
+  assert.match(component, /≤0 EV/);
+  assert.match(component, /BELOW FLOOR/);
   assert.match(component, /NO EVIDENCE/);
   assert.match(component, /INTEL READY/);
 });
@@ -334,6 +339,74 @@ test("balanced mode still rejects sub-20-percent long shots", () => {
     ],
     2,
     "BALANCED",
+  );
+
+  assert.equal(result.status, "NO_QUALIFYING_COMBO");
+});
+
+
+test("balanced combo prefers the reached combination closest to the requested odds", () => {
+  const result = buildCombo(
+    [
+      candidate(61, {
+        eventId: "event-a",
+        decimalOdds: 1.45,
+        modelProbability: 0.67,
+        estimatedValue: -0.0285,
+        dataQuality: 0.7,
+        modelAgreement: 0.82,
+        risk: "MEDIUM",
+        status: "WATCH",
+      }),
+      candidate(62, {
+        eventId: "event-b",
+        decimalOdds: 1.45,
+        modelProbability: 0.67,
+        estimatedValue: -0.0285,
+        dataQuality: 0.7,
+        modelAgreement: 0.82,
+        risk: "MEDIUM",
+        status: "WATCH",
+      }),
+      candidate(63, {
+        eventId: "event-c",
+        decimalOdds: 3.14,
+        modelProbability: 0.33,
+        estimatedValue: 0.0362,
+        dataQuality: 0.7,
+        modelAgreement: 0.82,
+        risk: "MEDIUM",
+        status: "WATCH",
+      }),
+    ],
+    2,
+    "BALANCED",
+  );
+
+  assert.equal(result.status, "TARGET_REACHED");
+  assert.equal(result.legs.length, 2);
+  assert.equal(result.actualOdds, 2.1025);
+  assert.ok(result.message.includes("2x target"));
+});
+
+test("low mode still rejects negative-value target-fit legs", () => {
+  const result = buildCombo(
+    [
+      candidate(71, {
+        eventId: "event-a",
+        decimalOdds: 1.45,
+        modelProbability: 0.67,
+        estimatedValue: -0.0285,
+      }),
+      candidate(72, {
+        eventId: "event-b",
+        decimalOdds: 1.45,
+        modelProbability: 0.67,
+        estimatedValue: -0.0285,
+      }),
+    ],
+    2,
+    "LOW",
   );
 
   assert.equal(result.status, "NO_QUALIFYING_COMBO");
