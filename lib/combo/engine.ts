@@ -10,6 +10,8 @@ export type ComboCandidate = {
   league: string;
   startsAt: string;
   matchup: string;
+  marketKey: string;
+  point: number | null;
   selectionKey: string;
   selectionName: string;
   decimalOdds: number;
@@ -287,7 +289,7 @@ export function buildCombo(
       candidateCount: eligible.length,
       message: "No structurally valid combination could be constructed.",
       methodology:
-        "One selection per event; pre-event Phase 7 H2H outputs only.",
+        "One selection per event; pre-event featured-market outputs only.",
     };
   }
 
