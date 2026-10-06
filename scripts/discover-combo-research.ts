@@ -2,7 +2,7 @@ import dotenv from "dotenv";
 import { writeFile } from "node:fs/promises";
 import { getComboCandidatePool } from "../lib/data/uiCombos";
 import { buildComboResearchTask } from "../lib/intelligence/researchEvidence";
-import { discoverGoogleNews } from "../lib/intelligence/googleNewsDiscovery";
+import { discoverPublicNews } from "../lib/intelligence/googleNewsDiscovery";
 
 dotenv.config({ path: [".env.local", ".env"], quiet: true });
 
@@ -67,7 +67,7 @@ async function main() {
     const queryResults = [];
 
     for (const query of queries) {
-      const result = await discoverGoogleNews(query, {
+      const result = await discoverPublicNews(query, {
         startsAt: task.startsAt,
         limit: resultLimit,
       });
@@ -83,7 +83,7 @@ async function main() {
 
   const payload = {
     generatedAt: new Date().toISOString(),
-    provider: "google-news-rss",
+    providers: ["google-news-rss", "bing-news-rss"],
     diagnostics: pool.diagnostics,
     discoveries,
     rules: {
