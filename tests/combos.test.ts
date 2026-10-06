@@ -411,3 +411,60 @@ test("low mode still rejects negative-value target-fit legs", () => {
 
   assert.equal(result.status, "NO_QUALIFYING_COMBO");
 });
+
+
+test("balanced combo accepts today's short-priced target-fit favorites at the loader floor", () => {
+  const result = buildCombo(
+    [
+      candidate(81, {
+        eventId: "goias-athletic",
+        decimalOdds: 1.78,
+        modelProbability: 0.535709,
+        estimatedValue: -0.046438,
+        dataQuality: 0.63529,
+        modelAgreement: 1,
+        risk: "MEDIUM",
+        status: "WATCH",
+      }),
+      candidate(82, {
+        eventId: "sport-sao-bernardo",
+        decimalOdds: 1.88,
+        modelProbability: 0.50545,
+        estimatedValue: -0.049754,
+        dataQuality: 0.63529,
+        modelAgreement: 1,
+        risk: "MEDIUM",
+        status: "WATCH",
+      }),
+      candidate(83, {
+        eventId: "goias-athletic",
+        decimalOdds: 3.71,
+        modelProbability: 0.270928,
+        estimatedValue: 0.005144,
+        dataQuality: 0.63529,
+        modelAgreement: 1,
+        risk: "MEDIUM",
+        status: "WATCH",
+      }),
+      candidate(84, {
+        eventId: "sport-sao-bernardo",
+        decimalOdds: 3.92,
+        modelProbability: 0.260583,
+        estimatedValue: 0.021484,
+        dataQuality: 0.63529,
+        modelAgreement: 1,
+        risk: "MEDIUM",
+        status: "WATCH",
+      }),
+    ],
+    2,
+    "BALANCED",
+  );
+
+  assert.equal(result.status, "TARGET_REACHED");
+  assert.equal(result.actualOdds, 3.3464);
+  assert.deepEqual(
+    result.legs.map((leg) => leg.decimalOdds).sort((a, b) => a - b),
+    [1.78, 1.88],
+  );
+});
