@@ -18,6 +18,25 @@ function run(script: string, args: string[] = []) {
   }
 }
 
+function runBestEffort(
+  script: string,
+  args: string[],
+  label: string,
+): boolean {
+  try {
+    run(script, args);
+    return true;
+  } catch (error) {
+    console.warn(
+      "WARN " +
+        label +
+        " failed; continuing with stored event identities so result settlement can still run.",
+    );
+    console.warn(error instanceof Error ? error.message : error);
+    return false;
+  }
+}
+
 function hasFlag(name: string): boolean {
   return process.argv.includes("--" + name);
 }
@@ -109,11 +128,15 @@ function main() {
         (futureDatesAllowed ? "enabled" : "disabled") +
         ")...",
     );
-    run("data:sync", [
-      "--provider=api-sports",
-      "--sports=football,basketball",
-      "--to=" + eventTo,
-    ]);
+    runBestEffort(
+      "data:sync",
+      [
+        "--provider=api-sports",
+        "--sports=football,basketball",
+        "--to=" + eventTo,
+      ],
+      "API-Sports event discovery",
+    );
 
     console.log(
       "Refreshing recent final football/basketball results " +
