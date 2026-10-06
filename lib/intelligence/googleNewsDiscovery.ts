@@ -106,10 +106,23 @@ export function parseGoogleNewsRss(xml: string): GoogleNewsDiscoveryItem[] {
   return items;
 }
 
+export function isIndependentResearchDiscovery(
+  item: GoogleNewsDiscoveryItem,
+): boolean {
+  const text = [
+    item.headline,
+    item.summary ?? "",
+    item.publisherName ?? "",
+  ].join(" ");
+
+  return !/\b(predictions?|betting tips?|best bets?|odds|picks?)\b/i.test(text);
+}
+
 export function preEventDiscoveries(
   items: GoogleNewsDiscoveryItem[],
   startsAt: string,
   limit = 5,
+  lookbackDays = 21,
 ): GoogleNewsDiscoveryItem[] {
   const start = new Date(startsAt).getTime();
 
@@ -117,8 +130,17 @@ export function preEventDiscoveries(
     throw new Error("startsAt must be a valid date.");
   }
 
+  const oldest = start - Math.max(1, Math.min(lookbackDays, 90)) * 86_400_000;
+
   return items
-    .filter((item) => new Date(item.publishedAt).getTime() < start)
+    .filter((item) => {
+      const published = new Date(item.publishedAt).getTime();
+      return (
+        published < start &&
+        published >= oldest &&
+        isIndependentResearchDiscovery(item)
+      );
+    })
     .sort(
       (a, b) =>
         new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
