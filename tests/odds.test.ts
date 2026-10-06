@@ -463,3 +463,36 @@ test("API-Sports featured odds normalization captures Double Chance bet 12", () 
     { side: "draw_away", price: 1.95 },
   ]);
 });
+
+
+test("API-Sports double chance normalization accepts current label variants", () => {
+  const normalized = normalizeApiSportsMatchWinnerRow({
+    fixture: {
+      id: 1493152,
+      date: "2026-10-06T18:00:00Z",
+    },
+    bookmakers: [
+      {
+        id: 8,
+        name: "Bet365",
+        bets: [
+          {
+            name: "Double Chance",
+            values: [
+              { value: "Home or Draw", odd: "1.20" },
+              { value: "Home or Away", odd: "1.28" },
+              { value: "Away or Draw", odd: "1.90" },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+
+  assert.ok(normalized);
+  assert.deepEqual(normalized.bookmakers[0].doubleChanceOutcomes, [
+    { side: "home_draw", price: 1.2 },
+    { side: "home_away", price: 1.28 },
+    { side: "draw_away", price: 1.9 },
+  ]);
+});
