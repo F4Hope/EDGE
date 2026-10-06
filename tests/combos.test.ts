@@ -224,3 +224,52 @@ test("combo pool supports winner totals and handicap markets without research bl
   assert.match(component, /TOTAL GOALS/);
   assert.match(component, /HANDICAP/);
 });
+
+
+test("balanced combo accepts model-classified medium risk selections at the model quality floor", () => {
+  const result = buildCombo(
+    [
+      candidate(21, {
+        decimalOdds: 1.55,
+        modelProbability: 0.68,
+        estimatedValue: 0.054,
+        dataQuality: 0.56,
+        modelAgreement: 0.55,
+        risk: "MEDIUM",
+        status: "WATCH",
+      }),
+      candidate(22, {
+        decimalOdds: 1.5,
+        modelProbability: 0.7,
+        estimatedValue: 0.05,
+        dataQuality: 0.58,
+        modelAgreement: 0.57,
+        risk: "MEDIUM",
+        status: "WATCH",
+      }),
+    ],
+    2,
+    "BALANCED",
+  );
+
+  assert.equal(result.status, "TARGET_REACHED");
+  assert.equal(result.legs.length, 2);
+  assert.ok((result.actualOdds ?? 0) >= 2);
+});
+
+test("combo output requires at least two different events", () => {
+  const result = buildCombo(
+    [
+      candidate(31, {
+        decimalOdds: 2.2,
+        modelProbability: 0.55,
+        estimatedValue: 0.21,
+      }),
+    ],
+    2,
+    "BALANCED",
+  );
+
+  assert.equal(result.status, "NO_QUALIFYING_COMBO");
+  assert.equal(result.legs.length, 0);
+});
