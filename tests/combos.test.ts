@@ -198,7 +198,7 @@ test("combo research action is read-only and review gated", async () => {
   assert.doesNotMatch(route, /oddsSnapshot\.(create|update|upsert)/);
   assert.doesNotMatch(route, /intelligenceSignal\.(create|update|upsert)/);
 
-  assert.match(component, />RESEARCH</);
+  assert.match(component, /"RESEARCH"/);
   assert.match(component, /\/api\/combos\/research/);
   assert.match(component, /Discovery only/);
   assert.match(component, /does not approve the leg/);
