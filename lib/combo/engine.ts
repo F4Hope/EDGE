@@ -68,7 +68,7 @@ const PROFILES: Record<ComboRiskMode, RiskProfile> = {
     minProbability: 0.2,
     minDataQuality: 0.55,
     minAgreement: 0.5,
-    minEstimatedValue: -0.03,
+    minEstimatedValue: -0.05,
     maxLegs: 6,
   },
   AGGRESSIVE: {
