@@ -6,6 +6,7 @@ import {
   buildGoogleNewsRssUrl,
   discoverGoogleNews,
   discoverPublicNews,
+  isIndependentResearchDiscovery,
   parseGoogleNewsRss,
   preEventDiscoveries,
 } from "../lib/intelligence/googleNewsDiscovery";
@@ -140,4 +141,60 @@ test("research discovery script is discovery-only and cannot mutate model state"
   assert.doesNotMatch(source, /intelligenceSignal\.(create|upsert|update)/);
   assert.doesNotMatch(source, /prediction\.(create|update|upsert)/);
   assert.doesNotMatch(source, /oddsSnapshot\.(create|update|upsert)/);
+});
+
+
+test("research discovery rejects circular tipster content", () => {
+  assert.equal(
+    isIndependentResearchDiscovery({
+      headline: "Alpha vs Beta Prediction, Betting Tips & Odds",
+      publisherName: "Tipster Example",
+      publisherUrl: "https://tips.example",
+      discoveryUrl: "https://news.example/item",
+      publishedAt: "2026-10-05T10:00:00.000Z",
+      summary: "Best bets and picks for the fixture.",
+    }),
+    false,
+  );
+
+  assert.equal(
+    isIndependentResearchDiscovery({
+      headline: "Alpha captain ruled out with hamstring injury",
+      publisherName: "Local Sports Desk",
+      publisherUrl: "https://sports.example",
+      discoveryUrl: "https://news.example/injury",
+      publishedAt: "2026-10-05T10:00:00.000Z",
+      summary: "Club confirmed the absence before the fixture.",
+    }),
+    true,
+  );
+});
+
+test("pre-event discovery drops stale articles outside the research window", () => {
+  const items = preEventDiscoveries(
+    [
+      {
+        headline: "Recent lineup update",
+        publisherName: "Example",
+        publisherUrl: "https://example.com",
+        discoveryUrl: "https://example.com/recent",
+        publishedAt: "2026-10-04T10:00:00.000Z",
+        summary: null,
+      },
+      {
+        headline: "Old injury report",
+        publisherName: "Example",
+        publisherUrl: "https://example.com",
+        discoveryUrl: "https://example.com/old",
+        publishedAt: "2026-08-01T10:00:00.000Z",
+        summary: null,
+      },
+    ],
+    "2026-10-06T18:00:00.000Z",
+    10,
+    21,
+  );
+
+  assert.equal(items.length, 1);
+  assert.equal(items[0].discoveryUrl, "https://example.com/recent");
 });
