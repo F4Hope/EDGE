@@ -6,7 +6,7 @@ import {
   type FeatureVector,
 } from "@/lib/features/types";
 import {
-  buildH2hPredictionCandidates,
+  buildMarketPredictionCandidates,
   PREDICTION_MODEL_VERSION,
 } from "./model";
 
@@ -78,7 +78,7 @@ export async function generatePredictionsForEvent(
       },
       markets: {
         where: {
-          key: "h2h",
+          key: { in: ["h2h", "totals", "spreads"] },
           status: "OPEN",
         },
         include: {
@@ -143,7 +143,7 @@ export async function generatePredictionsForEvent(
 
   const prepared: Array<{
     market: (typeof event.markets)[number];
-    candidates: ReturnType<typeof buildH2hPredictionCandidates>;
+    candidates: ReturnType<typeof buildMarketPredictionCandidates>;
     fingerprint: string;
   }> = [];
   let reused = 0;
@@ -170,7 +170,7 @@ export async function generatePredictionsForEvent(
 
     if (!summary) continue;
 
-    const candidates = buildH2hPredictionCandidates(
+    const candidates = buildMarketPredictionCandidates(
       featureRow.values,
       summary,
     );
@@ -217,7 +217,7 @@ export async function generatePredictionsForEvent(
       created: 0,
       reused,
       modelRunId: null,
-      reason: reused > 0 ? "current-inputs-already-scored" : "no-eligible-h2h-market",
+      reason: reused > 0 ? "current-inputs-already-scored" : "no-eligible-featured-market",
     };
   }
 
@@ -227,7 +227,7 @@ export async function generatePredictionsForEvent(
       modelVersion: PREDICTION_MODEL_VERSION,
       status: "RUNNING",
       parameters: {
-        modelClass: "transparent-market-anchored-evidence-baseline",
+        modelClass: "transparent-market-anchored-featured-baseline",
         featureSchemaVersion: FEATURE_SCHEMA_VERSION,
         validationGate: "UNVALIDATED_BASELINE",
         bettableEnabled: false,
@@ -268,7 +268,7 @@ export async function generatePredictionsForEvent(
             modelAgreement: candidate.modelAgreement,
             explanation: {
               inputFingerprint: item.fingerprint,
-              modelClass: "transparent-market-anchored-evidence-baseline",
+              modelClass: "transparent-market-anchored-featured-baseline",
               validationState: "UNVALIDATED_BASELINE",
               bettableEnabled: false,
               selectionName: candidate.selectionName,
