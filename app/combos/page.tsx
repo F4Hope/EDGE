@@ -3,6 +3,7 @@ import { MobileShell } from "@/components/MobileShell";
 import { ScreenHeader } from "@/components/ScreenHeader";
 import { buildCombo } from "@/lib/combo/engine";
 import { getComboCandidatePool } from "@/lib/data/uiCombos";
+import { recordComboBuild } from "@/lib/data/comboAudit";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,12 @@ export default async function CombosPage() {
   try {
     const pool = await getComboCandidatePool();
     initialResult = buildCombo(pool.candidates, 2, "BALANCED");
+    await recordComboBuild(initialResult).catch((error) => {
+      console.error(
+        "EDGE initial combo audit write failed.",
+        error instanceof Error ? error.message : String(error),
+      );
+    });
     initialDiagnostics = pool.diagnostics;
     initialResearchQueue = pool.evidenceResearchQueue;
   } catch {
