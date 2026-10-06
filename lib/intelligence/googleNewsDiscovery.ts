@@ -7,7 +7,8 @@ export type GoogleNewsDiscoveryItem = {
   summary: string | null;
 };
 
-export type GoogleNewsDiscoveryResponse = {
+export type PublicNewsDiscoveryResponse = {
+  provider: "google-news-rss" | "bing-news-rss";
   query: string;
   feedUrl: string;
   items: GoogleNewsDiscoveryItem[];
@@ -125,16 +126,24 @@ export function preEventDiscoveries(
     .slice(0, Math.max(1, Math.min(limit, 20)));
 }
 
-export async function discoverGoogleNews(
+export function buildBingNewsRssUrl(query: string): string {
+  const url = new URL("https://www.bing.com/news/search");
+  url.searchParams.set("q", query);
+  url.searchParams.set("format", "rss");
+  url.searchParams.set("mkt", "en-US");
+  return url.toString();
+}
+
+async function discoverRss(
+  provider: "google-news-rss" | "bing-news-rss",
+  feedUrl: string,
   query: string,
   options: {
     startsAt: string;
     limit?: number;
     timeoutMs?: number;
   },
-): Promise<GoogleNewsDiscoveryResponse> {
-  const feedUrl = buildGoogleNewsRssUrl(query);
-
+): Promise<PublicNewsDiscoveryResponse> {
   try {
     const response = await fetch(feedUrl, {
       method: "GET",
@@ -148,15 +157,17 @@ export async function discoverGoogleNews(
 
     if (!response.ok) {
       return {
+        provider,
         query,
         feedUrl,
         items: [],
-        error: "Google News RSS returned HTTP " + response.status + ".",
+        error: provider + " returned HTTP " + response.status + ".",
       };
     }
 
     const xml = await response.text();
     return {
+      provider,
       query,
       feedUrl,
       items: preEventDiscoveries(
@@ -168,10 +179,71 @@ export async function discoverGoogleNews(
     };
   } catch (error) {
     return {
+      provider,
       query,
       feedUrl,
       items: [],
       error: error instanceof Error ? error.message : "Discovery request failed.",
     };
   }
+}
+
+export async function discoverGoogleNews(
+  query: string,
+  options: {
+    startsAt: string;
+    limit?: number;
+    timeoutMs?: number;
+  },
+): Promise<PublicNewsDiscoveryResponse> {
+  return discoverRss(
+    "google-news-rss",
+    buildGoogleNewsRssUrl(query),
+    query,
+    options,
+  );
+}
+
+export async function discoverBingNews(
+  query: string,
+  options: {
+    startsAt: string;
+    limit?: number;
+    timeoutMs?: number;
+  },
+): Promise<PublicNewsDiscoveryResponse> {
+  return discoverRss(
+    "bing-news-rss",
+    buildBingNewsRssUrl(query),
+    query,
+    options,
+  );
+}
+
+export async function discoverPublicNews(
+  query: string,
+  options: {
+    startsAt: string;
+    limit?: number;
+    timeoutMs?: number;
+  },
+): Promise<PublicNewsDiscoveryResponse> {
+  const google = await discoverGoogleNews(query, options);
+  if (!google.error && google.items.length > 0) {
+    return google;
+  }
+
+  const bing = await discoverBingNews(query, options);
+  if (!bing.error && bing.items.length > 0) {
+    return bing;
+  }
+
+  if (!bing.error && google.error) {
+    return bing;
+  }
+
+  return {
+    ...bing,
+    error: [google.error, bing.error].filter(Boolean).join(" | ") || null,
+  };
 }
