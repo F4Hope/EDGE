@@ -86,6 +86,7 @@ export async function syncProviderResults(
               select: {
                 selectionKey: true,
                 explanation: true,
+                market: { select: { key: true } },
               },
             },
           },
@@ -123,6 +124,10 @@ export async function syncProviderResults(
         source.event.predictions,
         result.winner,
         participants,
+        {
+          home: result.homeScore,
+          away: result.awayScore,
+        },
       );
 
       await db.$transaction([

@@ -259,3 +259,195 @@ test("model performance derives legacy outcomes and deduplicates prediction revi
   assert.equal(report.byMarket[0]?.count, 2);
   assert.equal(report.byModelVersion[0]?.count, 2);
 });
+
+
+test("double chance selections settle from the final 1X2 winner", () => {
+  const outcomes = buildSelectionOutcomes(
+    [
+      {
+        selectionKey: "double_chance:home-draw:na",
+        market: { key: "double_chance" },
+        explanation: { selectionName: "Home/Draw" },
+      },
+      {
+        selectionKey: "double_chance:home-away:na",
+        market: { key: "double_chance" },
+        explanation: { selectionName: "Home/Away" },
+      },
+      {
+        selectionKey: "double_chance:draw-away:na",
+        market: { key: "double_chance" },
+        explanation: { selectionName: "Draw/Away" },
+      },
+    ],
+    "away",
+    { home: "Alpha", away: "Beta" },
+    { home: 0, away: 2 },
+  );
+
+  assert.deepEqual(outcomes, {
+    "double_chance:home-draw:na": "loss",
+    "double_chance:home-away:na": "win",
+    "double_chance:draw-away:na": "win",
+  });
+});
+
+test("totals settle full wins and losses but omit pushes and half settlements", () => {
+  const outcomes = buildSelectionOutcomes(
+    [
+      {
+        selectionKey: "totals:over:1.5",
+        market: { key: "totals" },
+        explanation: { selectionName: "Over", point: 1.5 },
+      },
+      {
+        selectionKey: "totals:under:4.5",
+        market: { key: "totals" },
+        explanation: { selectionName: "Under", point: 4.5 },
+      },
+      {
+        selectionKey: "totals:over:3.75",
+        market: { key: "totals" },
+        explanation: { selectionName: "Over", point: 3.75 },
+      },
+      {
+        selectionKey: "totals:under:4",
+        market: { key: "totals" },
+        explanation: { selectionName: "Under", point: 4 },
+      },
+    ],
+    "home",
+    { home: "Alpha", away: "Beta" },
+    { home: 3, away: 1 },
+  );
+
+  assert.deepEqual(outcomes, {
+    "totals:over:1.5": "win",
+    "totals:under:4.5": "win",
+  });
+});
+
+test("handicaps settle full outcomes and omit half settlements", () => {
+  const outcomes = buildSelectionOutcomes(
+    [
+      {
+        selectionKey: "spreads:alpha:-0.5",
+        market: { key: "spreads" },
+        explanation: { selectionName: "Alpha", point: -0.5 },
+      },
+      {
+        selectionKey: "spreads:beta:1.5",
+        market: { key: "spreads" },
+        explanation: { selectionName: "Beta", point: 1.5 },
+      },
+      {
+        selectionKey: "spreads:alpha:-0.75",
+        market: { key: "spreads" },
+        explanation: { selectionName: "Alpha", point: -0.75 },
+      },
+    ],
+    "home",
+    { home: "Alpha", away: "Beta" },
+    { home: 2, away: 1 },
+  );
+
+  assert.deepEqual(outcomes, {
+    "spreads:alpha:-0.5": "win",
+    "spreads:beta:1.5": "win",
+  });
+});
+
+test("legacy final score payloads can evaluate totals without stored selection outcomes", () => {
+  assert.equal(
+    resolveSelectionOutcome(
+      {
+        score: { home: 2, away: 1 },
+        winner: "home",
+      },
+      {
+        selectionKey: "totals:over:2.5",
+        market: { key: "totals" },
+        explanation: { selectionName: "Over", point: 2.5 },
+      },
+      { home: "Alpha", away: "Beta" },
+    ),
+    1,
+  );
+});
+
+test("provider result sync persists totals and double chance outcomes when resolvable", async () => {
+  let persistedPayload: unknown = null;
+
+  const db = {
+    eventSource: {
+      findUnique: async () => ({
+        eventId: "event-featured",
+        event: {
+          homeTeam: { name: "Alpha" },
+          awayTeam: { name: "Beta" },
+          homePlayer: null,
+          awayPlayer: null,
+          predictions: [
+            {
+              selectionKey: "totals:over:2.5",
+              explanation: { selectionName: "Over", point: 2.5 },
+              market: { key: "totals" },
+            },
+            {
+              selectionKey: "double_chance:home-draw:na",
+              explanation: { selectionName: "Home/Draw" },
+              market: { key: "double_chance" },
+            },
+          ],
+        },
+      }),
+    },
+    event: {
+      update: async () => ({ id: "event-featured" }),
+    },
+    result: {
+      upsert: async (args: {
+        update: { payload: unknown };
+      }) => {
+        persistedPayload = args.update.payload;
+        return { id: "result-featured" };
+      },
+    },
+    $transaction: async (operations: Array<Promise<unknown>>) =>
+      Promise.all(operations),
+  };
+
+  const provider: ResultProvider = {
+    name: "test-provider",
+    supportsResults: () => true,
+    getResults: async () => [
+      {
+        providerId: "provider-featured",
+        sport: "football",
+        status: "final",
+        completedAt: "2026-10-06T20:00:00.000Z",
+        homeScore: 2,
+        awayScore: 1,
+        winner: "home",
+        sourceStatus: "FT",
+      },
+    ],
+  };
+
+  await syncProviderResults(
+    db as never,
+    provider,
+    "football",
+    new Date("2026-10-06T00:00:00.000Z"),
+    new Date("2026-10-06T23:59:59.999Z"),
+  );
+
+  assert.deepEqual(
+    (persistedPayload as { selectionOutcomes: Record<string, string> })
+      .selectionOutcomes,
+    {
+      "totals:over:2.5": "win",
+      "double_chance:home-draw:na": "win",
+    },
+  );
+});
