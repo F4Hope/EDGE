@@ -184,7 +184,7 @@ test("combo exposes positive-EV evidence research candidates without qualifying 
   assert.match(loader, /evidenceSupport <= 1e-9/);
   assert.match(route, /evidenceResearchQueue: pool\.evidenceResearchQueue/);
   assert.match(page, /initialResearchQueue/);
-  assert.match(component, /EVIDENCE RESEARCH QUEUE/);
+  assert.match(component, /RESEARCH BACKLOG — NOT BET PICKS/);
   assert.match(component, /INTEL READY/);
   assert.match(component, /active research signal/);
 });
@@ -481,4 +481,17 @@ test("combo loader renders participant-friendly double chance selections", async
   assert.match(source, /\$\{home\} or Draw/);
   assert.match(source, /\$\{home\} or \$\{away\}/);
   assert.match(source, /Draw or \$\{away\}/);
+});
+
+
+test("research backlog is probability-ranked and explicitly not presented as bets", async () => {
+  const [loader, component] = await Promise.all([
+    readFile("lib/data/uiCombos.ts", "utf8"),
+    readFile("components/ComboBuilder.tsx", "utf8"),
+  ]);
+
+  assert.match(loader, /b\.modelProbability - a\.modelProbability/);
+  assert.match(component, /RESEARCH BACKLOG — NOT BET PICKS/);
+  assert.match(component, /rejected research candidates, not recommended bets/);
+  assert.match(component, /LOW WIN PROBABILITY/);
 });

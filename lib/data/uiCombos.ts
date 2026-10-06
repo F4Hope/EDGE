@@ -358,6 +358,7 @@ export async function getComboCandidatePool(
 
   evidenceResearchQueue.sort(
     (a, b) =>
+      b.modelProbability - a.modelProbability ||
       b.intelligenceSignals.length - a.intelligenceSignals.length ||
       b.estimatedValue - a.estimatedValue ||
       a.startsAt.localeCompare(b.startsAt),

@@ -408,10 +408,15 @@ export function ComboBuilder({
             <div className="combo-leg-list">
               <div className="combo-result-heading">
                 <div>
-                  <span>EVIDENCE RESEARCH QUEUE</span>
-                  <strong>{researchQueue.length} selections need support</strong>
+                  <span>RESEARCH BACKLOG — NOT BET PICKS</span>
+                  <strong>{researchQueue.length} selections failed evidence review</strong>
                 </div>
               </div>
+              <p className="combo-research-note">
+                These are rejected research candidates, not recommended bets.
+                They do not enter your Combo unless they later pass the model and
+                evidence gates. Higher model probability is shown first.
+              </p>
               {researchQueue.slice(0, 5).map((candidate, index) => (
                 <article className="combo-leg" key={candidate.predictionId}>
                   <div className="combo-leg-index">
@@ -431,6 +436,7 @@ export function ComboBuilder({
                     <small>
                       Model {percent(candidate.modelProbability)} · Market{" "}
                       {percent(candidate.marketProbability)}
+                      {candidate.modelProbability < 0.5 ? " · LOW WIN PROBABILITY" : ""}
                     </small>
                     <small>
                       {candidate.intelligenceSignals.length > 0
