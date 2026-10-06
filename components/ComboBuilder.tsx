@@ -97,6 +97,43 @@ type ApiResponse = {
   requestId?: string;
 };
 
+type ComboResearchArticle = {
+  headline: string;
+  publisherName: string | null;
+  publisherUrl: string | null;
+  discoveryUrl: string;
+  publishedAt: string;
+  summary: string | null;
+  provider: "google-news-rss" | "bing-news-rss";
+  query: string;
+};
+
+type ComboResearchData = {
+  predictionId: string;
+  eventId: string;
+  matchup: string;
+  selectionName: string;
+  generatedAt: string;
+  articles: ComboResearchArticle[];
+  rules: {
+    discoveryOnly: boolean;
+    mustReviewBeforeImport: boolean;
+    noAutomaticQualification: boolean;
+  };
+};
+
+type ResearchApiResponse = {
+  data?: ComboResearchData;
+  error?: string;
+  requestId?: string;
+};
+
+type ResearchState = {
+  loading: boolean;
+  error: string | null;
+  data: ComboResearchData | null;
+};
+
 function percent(value: number | null | undefined): string {
   return value === null || value === undefined
     ? "—"
@@ -136,6 +173,9 @@ export function ComboBuilder({
   >(initialResearchQueue ?? []);
   const [error, setError] = useState<string | null>(null);
   const [building, setBuilding] = useState(false);
+  const [researchByPrediction, setResearchByPrediction] = useState<
+    Record<string, ResearchState>
+  >({});
 
   async function build(
     requestedTarget: Target = target,
@@ -173,6 +213,54 @@ export function ComboBuilder({
       );
     } finally {
       setBuilding(false);
+    }
+  }
+
+  async function research(candidate: ComboEvidenceResearchCandidate) {
+    const predictionId = candidate.predictionId;
+
+    setResearchByPrediction((current) => ({
+      ...current,
+      [predictionId]: {
+        loading: true,
+        error: null,
+        data: current[predictionId]?.data ?? null,
+      },
+    }));
+
+    try {
+      const response = await fetch("/api/combos/research", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({ predictionId }),
+      });
+
+      const payload = (await response.json()) as ResearchApiResponse;
+      if (!response.ok || !payload.data) {
+        throw new Error(payload.error ?? "Research discovery failed.");
+      }
+
+      setResearchByPrediction((current) => ({
+        ...current,
+        [predictionId]: {
+          loading: false,
+          error: null,
+          data: payload.data ?? null,
+        },
+      }));
+    } catch (caught) {
+      setResearchByPrediction((current) => ({
+        ...current,
+        [predictionId]: {
+          loading: false,
+          error:
+            caught instanceof Error
+              ? caught.message
+              : "Research discovery failed.",
+          data: current[predictionId]?.data ?? null,
+        },
+      }));
     }
   }
 
@@ -332,6 +420,69 @@ export function ComboBuilder({
                   <div className="combo-leg-metrics">
                     <strong>{candidate.decimalOdds.toFixed(2)}</strong>
                     <span>{percent(candidate.estimatedValue)} EV</span>
+                  </div>
+
+                  <div className="combo-research-panel">
+                    <button
+                      type="button"
+                      className="combo-research-button"
+                      disabled={
+                        researchByPrediction[candidate.predictionId]?.loading ===
+                        true
+                      }
+                      onClick={() => void research(candidate)}
+                    >
+                      {researchByPrediction[candidate.predictionId]?.loading
+                        ? "RESEARCHING..."
+                        : "RESEARCH"}
+                    </button>
+
+                    {researchByPrediction[candidate.predictionId]?.error ? (
+                      <p className="combo-research-error">
+                        {researchByPrediction[candidate.predictionId]?.error}
+                      </p>
+                    ) : null}
+
+                    {researchByPrediction[candidate.predictionId]?.data ? (
+                      <div className="combo-research-results">
+                        <small className="combo-research-note">
+                          Discovery only. Review attributable sources before any
+                          separate evidence import; this does not approve the leg.
+                        </small>
+
+                        {researchByPrediction[candidate.predictionId]?.data
+                          ?.articles.length ? (
+                          <div className="combo-research-article-list">
+                            {researchByPrediction[
+                              candidate.predictionId
+                            ]?.data?.articles.map((article, articleIndex) => (
+                              <a
+                                key={article.discoveryUrl + "-" + articleIndex}
+                                className="combo-research-article"
+                                href={article.discoveryUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                <strong>{article.headline}</strong>
+                                <span>
+                                  {article.publisherName ??
+                                    article.provider
+                                      .replaceAll("-", " ")
+                                      .toUpperCase()}{" "}
+                                  · {article.publishedAt.slice(0, 10)}
+                                </span>
+                                {article.summary ? <p>{article.summary}</p> : null}
+                              </a>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="combo-research-empty">
+                            No acceptable independent pre-event articles were
+                            found. Nothing was imported or approved.
+                          </p>
+                        )}
+                      </div>
+                    ) : null}
                   </div>
                 </article>
               ))}

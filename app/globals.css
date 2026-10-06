@@ -2909,3 +2909,94 @@ button {
     border-top: 1px solid rgba(244, 240, 231, 0.06);
   }
 }
+
+
+/* Combo source-discovery review action */
+
+.combo-research-panel {
+  grid-column: 1 / -1;
+  padding-top: 10px;
+  border-top: 1px solid rgba(244, 240, 231, 0.06);
+}
+
+.combo-research-button {
+  min-height: 34px;
+  padding: 0 13px;
+  border: 1px solid rgba(200, 169, 107, 0.28);
+  border-radius: 10px;
+  background: rgba(200, 169, 107, 0.08);
+  color: var(--champagne);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+}
+
+.combo-research-button:disabled {
+  opacity: 0.58;
+  cursor: default;
+}
+
+.combo-research-results {
+  margin-top: 10px;
+}
+
+.combo-research-note,
+.combo-research-error,
+.combo-research-empty {
+  display: block;
+  margin: 0;
+  color: #85837d;
+  font-size: 8px;
+  line-height: 1.55;
+}
+
+.combo-research-error {
+  margin-top: 8px;
+  color: #c4978b;
+}
+
+.combo-research-empty {
+  margin-top: 9px;
+}
+
+.combo-research-article-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 9px;
+}
+
+.combo-research-article {
+  display: block;
+  padding: 10px;
+  border: 1px solid rgba(244, 240, 231, 0.06);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.012);
+  text-decoration: none;
+}
+
+.combo-research-article strong,
+.combo-research-article span,
+.combo-research-article p {
+  display: block;
+}
+
+.combo-research-article strong {
+  color: var(--ivory);
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.combo-research-article span {
+  margin-top: 5px;
+  color: #7d7b75;
+  font-size: 7px;
+  letter-spacing: 0.05em;
+}
+
+.combo-research-article p {
+  margin: 6px 0 0;
+  color: #85837d;
+  font-size: 8px;
+  line-height: 1.45;
+}

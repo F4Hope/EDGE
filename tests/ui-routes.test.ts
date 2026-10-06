@@ -116,7 +116,7 @@ test("opportunities page requires independent evidence and stays validation-gate
   assert.match(data, /estimatedValue: \{ gt: 0 \}/);
   assert.match(data, /dataQuality: \{ gte: 0\.5 \}/);
   assert.match(data, /modelAgreement: \{ gte: 0\.6 \}/);
-  assert.match(data, /passesIndependentEvidenceGate/);
+  assert.match(data, /independentEvidenceSupport/);
   assert.match(data, /rankOneOpportunityPerEvent/);
 });
 
@@ -128,13 +128,13 @@ test("combo page preloads a live default and exposes price provenance", async ()
     readFile("lib/data/uiCombos.ts", "utf8"),
   ]);
 
-  assert.match(page, /getComboCandidates/);
-  assert.match(page, /buildCombo\(candidates, 5, "BALANCED"\)/);
+  assert.match(page, /getComboCandidatePool/);
+  assert.match(page, /buildCombo\(pool\.candidates, 2, "BALANCED"\)/);
   assert.match(page, /initialResult=/);
   assert.match(builder, /initialResult/);
   assert.match(builder, /bookmakerName/);
   assert.match(builder, /oddsProvider/);
   assert.match(builder, /marketProbability/);
   assert.match(builder, /modelLift/);
-  assert.match(data, /passesIndependentEvidenceGate/);
+  assert.match(data, /independentEvidenceSupport/);
 });

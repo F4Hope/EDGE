@@ -181,3 +181,25 @@ test("combo exposes positive-EV evidence research candidates without qualifying 
   assert.match(component, /INTEL READY/);
   assert.match(component, /active research signal/);
 });
+
+
+test("combo research action is read-only and review gated", async () => {
+  const [route, component] = await Promise.all([
+    readFile("app/api/combos/research/route.ts", "utf8"),
+    readFile("components/ComboBuilder.tsx", "utf8"),
+  ]);
+
+  assert.match(route, /requireOpaqueId/);
+  assert.match(route, /evidenceResearchQueue\.find/);
+  assert.match(route, /discoverPublicNews/);
+  assert.match(route, /mustReviewBeforeImport: true/);
+  assert.match(route, /noAutomaticQualification: true/);
+  assert.doesNotMatch(route, /prediction\.(create|update|upsert)/);
+  assert.doesNotMatch(route, /oddsSnapshot\.(create|update|upsert)/);
+  assert.doesNotMatch(route, /intelligenceSignal\.(create|update|upsert)/);
+
+  assert.match(component, /"RESEARCH"/);
+  assert.match(component, /\/api\/combos\/research/);
+  assert.match(component, /Discovery only/);
+  assert.match(component, /does not approve the leg/);
+});
