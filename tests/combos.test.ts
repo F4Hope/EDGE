@@ -184,7 +184,7 @@ test("combo exposes positive-EV evidence research candidates without qualifying 
   assert.match(loader, /evidenceSupport <= 1e-9/);
   assert.match(route, /evidenceResearchQueue: pool\.evidenceResearchQueue/);
   assert.match(page, /initialResearchQueue/);
-  assert.match(component, /EVIDENCE RESEARCH QUEUE/);
+  assert.match(component, /RESEARCH BACKLOG — NOT BET PICKS/);
   assert.match(component, /INTEL READY/);
   assert.match(component, /active research signal/);
 });
