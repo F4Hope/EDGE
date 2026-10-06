@@ -54,11 +54,17 @@ export type ApiSportsTotalsOutcome = {
   price: number;
 };
 
+export type ApiSportsDoubleChanceOutcome = {
+  side: "home_draw" | "home_away" | "draw_away";
+  price: number;
+};
+
 export type ApiSportsMatchWinnerBookmaker = {
   key: string;
   name: string;
   outcomes: ApiSportsMatchWinnerOutcome[];
   totalsOutcomes: ApiSportsTotalsOutcome[];
+  doubleChanceOutcomes: ApiSportsDoubleChanceOutcome[];
 };
 
 export type ApiSportsMatchWinnerEvent = {
@@ -93,6 +99,20 @@ function normalizeSide(value: unknown): ApiSportsMatchWinnerOutcome["side"] | nu
   if (normalized === "home") return "home";
   if (normalized === "draw" || normalized === "tie") return "draw";
   if (normalized === "away") return "away";
+  return null;
+}
+
+function normalizeDoubleChance(
+  value: unknown,
+): ApiSportsDoubleChanceOutcome["side"] | null {
+  const normalized = String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "");
+
+  if (normalized === "home/draw" || normalized === "1x") return "home_draw";
+  if (normalized === "home/away" || normalized === "12") return "home_away";
+  if (normalized === "draw/away" || normalized === "x2") return "draw_away";
   return null;
 }
 
@@ -139,6 +159,11 @@ export function normalizeApiSportsMatchWinnerRow(
         bet.id === 5 ||
         String(bet.name ?? "").trim().toLowerCase() === "goals over/under",
     );
+    const doubleChance = (bookmaker.bets ?? []).find(
+      (bet) =>
+        bet.id === 12 ||
+        String(bet.name ?? "").trim().toLowerCase() === "double chance",
+    );
 
     const outcomes: ApiSportsMatchWinnerOutcome[] = [];
     for (const value of matchWinner?.values ?? []) {
@@ -156,12 +181,25 @@ export function normalizeApiSportsMatchWinnerRow(
       totalsOutcomes.push({ ...total, price });
     }
 
-    if (outcomes.length >= 2 || totalsOutcomes.length >= 2) {
+    const doubleChanceOutcomes: ApiSportsDoubleChanceOutcome[] = [];
+    for (const value of doubleChance?.values ?? []) {
+      const side = normalizeDoubleChance(value.value);
+      const price = numericOdd(value.odd);
+      if (!side || price === null) continue;
+      doubleChanceOutcomes.push({ side, price });
+    }
+
+    if (
+      outcomes.length >= 2 ||
+      totalsOutcomes.length >= 2 ||
+      doubleChanceOutcomes.length >= 2
+    ) {
       bookmakers.push({
         key: `api-sports:${bookmakerId}`,
         name: bookmakerName,
         outcomes,
         totalsOutcomes,
+        doubleChanceOutcomes,
       });
     }
   }
