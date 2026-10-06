@@ -219,9 +219,9 @@ export function buildCombo(
       legs: [],
       candidateCount: 0,
       message:
-        "No stored Phase 7 selections pass the selected risk and evidence gates.",
+        "No stored priced selections pass the selected risk and model-quality gates.",
       methodology:
-        "Pre-event H2H predictions only; NO_BET/HIGH_RISK outputs are excluded.",
+        "Pre-event priced model selections only; NO_BET/HIGH_RISK outputs are excluded.",
     };
   }
 
