@@ -259,13 +259,11 @@ export async function getComboCandidatePool(
       if (intelligenceSignals.length > 0) {
         diagnostics.evidenceResearchWithActiveIntelligence += 1;
       }
-      continue;
     }
 
     const modelLift = Math.abs(modelProbability - marketProbability);
     if (modelLift + Number.EPSILON * 16 < MIN_MODEL_MARKET_LIFT) {
       diagnostics.insufficientModelMarketLift += 1;
-      continue;
     }
 
     candidates.push({
