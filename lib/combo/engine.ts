@@ -57,7 +57,7 @@ type RiskProfile = {
 const PROFILES: Record<ComboRiskMode, RiskProfile> = {
   LOW: {
     allowedRisks: ["LOW"],
-    minProbability: 0.45,
+    minProbability: 0.6,
     minDataQuality: 0.8,
     minAgreement: 0.88,
     minEstimatedValue: 0,
@@ -65,7 +65,7 @@ const PROFILES: Record<ComboRiskMode, RiskProfile> = {
   },
   BALANCED: {
     allowedRisks: ["LOW", "MEDIUM"],
-    minProbability: 0.2,
+    minProbability: 0.5,
     minDataQuality: 0.55,
     minAgreement: 0.5,
     minEstimatedValue: -0.05,
@@ -73,7 +73,7 @@ const PROFILES: Record<ComboRiskMode, RiskProfile> = {
   },
   AGGRESSIVE: {
     allowedRisks: ["LOW", "MEDIUM"],
-    minProbability: 0.05,
+    minProbability: 0.35,
     minDataQuality: 0.55,
     minAgreement: 0.35,
     minEstimatedValue: -0.05,
@@ -200,10 +200,10 @@ function compareReachedStates(
   const bDistance = Math.abs(Math.log(b.odds / targetOdds));
 
   return (
-    aDistance - bDistance ||
     b.probability - a.probability ||
     b.avgQuality - a.avgQuality ||
     b.avgAgreement - a.avgAgreement ||
+    aDistance - bDistance ||
     b.diversificationScore - a.diversificationScore ||
     a.legs.length - b.legs.length
   );
@@ -335,6 +335,6 @@ export function buildCombo(
       ? `A qualifying ${riskMode.toLowerCase()} combo reached the requested ${targetOdds}x target at ${round(best.odds, 2)}x.`
       : `The available qualified selections cannot safely reach ${targetOdds}x. Showing the strongest best-effort combination instead.`,
     methodology:
-      "Decimal leg odds are multiplied for the combined price. Among combinations that reach the request, EDGE prioritizes the closest target fit, then probability, quality, agreement, diversification, and fewer legs. Combined probability assumes leg independence; diversification score is a structural proxy, not measured statistical correlation.",
+      "Decimal leg odds are multiplied for the combined price. Quality comes before target fit: among combinations that reach the request, EDGE prioritizes combined model probability, then data quality and agreement, then closeness to the requested odds. Combined probability assumes leg independence; diversification score is a structural proxy, not measured statistical correlation.",
   };
 }
