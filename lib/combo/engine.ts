@@ -57,26 +57,26 @@ type RiskProfile = {
 const PROFILES: Record<ComboRiskMode, RiskProfile> = {
   LOW: {
     allowedRisks: ["LOW"],
-    minProbability: 0.48,
+    minProbability: 0.45,
     minDataQuality: 0.8,
     minAgreement: 0.88,
-    minEstimatedValue: -0.02,
+    minEstimatedValue: 0,
     maxLegs: 4,
   },
   BALANCED: {
     allowedRisks: ["LOW", "MEDIUM"],
-    minProbability: 0.38,
-    minDataQuality: 0.65,
-    minAgreement: 0.75,
-    minEstimatedValue: -0.04,
+    minProbability: 0.3,
+    minDataQuality: 0.55,
+    minAgreement: 0.5,
+    minEstimatedValue: 0,
     maxLegs: 6,
   },
   AGGRESSIVE: {
     allowedRisks: ["LOW", "MEDIUM"],
-    minProbability: 0.28,
-    minDataQuality: 0.5,
-    minAgreement: 0.6,
-    minEstimatedValue: -0.08,
+    minProbability: 0.2,
+    minDataQuality: 0.55,
+    minAgreement: 0.35,
+    minEstimatedValue: 0,
     maxLegs: 10,
   },
 };
@@ -134,6 +134,8 @@ function qualifies(
   if ((candidate.estimatedValue ?? -1) < profile.minEstimatedValue) return false;
   return true;
 }
+
+const MIN_COMBO_LEGS = 2;
 
 function diversificationScore(legs: ComboCandidate[]): number {
   let score = 1;
@@ -259,13 +261,17 @@ export function buildCombo(
       .slice(0, 600);
   }
 
-  const reached = beam
+  const validCombos = beam.filter(
+    (state) => state.legs.length >= MIN_COMBO_LEGS,
+  );
+
+  const reached = validCombos
     .filter((state) => state.odds >= targetOdds)
     .sort((a, b) => stateScore(b, targetOdds) - stateScore(a, targetOdds));
 
   const best =
     reached[0] ??
-    [...beam].sort((a, b) => {
+    [...validCombos].sort((a, b) => {
       const aProgress = Math.min(a.odds / targetOdds, 1);
       const bProgress = Math.min(b.odds / targetOdds, 1);
       return (
@@ -289,7 +295,7 @@ export function buildCombo(
       candidateCount: eligible.length,
       message: "No structurally valid combination could be constructed.",
       methodology:
-        "One selection per event; pre-event featured-market outputs only.",
+        "At least two selections from different events are required; pre-event featured-market outputs only.",
     };
   }
 
