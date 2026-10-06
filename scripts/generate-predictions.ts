@@ -47,7 +47,7 @@ async function main() {
             },
             markets: {
               some: {
-                key: { in: ["h2h", "totals", "spreads"] },
+                key: { in: ["h2h", "totals", "spreads", "double_chance"] },
                 status: "OPEN",
                 oddsSnapshots: { some: {} },
               },
@@ -87,7 +87,7 @@ async function main() {
       skipped,
       modelVersion: PREDICTION_MODEL_VERSION,
       validationState: "UNVALIDATED_BASELINE",
-      markets: ["h2h", "totals", "spreads"],
+      markets: ["h2h", "totals", "spreads", "double_chance"],
     });
   } finally {
     await db.$disconnect();

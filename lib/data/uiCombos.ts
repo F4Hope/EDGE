@@ -85,7 +85,22 @@ function selectionLabel(
   marketKey: string,
   selectionName: string,
   point: number | null,
+  home: string,
+  away: string,
 ): string {
+  if (marketKey === "double_chance") {
+    const normalized = selectionName.trim().toLowerCase();
+    if (normalized === "home/draw" || normalized === "1x") {
+      return `${home} or Draw`;
+    }
+    if (normalized === "home/away" || normalized === "12") {
+      return `${home} or ${away}`;
+    }
+    if (normalized === "draw/away" || normalized === "x2") {
+      return `Draw or ${away}`;
+    }
+  }
+
   if (point === null || !Number.isFinite(point)) return selectionName;
   if (selectionName.includes(String(point))) return selectionName;
   if (marketKey === "totals") return `${selectionName} ${point}`;
@@ -121,7 +136,7 @@ export async function getComboCandidatePool(
         status: { notIn: ["CANCELLED", "POSTPONED", "COMPLETED"] },
       },
       market: {
-        key: { in: ["h2h", "totals", "spreads"] },
+        key: { in: ["h2h", "totals", "spreads", "double_chance"] },
         status: "OPEN",
       },
       status: { in: ["BETTABLE", "WATCH"] },
@@ -231,10 +246,16 @@ export async function getComboCandidatePool(
     const point = numberValue(explanation?.point);
     const rawSelectionName =
       explanationSelectionName(row.explanation) ?? row.selectionKey;
+    const homeName =
+      row.event.homeTeam?.name ?? row.event.homePlayer?.fullName ?? "Home";
+    const awayName =
+      row.event.awayTeam?.name ?? row.event.awayPlayer?.fullName ?? "Away";
     const selectionName = selectionLabel(
       row.market.key,
       rawSelectionName,
       point,
+      homeName,
+      awayName,
     );
     const modelProbability = Number(row.modelProbability);
     const estimatedValue =

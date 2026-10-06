@@ -49,7 +49,7 @@ test("normalizes featured decimal odds and ignores unsupported markets", () => {
   assert.equal(event.bookmakers[0].markets[0].outcomes[0].price, 1.8);
 });
 
-test("selection keys distinguish handicap and totals lines", () => {
+test("selection keys distinguish featured and double chance markets", () => {
   assert.equal(
     makeSelectionKey("spreads", { name: "Alpha FC", price: 1.91, point: -1.5 }),
     "spreads:alpha-fc:-1.5",
@@ -57,6 +57,10 @@ test("selection keys distinguish handicap and totals lines", () => {
   assert.equal(
     makeSelectionKey("totals", { name: "Over", price: 1.88, point: 2.5 }),
     "totals:over:2.5",
+  );
+  assert.equal(
+    makeSelectionKey("double_chance", { name: "Home/Draw", price: 1.22 }),
+    "double_chance:home-draw:na",
   );
 });
 
@@ -422,5 +426,73 @@ test("API-Sports featured odds normalization captures goal totals with their lin
     { side: "under", point: 1.5, price: 3.6 },
     { side: "over", point: 2.5, price: 1.95 },
     { side: "under", point: 2.5, price: 1.9 },
+  ]);
+});
+
+
+test("API-Sports featured odds normalization captures Double Chance bet 12", () => {
+  const normalized = normalizeApiSportsMatchWinnerRow({
+    fixture: {
+      id: 1493152,
+      date: "2026-10-06T18:00:00Z",
+    },
+    bookmakers: [
+      {
+        id: 8,
+        name: "Bet365",
+        bets: [
+          {
+            id: 12,
+            name: "Double Chance",
+            values: [
+              { value: "Home/Draw", odd: "1.22" },
+              { value: "Home/Away", odd: "1.30" },
+              { value: "Draw/Away", odd: "1.95" },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+
+  assert.ok(normalized);
+  assert.equal(normalized.bookmakers.length, 1);
+  assert.deepEqual(normalized.bookmakers[0].doubleChanceOutcomes, [
+    { side: "home_draw", price: 1.22 },
+    { side: "home_away", price: 1.3 },
+    { side: "draw_away", price: 1.95 },
+  ]);
+});
+
+
+test("API-Sports double chance normalization accepts current label variants", () => {
+  const normalized = normalizeApiSportsMatchWinnerRow({
+    fixture: {
+      id: 1493152,
+      date: "2026-10-06T18:00:00Z",
+    },
+    bookmakers: [
+      {
+        id: 8,
+        name: "Bet365",
+        bets: [
+          {
+            name: "Double Chance",
+            values: [
+              { value: "Home or Draw", odd: "1.20" },
+              { value: "Home or Away", odd: "1.28" },
+              { value: "Away or Draw", odd: "1.90" },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+
+  assert.ok(normalized);
+  assert.deepEqual(normalized.bookmakers[0].doubleChanceOutcomes, [
+    { side: "home_draw", price: 1.2 },
+    { side: "home_away", price: 1.28 },
+    { side: "draw_away", price: 1.9 },
   ]);
 });

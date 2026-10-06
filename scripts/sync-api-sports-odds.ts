@@ -14,6 +14,7 @@ const PROVIDER = "api-sports";
 const MARKET_NAMES = {
   h2h: "Head to head / Moneyline",
   totals: "Totals / Over Under",
+  double_chance: "Double Chance",
 } as const;
 
 function getArg(name: string): string | undefined {
@@ -103,7 +104,7 @@ async function refreshPricedAnalysis(
       status: { notIn: ["LIVE", "COMPLETED", "CANCELLED", "POSTPONED"] },
       markets: {
         some: {
-          key: { in: ["h2h", "totals", "spreads"] },
+          key: { in: ["h2h", "totals", "spreads", "double_chance"] },
           status: "OPEN",
           oddsSnapshots: { some: {} },
         },
@@ -187,6 +188,7 @@ async function main() {
   let snapshotsReused = 0;
   let h2hSnapshotsInserted = 0;
   let totalsSnapshotsInserted = 0;
+  let doubleChanceSnapshotsInserted = 0;
   let noOddsReturned = 0;
   let missingProviderId = 0;
 
@@ -218,6 +220,18 @@ async function main() {
                     some: {
                       provider: PROVIDER,
                       key: "totals",
+                      status: "OPEN",
+                      oddsSnapshots: { some: {} },
+                    },
+                  },
+                },
+              },
+              {
+                NOT: {
+                  markets: {
+                    some: {
+                      provider: PROVIDER,
+                      key: "double_chance",
                       status: "OPEN",
                       oddsSnapshots: { some: {} },
                     },
@@ -272,8 +286,11 @@ async function main() {
           const hasTotals = oddsEvent.bookmakers.some(
             (bookmaker) => bookmaker.totalsOutcomes.length >= 2,
           );
+          const hasDoubleChance = oddsEvent.bookmakers.some(
+            (bookmaker) => bookmaker.doubleChanceOutcomes.length >= 2,
+          );
 
-          if (!hasH2h && !hasTotals) {
+          if (!hasH2h && !hasTotals && !hasDoubleChance) {
             noOddsReturned += 1;
             continue;
           }
@@ -283,6 +300,9 @@ async function main() {
             : null;
           const totalsMarket = hasTotals
             ? await ensureMarket(db, event.id, "totals")
+            : null;
+          const doubleChanceMarket = hasDoubleChance
+            ? await ensureMarket(db, event.id, "double_chance")
             : null;
 
           const providerUpdatedAt = oddsEvent.providerUpdatedAt
@@ -401,6 +421,58 @@ async function main() {
                 storedForEvent = true;
               }
             }
+
+            if (doubleChanceMarket) {
+              for (const outcome of bookmaker.doubleChanceOutcomes) {
+                const selectionName =
+                  outcome.side === "home_draw"
+                    ? "Home/Draw"
+                    : outcome.side === "home_away"
+                      ? "Home/Away"
+                      : "Draw/Away";
+                const selectionKey = makeSelectionKey("double_chance", {
+                  name: selectionName,
+                  price: outcome.price,
+                });
+                const fingerprint = makeSnapshotFingerprint({
+                  marketId: doubleChanceMarket.id,
+                  provider: PROVIDER,
+                  bookmakerKey: bookmaker.key,
+                  selectionKey,
+                  decimalOdds: outcome.price,
+                  providerUpdatedAt: safeProviderUpdatedAt,
+                });
+
+                const existing = await db.oddsSnapshot.findUnique({
+                  where: { fingerprint },
+                  select: { id: true },
+                });
+
+                if (existing) {
+                  snapshotsReused += 1;
+                  storedForEvent = true;
+                  continue;
+                }
+
+                await db.oddsSnapshot.create({
+                  data: {
+                    marketId: doubleChanceMarket.id,
+                    provider: PROVIDER,
+                    bookmakerKey: bookmaker.key,
+                    bookmakerName: bookmaker.name,
+                    selectionKey,
+                    selectionName,
+                    decimalOdds: outcome.price,
+                    providerUpdatedAt: safeProviderUpdatedAt,
+                    fingerprint,
+                  },
+                });
+
+                snapshotsInserted += 1;
+                doubleChanceSnapshotsInserted += 1;
+                storedForEvent = true;
+              }
+            }
           }
 
           if (storedForEvent) {
@@ -420,6 +492,7 @@ async function main() {
           snapshotsReused,
           h2hSnapshotsInserted,
           totalsSnapshotsInserted,
+          doubleChanceSnapshotsInserted,
           noOddsReturned,
           missingProviderId,
           from: now.toISOString(),

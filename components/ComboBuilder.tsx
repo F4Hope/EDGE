@@ -149,6 +149,7 @@ function marketLabel(marketKey: string): string {
   if (marketKey === "h2h") return "MATCH WINNER";
   if (marketKey === "totals") return "TOTAL GOALS";
   if (marketKey === "spreads") return "HANDICAP";
+  if (marketKey === "double_chance") return "DOUBLE CHANCE";
   return marketKey.replaceAll("_", " ").toUpperCase();
 }
 

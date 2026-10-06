@@ -55,7 +55,16 @@ function normalizedLabel(value: string | null): string {
     .trim();
 }
 
-type SelectionRole = "home" | "away" | "draw" | "over" | "under" | "unknown";
+type SelectionRole =
+  | "home"
+  | "away"
+  | "draw"
+  | "over"
+  | "under"
+  | "home_draw"
+  | "home_away"
+  | "draw_away"
+  | "unknown";
 
 function selectionRole(
   selectionName: string,
@@ -68,6 +77,27 @@ function selectionRole(
   if (label === "draw" || label === "tie" || label === "x") return "draw";
   if (label === "home" || label === "1") return "home";
   if (label === "away" || label === "2") return "away";
+  if (
+    label === "home draw" ||
+    label === "1x" ||
+    label === "home or draw"
+  ) {
+    return "home_draw";
+  }
+  if (
+    label === "home away" ||
+    label === "12" ||
+    label === "home or away"
+  ) {
+    return "home_away";
+  }
+  if (
+    label === "draw away" ||
+    label === "x2" ||
+    label === "draw or away"
+  ) {
+    return "draw_away";
+  }
   if (label === "over" || label.startsWith("over ")) return "over";
   if (label === "under" || label.startsWith("under ")) return "under";
   if (home && label === home) return "home";
@@ -302,6 +332,173 @@ function candidateRisk(
   return "MEDIUM";
 }
 
+function h2hReference(
+  feature: FeatureVector,
+): {
+  market: Record<"home" | "draw" | "away", number>;
+  model: Record<"home" | "draw" | "away", number>;
+  evidence: ReturnType<typeof evidenceAdjustment>;
+} | null {
+  const h2h = feature.market.markets.find((market) => market.key === "h2h");
+  if (!h2h) return null;
+
+  const selections = h2h.selections.filter(
+    (selection) =>
+      Number.isFinite(selection.bestDecimalOdds) &&
+      selection.bestDecimalOdds > 1 &&
+      Number.isFinite(selection.meanImpliedProbability) &&
+      selection.meanImpliedProbability > 0,
+  );
+  const consensus = consensusProbabilities(selections);
+  if (!consensus) return null;
+
+  const adjusted = adjustedProbabilities(
+    feature,
+    "h2h",
+    selections,
+    consensus,
+  );
+
+  const market = { home: 0, draw: 0, away: 0 };
+  const model = { home: 0, draw: 0, away: 0 };
+  let found = 0;
+
+  selections.forEach((selection, index) => {
+    const role = selectionRole(selection.selectionName, feature);
+    if (role !== "home" && role !== "draw" && role !== "away") return;
+    market[role] = consensus[index];
+    model[role] = adjusted.probabilities[index];
+    found += 1;
+  });
+
+  if (found < 3) return null;
+
+  return {
+    market,
+    model,
+    evidence: evidenceAdjustment(feature),
+  };
+}
+
+function doubleChanceProbability(
+  role: SelectionRole,
+  probabilities: Record<"home" | "draw" | "away", number>,
+): number | null {
+  if (role === "home_draw") {
+    return probabilities.home + probabilities.draw;
+  }
+  if (role === "home_away") {
+    return probabilities.home + probabilities.away;
+  }
+  if (role === "draw_away") {
+    return probabilities.draw + probabilities.away;
+  }
+  return null;
+}
+
+function doubleChanceEvidence(
+  role: SelectionRole,
+  evidence: ReturnType<typeof evidenceAdjustment>,
+): {
+  form: number;
+  headToHead: number;
+  rest: number;
+  scoring: number;
+  total: number;
+} {
+  const direction =
+    role === "home_draw" ? 1 : role === "draw_away" ? -1 : 0;
+
+  return {
+    form: round(evidence.form * direction),
+    headToHead: round(evidence.headToHead * direction),
+    rest: round(evidence.rest * direction),
+    scoring: 0,
+    total: round(evidence.home * direction),
+  };
+}
+
+function buildDoubleChancePredictionCandidates(
+  feature: FeatureVector,
+  market: MarketCoverageFeatures,
+): PredictionCandidate[] {
+  const reference = h2hReference(feature);
+  if (!reference) return [];
+
+  const quality = clamp(feature.quality.overall, 0, 1);
+
+  return market.selections
+    .filter(
+      (selection) =>
+        Number.isFinite(selection.bestDecimalOdds) &&
+        selection.bestDecimalOdds > 1 &&
+        selection.bookmakerCount > 0,
+    )
+    .flatMap((selection) => {
+      const role = selectionRole(selection.selectionName, feature);
+      const marketProbability = doubleChanceProbability(
+        role,
+        reference.market,
+      );
+      const modelProbability = doubleChanceProbability(
+        role,
+        reference.model,
+      );
+
+      if (
+        marketProbability === null ||
+        modelProbability === null ||
+        marketProbability <= 0 ||
+        modelProbability <= 0 ||
+        marketProbability >= 1 ||
+        modelProbability >= 1
+      ) {
+        return [];
+      }
+
+      const impliedProbability = 1 / selection.bestDecimalOdds;
+      const estimatedEdge = modelProbability - impliedProbability;
+      const estimatedValue =
+        modelProbability * selection.bestDecimalOdds - 1;
+      const modelAgreement = clamp(
+        1 - Math.abs(modelProbability - marketProbability) * 3,
+        0,
+        1,
+      );
+      const risk = candidateRisk(
+        quality,
+        selection.bookmakerCount,
+        modelAgreement,
+      );
+      const evidence = doubleChanceEvidence(role, reference.evidence);
+
+      return [{
+        selectionName: selection.selectionName,
+        point: null,
+        bookmakerCount: selection.bookmakerCount,
+        bestDecimalOdds: round(selection.bestDecimalOdds, 4),
+        marketProbability: round(marketProbability),
+        modelProbability: round(modelProbability),
+        impliedProbability: round(impliedProbability),
+        estimatedEdge: round(estimatedEdge),
+        estimatedValue: round(estimatedValue),
+        dataQuality: round(quality, 5),
+        modelAgreement: round(modelAgreement, 5),
+        risk,
+        status: risk === "HIGH" ? "NO_BET" : "WATCH",
+        evidence: {
+          marketAnchor: round(marketProbability),
+          formAdjustment: evidence.form,
+          headToHeadAdjustment: evidence.headToHead,
+          restAdjustment: evidence.rest,
+          scoringAdjustment: 0,
+          totalAdjustment: evidence.total,
+          dataQuality: round(quality, 5),
+        },
+      }];
+    });
+}
+
 function lineGroups(
   market: MarketCoverageFeatures,
 ): MarketSelectionFeatures[][] {
@@ -334,6 +531,10 @@ export function buildMarketPredictionCandidates(
   feature: FeatureVector,
   market: MarketCoverageFeatures,
 ): PredictionCandidate[] {
+  if (market.key === "double_chance") {
+    return buildDoubleChancePredictionCandidates(feature, market);
+  }
+
   if (!["h2h", "totals", "spreads"].includes(market.key)) return [];
 
   const quality = clamp(feature.quality.overall, 0, 1);
