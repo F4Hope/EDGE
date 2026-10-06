@@ -273,3 +273,68 @@ test("combo output requires at least two different events", () => {
   assert.equal(result.status, "NO_QUALIFYING_COMBO");
   assert.equal(result.legs.length, 0);
 });
+
+
+test("balanced combo can use positive-value medium-risk legs across different events down to 20 percent", () => {
+  const result = buildCombo(
+    [
+      candidate(41, {
+        eventId: "event-a",
+        decimalOdds: 1.77,
+        modelProbability: 0.540553,
+        estimatedValue: 0.000024,
+        dataQuality: 0.63529,
+        modelAgreement: 1,
+        risk: "MEDIUM",
+        status: "WATCH",
+      }),
+      candidate(42, {
+        eventId: "event-b",
+        decimalOdds: 3.14,
+        modelProbability: 0.287047,
+        estimatedValue: 0.004664,
+        dataQuality: 0.63529,
+        modelAgreement: 1,
+        risk: "MEDIUM",
+        status: "WATCH",
+      }),
+    ],
+    2,
+    "BALANCED",
+  );
+
+  assert.equal(result.status, "TARGET_REACHED");
+  assert.equal(result.legs.length, 2);
+  assert.equal(new Set(result.legs.map((leg) => leg.eventId)).size, 2);
+});
+
+test("balanced mode still rejects sub-20-percent long shots", () => {
+  const result = buildCombo(
+    [
+      candidate(51, {
+        eventId: "event-a",
+        decimalOdds: 1.77,
+        modelProbability: 0.540553,
+        estimatedValue: 0.000024,
+        dataQuality: 0.63529,
+        modelAgreement: 1,
+        risk: "MEDIUM",
+        status: "WATCH",
+      }),
+      candidate(52, {
+        eventId: "event-b",
+        decimalOdds: 7.5,
+        modelProbability: 0.1518,
+        estimatedValue: 0.1385,
+        dataQuality: 0.63529,
+        modelAgreement: 1,
+        risk: "MEDIUM",
+        status: "WATCH",
+      }),
+    ],
+    2,
+    "BALANCED",
+  );
+
+  assert.equal(result.status, "NO_QUALIFYING_COMBO");
+});
