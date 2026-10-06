@@ -65,7 +65,7 @@ function pointToken(point: number | null | undefined): string {
 }
 
 export function makeSelectionKey(
-  marketKey: FeaturedMarketKey,
+  marketKey: FeaturedMarketKey | "double_chance",
   outcome: ProviderOddsOutcome,
 ): string {
   return [
