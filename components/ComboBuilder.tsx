@@ -327,9 +327,10 @@ export function ComboBuilder({
       </div>
 
       <p className="combo-message">
-        EDGE uses future H2H model outputs with positive estimated value,
-        independent historical evidence, and real stored bookmaker prices.
-        One selection per event is allowed.
+        EDGE builds immediately from future positive-value model selections and
+        real stored bookmaker prices. Independent form, H2H, injury and news
+        evidence improves ranking and review confidence but does not block the
+        Combo from showing a playable selection. One selection per event is allowed.
       </p>
 
       <button
