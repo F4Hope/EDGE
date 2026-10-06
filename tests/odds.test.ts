@@ -424,3 +424,38 @@ test("API-Sports featured odds normalization captures goal totals with their lin
     { side: "under", point: 2.5, price: 1.9 },
   ]);
 });
+
+
+test("API-Sports featured odds normalization captures Double Chance bet 12", () => {
+  const normalized = normalizeApiSportsMatchWinnerRow({
+    fixture: {
+      id: 1493152,
+      date: "2026-10-06T18:00:00Z",
+    },
+    bookmakers: [
+      {
+        id: 8,
+        name: "Bet365",
+        bets: [
+          {
+            id: 12,
+            name: "Double Chance",
+            values: [
+              { value: "Home/Draw", odd: "1.22" },
+              { value: "Home/Away", odd: "1.30" },
+              { value: "Draw/Away", odd: "1.95" },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+
+  assert.ok(normalized);
+  assert.equal(normalized.bookmakers.length, 1);
+  assert.deepEqual(normalized.bookmakers[0].doubleChanceOutcomes, [
+    { side: "home_draw", price: 1.22 },
+    { side: "home_away", price: 1.3 },
+    { side: "draw_away", price: 1.95 },
+  ]);
+});
