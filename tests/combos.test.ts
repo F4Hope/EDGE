@@ -6,6 +6,7 @@ import {
   type ComboCandidate,
 } from "../lib/combo/engine";
 import { recordComboBuild } from "../lib/data/comboAudit";
+import { calculateComboPerformance } from "../lib/evaluation/comboPerformance";
 
 function candidate(
   index: number,
@@ -672,4 +673,113 @@ test("combo page and API both record displayed combo builds", async () => {
   assert.match(route, /recordComboBuild\(combo\)/);
   assert.match(route, /comboAuditId/);
   assert.match(route, /EDGE combo audit write failed/);
+});
+
+
+test("combo performance scores unique settled recommendations without reload inflation", async () => {
+  function leg(
+    predictionId: string,
+    selectionKey: string,
+    outcome: "win" | "loss" | null,
+  ) {
+    return {
+      position: 1,
+      selection: {
+        predictionId,
+        oddsAtSelection: 1.5,
+        prediction: {
+          selectionKey,
+          explanation: { selectionName: "Home" },
+          market: { key: "h2h" },
+          event: {
+            homeTeam: { name: "Home" },
+            awayTeam: { name: "Away" },
+            homePlayer: null,
+            awayPlayer: null,
+            result:
+              outcome === null
+                ? null
+                : {
+                    status: "FINAL",
+                    payload: {
+                      selectionOutcomes: {
+                        [selectionKey]: outcome,
+                      },
+                    },
+                  },
+          },
+        },
+      },
+    };
+  }
+
+  const winSelections = [
+    leg("win-1", "h2h:home:na", "win"),
+    { ...leg("win-2", "h2h:home:na-2", "win"), position: 2 },
+  ];
+  const lossSelections = [
+    leg("loss-1", "h2h:home:na-3", "win"),
+    { ...leg("loss-2", "h2h:home:na-4", "loss"), position: 2 },
+  ];
+  const pendingSelections = [
+    leg("pending-1", "h2h:home:na-5", "win"),
+    { ...leg("pending-2", "h2h:home:na-6", null), position: 2 },
+  ];
+
+  const db = {
+    combo: {
+      findMany: async () => [
+        {
+          id: "combo-win",
+          targetOdds: 2,
+          actualOdds: 2.5,
+          riskMode: "BALANCED",
+          selections: winSelections,
+        },
+        {
+          id: "combo-win-reload",
+          targetOdds: 2,
+          actualOdds: 2.5,
+          riskMode: "BALANCED",
+          selections: winSelections,
+        },
+        {
+          id: "combo-loss",
+          targetOdds: 2,
+          actualOdds: 3,
+          riskMode: "BALANCED",
+          selections: lossSelections,
+        },
+        {
+          id: "combo-pending",
+          targetOdds: 2,
+          actualOdds: 2.2,
+          riskMode: "BALANCED",
+          selections: pendingSelections,
+        },
+      ],
+    },
+  };
+
+  const report = await calculateComboPerformance(db as never);
+
+  assert.equal(report.recordedOutputs, 4);
+  assert.equal(report.uniqueRecommendations, 3);
+  assert.equal(report.settledRecommendations, 2);
+  assert.equal(report.wins, 1);
+  assert.equal(report.losses, 1);
+  assert.equal(report.pendingRecommendations, 1);
+  assert.equal(report.hitRate, 0.5);
+  assert.equal(report.averageOdds, 2.75);
+});
+
+test("combo page shows recommendation-level settled performance", async () => {
+  const page = await readFile("app/combos/page.tsx", "utf8");
+
+  assert.match(page, /calculateComboPerformance/);
+  assert.match(page, /RECOMMENDATION AUDIT/);
+  assert.match(page, /Combo track record/);
+  assert.match(page, /Page reload duplicates are collapsed/);
+  assert.match(page, /HIT RATE/);
+  assert.match(page, /Starts after displayed Combo recommendations settle/);
 });
