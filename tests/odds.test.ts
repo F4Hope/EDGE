@@ -371,10 +371,56 @@ test("API-Sports targeted odds requests use fixture id without pagination", asyn
     const url = new URL(requestedUrls[0]);
     assert.equal(url.pathname, "/odds");
     assert.equal(url.searchParams.get("fixture"), "1493152");
-    assert.equal(url.searchParams.get("bet"), "1");
+    assert.equal(url.searchParams.has("bet"), false);
     assert.equal(url.searchParams.has("page"), false);
     assert.equal(url.searchParams.has("date"), false);
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+
+test("API-Sports featured odds normalization captures goal totals with their lines", () => {
+  const normalized = normalizeApiSportsMatchWinnerRow({
+    fixture: {
+      id: 1493152,
+      date: "2026-10-06T18:00:00Z",
+    },
+    bookmakers: [
+      {
+        id: 8,
+        name: "Bet365",
+        bets: [
+          {
+            id: 1,
+            name: "Match Winner",
+            values: [
+              { value: "Home", odd: "1.85" },
+              { value: "Draw", odd: "3.40" },
+              { value: "Away", odd: "4.20" },
+            ],
+          },
+          {
+            id: 5,
+            name: "Goals Over/Under",
+            values: [
+              { value: "Over 1.5", odd: "1.30" },
+              { value: "Under 1.5", odd: "3.60" },
+              { value: "Over 2.5", odd: "1.95" },
+              { value: "Under 2.5", odd: "1.90" },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+
+  assert.ok(normalized);
+  assert.equal(normalized.bookmakers.length, 1);
+  assert.deepEqual(normalized.bookmakers[0].totalsOutcomes, [
+    { side: "over", point: 1.5, price: 1.3 },
+    { side: "under", point: 1.5, price: 3.6 },
+    { side: "over", point: 2.5, price: 1.95 },
+    { side: "under", point: 2.5, price: 1.9 },
+  ]);
 });
