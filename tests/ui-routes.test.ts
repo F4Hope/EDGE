@@ -136,5 +136,5 @@ test("combo page preloads a live default and exposes price provenance", async ()
   assert.match(builder, /oddsProvider/);
   assert.match(builder, /marketProbability/);
   assert.match(builder, /modelLift/);
-  assert.match(data, /passesIndependentEvidenceGate/);
+  assert.match(data, /independentEvidenceSupport/);
 });
