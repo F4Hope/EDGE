@@ -18,6 +18,25 @@ function run(script: string, args: string[] = []) {
   }
 }
 
+function runBestEffort(
+  script: string,
+  args: string[],
+  label: string,
+): boolean {
+  try {
+    run(script, args);
+    return true;
+  } catch (error) {
+    console.warn(
+      "WARN " +
+        label +
+        " failed; continuing with stored event identities so result settlement can still run.",
+    );
+    console.warn(error instanceof Error ? error.message : error);
+    return false;
+  }
+}
+
 function positiveHours(
   envName: string,
   fallback: number,
@@ -66,12 +85,16 @@ function main() {
       " hours...",
   );
 
-  run("data:sync", [
-    "--provider=api-sports",
-    "--sports=football,basketball",
-    "--from=" + from,
-    "--to=" + to,
-  ]);
+  runBestEffort(
+    "data:sync",
+    [
+      "--provider=api-sports",
+      "--sports=football,basketball",
+      "--from=" + from,
+      "--to=" + to,
+    ],
+    "API-Sports historical event backfill",
+  );
 
   console.log(
     "Settling football/basketball results across the same historical window...",
