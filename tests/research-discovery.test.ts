@@ -2,8 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import {
+  buildBingNewsRssUrl,
   buildGoogleNewsRssUrl,
   discoverGoogleNews,
+  discoverPublicNews,
   parseGoogleNewsRss,
   preEventDiscoveries,
 } from "../lib/intelligence/googleNewsDiscovery";
@@ -34,6 +36,16 @@ test("Google News discovery builds encoded RSS search URLs", () => {
   assert.equal(url.searchParams.get("hl"), "en-US");
   assert.equal(url.searchParams.get("gl"), "US");
   assert.equal(url.searchParams.get("ceid"), "US:en");
+});
+
+test("Bing News discovery builds encoded RSS search URLs", () => {
+  const url = new URL(buildBingNewsRssUrl('"Alpha FC" injury news'));
+
+  assert.equal(url.origin, "https://www.bing.com");
+  assert.equal(url.pathname, "/news/search");
+  assert.equal(url.searchParams.get("q"), '"Alpha FC" injury news');
+  assert.equal(url.searchParams.get("format"), "rss");
+  assert.equal(url.searchParams.get("mkt"), "en-US");
 });
 
 test("Google News RSS parser preserves attribution and publication time", () => {
@@ -74,6 +86,45 @@ test("Google News discovery fails open without inventing results", async () => {
 
     assert.equal(result.items.length, 0);
     assert.match(result.error ?? "", /HTTP 503/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("public news discovery falls back to Bing when Google is unavailable", async () => {
+  const originalFetch = globalThis.fetch;
+  const requested: string[] = [];
+
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const url =
+      typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.toString()
+          : input.url;
+
+    requested.push(url);
+
+    if (url.includes("news.google.com")) {
+      return new Response("Unavailable", { status: 503 });
+    }
+
+    return new Response(sample, {
+      status: 200,
+      headers: { "content-type": "application/rss+xml" },
+    });
+  }) as typeof fetch;
+
+  try {
+    const result = await discoverPublicNews("Alpha vs Beta", {
+      startsAt: "2026-10-05T18:00:00Z",
+      limit: 5,
+    });
+
+    assert.equal(result.provider, "bing-news-rss");
+    assert.equal(result.error, null);
+    assert.equal(result.items.length, 1);
+    assert.equal(requested.length, 2);
   } finally {
     globalThis.fetch = originalFetch;
   }
