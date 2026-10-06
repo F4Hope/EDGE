@@ -29,7 +29,7 @@ jobs:
       API_SPORTS_KEY: ${{ secrets.API_SPORTS_KEY }}
       ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
       ODDS_API_REGIONS: ${{ vars.ODDS_API_REGIONS || 'eu' }}
-      ODDS_API_MARKETS: ${{ vars.ODDS_API_MARKETS || 'h2h' }}
+      ODDS_API_MARKETS: ${{ vars.ODDS_API_MARKETS || 'h2h,totals,spreads' }}
       ODDS_API_SPORT_KEYS: ${{ vars.ODDS_API_SPORT_KEYS }}
       ODDS_SYNC_MAX_SPORT_KEYS: ${{ vars.ODDS_SYNC_MAX_SPORT_KEYS || '12' }}
       ODDS_RESULT_MAX_SPORT_KEYS: ${{ vars.ODDS_RESULT_MAX_SPORT_KEYS || '4' }}
