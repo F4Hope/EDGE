@@ -68,7 +68,7 @@ const PROFILES: Record<ComboRiskMode, RiskProfile> = {
     minProbability: 0.2,
     minDataQuality: 0.55,
     minAgreement: 0.5,
-    minEstimatedValue: 0,
+    minEstimatedValue: -0.03,
     maxLegs: 6,
   },
   AGGRESSIVE: {
@@ -76,7 +76,7 @@ const PROFILES: Record<ComboRiskMode, RiskProfile> = {
     minProbability: 0.05,
     minDataQuality: 0.55,
     minAgreement: 0.35,
-    minEstimatedValue: 0,
+    minEstimatedValue: -0.05,
     maxLegs: 10,
   },
 };
@@ -177,7 +177,7 @@ function stateFromLegs(legs: ComboCandidate[]): ComboState {
 function stateScore(state: ComboState, targetOdds: number): number {
   const reached = state.odds >= targetOdds;
   const progress = Math.min(state.odds / targetOdds, 1);
-  const overshoot = reached ? Math.abs(Math.log(state.odds / targetOdds)) : 0;
+  const targetDistance = Math.abs(Math.log(state.odds / targetOdds));
 
   return (
     (reached ? 1000 : 0) +
@@ -186,8 +186,26 @@ function stateScore(state: ComboState, targetOdds: number): number {
     state.avgQuality * 20 +
     state.avgAgreement * 12 +
     state.diversificationScore * 10 -
-    overshoot * 22 -
+    targetDistance * (reached ? 320 : 45) -
     Math.max(0, state.legs.length - 1) * 0.4
+  );
+}
+
+function compareReachedStates(
+  a: ComboState,
+  b: ComboState,
+  targetOdds: number,
+): number {
+  const aDistance = Math.abs(Math.log(a.odds / targetOdds));
+  const bDistance = Math.abs(Math.log(b.odds / targetOdds));
+
+  return (
+    aDistance - bDistance ||
+    b.probability - a.probability ||
+    b.avgQuality - a.avgQuality ||
+    b.avgAgreement - a.avgAgreement ||
+    b.diversificationScore - a.diversificationScore ||
+    a.legs.length - b.legs.length
   );
 }
 
@@ -267,7 +285,7 @@ export function buildCombo(
 
   const reached = validCombos
     .filter((state) => state.odds >= targetOdds)
-    .sort((a, b) => stateScore(b, targetOdds) - stateScore(a, targetOdds));
+    .sort((a, b) => compareReachedStates(a, b, targetOdds));
 
   const best =
     reached[0] ??
@@ -314,9 +332,9 @@ export function buildCombo(
     legs: best.legs,
     candidateCount: eligible.length,
     message: targetReached
-      ? `A qualifying ${riskMode.toLowerCase()} combo reached the requested target.`
+      ? `A qualifying ${riskMode.toLowerCase()} combo reached the requested ${targetOdds}x target at ${round(best.odds, 2)}x.`
       : `The available qualified selections cannot safely reach ${targetOdds}x. Showing the strongest best-effort combination instead.`,
     methodology:
-      "Combined probability assumes leg independence; diversification score is a structural proxy, not measured statistical correlation.",
+      "Decimal leg odds are multiplied for the combined price. Among combinations that reach the request, EDGE prioritizes the closest target fit, then probability, quality, agreement, diversification, and fewer legs. Combined probability assumes leg independence; diversification score is a structural proxy, not measured statistical correlation.",
   };
 }
