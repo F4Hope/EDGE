@@ -25,8 +25,8 @@ export type UiEvent = {
   status: string;
   home: string | null;
   away: string | null;
-  homeParticipant: ParticipantVisual | null;
-  awayParticipant: ParticipantVisual | null;
+  homeParticipant?: ParticipantVisual | null;
+  awayParticipant?: ParticipantVisual | null;
   h2hOdds: UiEventOddsQuote[];
 };
 

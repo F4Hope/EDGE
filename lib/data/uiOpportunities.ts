@@ -47,8 +47,8 @@ export type UiOpportunity = {
   country: string | null;
   home: string | null;
   away: string | null;
-  homeParticipant: ParticipantVisual | null;
-  awayParticipant: ParticipantVisual | null;
+  homeParticipant?: ParticipantVisual | null;
+  awayParticipant?: ParticipantVisual | null;
   startsAt: string;
   marketKey: string;
   point: number | null;
