@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ComboBuilder } from "@/components/ComboBuilder";
 import { MobileShell } from "@/components/MobileShell";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -36,6 +37,14 @@ export default async function CombosPage() {
         title="Combo builder"
         description="Today’s Best balanced combo targeting 2x now rolls forward to the next playable pre-live events. Started matches are removed automatically, and new priced/model-qualified candidates are replenished during the day."
       />
+
+      <div className="combo-pick-launch">
+        <Link href="/combo-pick" className="combo-pick-launch-link">
+          <span>⚡</span>
+          <strong>OPEN TODAY’S COMBO PICK</strong>
+          <b>Selections · stake · potential return →</b>
+        </Link>
+      </div>
 
       <ComboBuilder
         initialResult={initialResult}

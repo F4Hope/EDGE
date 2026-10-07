@@ -49,7 +49,13 @@ const items: Array<{
       path.startsWith("/best-picks") ||
       path.startsWith("/analysis"),
   },
-  { label: "Combos", href: "/combos", icon: "combos", matches: (path) => path.startsWith("/combos") },
+  {
+    label: "Combos",
+    href: "/combo-pick",
+    icon: "combos",
+    matches: (path) =>
+      path.startsWith("/combos") || path.startsWith("/combo-pick"),
+  },
   { label: "History", href: "/history", icon: "history", matches: (path) => path.startsWith("/history") },
   {
     label: "More",
