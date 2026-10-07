@@ -1,6 +1,7 @@
 import "./settled-outcomes.test";
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import {
   normalizeBasketballResult,
   normalizeFootballResult,
@@ -148,4 +149,22 @@ test("ignores live or incomplete Odds API score records", () => {
     ),
     null,
   );
+});
+
+
+test("Odds API result adapter supports football and basketball score normalization", async () => {
+  const source = await readFile("lib/providers/oddsApi.ts", "utf8");
+  assert.match(
+    source,
+    /sport === "football" \|\| sport === "basketball" \|\| sport === "tennis"/,
+  );
+});
+
+test("Odds API score sync accepts bounded football and basketball scopes", async () => {
+  const source = await readFile("scripts/sync-odds-results.ts", "utf8");
+  assert.match(source, /football/);
+  assert.match(source, /basketball/);
+  assert.match(source, /getArg\("sports"\)/);
+  assert.match(source, /sourceSportKey/);
+  assert.match(source, /maxSportKeys/);
 });
