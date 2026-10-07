@@ -49,13 +49,13 @@ function main() {
 
   const maxRequests = positiveInt(
     process.env.COMBO_REFRESH_MAX_ODDS_REQUESTS,
-    4,
+    3,
     12,
     "COMBO_REFRESH_MAX_ODDS_REQUESTS",
   );
   const oddsHours = positiveInt(
     process.env.COMBO_REFRESH_ODDS_HOURS,
-    24,
+    48,
     72,
     "COMBO_REFRESH_ODDS_HOURS",
   );

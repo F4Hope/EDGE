@@ -698,3 +698,11 @@ test("rolling Combo refresh regenerates the next candidate pool with bounded odd
   assert.match(script, /--max-requests=/);
   assert.match(pkg, /"combo:refresh": "tsx scripts\/refresh-combos\.ts"/);
 });
+
+
+test("rolling Combo refresh looks farther ahead while keeping provider calls bounded", async () => {
+  const source = await readFile("scripts/refresh-combos.ts", "utf8");
+
+  assert.match(source, /COMBO_REFRESH_MAX_ODDS_REQUESTS,[\s\S]*3,[\s\S]*12/);
+  assert.match(source, /COMBO_REFRESH_ODDS_HOURS,[\s\S]*48,[\s\S]*72/);
+});

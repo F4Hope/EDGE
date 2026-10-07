@@ -203,7 +203,7 @@ function main() {
     );
     runBestEffort(
       "analysis:refresh",
-      ["--max-requests=4", "--hours=24"],
+      ["--max-requests=3", "--hours=48"],
       "Rolling Combo odds refresh",
     );
   }

@@ -113,8 +113,8 @@ test("normal refresh replenishes rolling Combo odds with a bounded API-Sports bu
 
   assert.match(source, /Rolling Combo odds refresh/);
   assert.match(source, /analysis:refresh/);
-  assert.match(source, /--max-requests=4/);
-  assert.match(source, /--hours=24/);
+  assert.match(source, /--max-requests=3/);
+  assert.match(source, /--hours=48/);
 
   const rollingIndex = source.indexOf("Rolling Combo odds refresh");
   const featureIndex = source.indexOf("Recalculating transparent feature snapshots");
