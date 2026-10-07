@@ -34,7 +34,7 @@ export default async function CombosPage() {
       <ScreenHeader
         eyebrow="QUALITY FIRST / TARGET SECOND"
         title="Combo builder"
-        description="EDGE continuously rolls forward to the next playable pre-live events. Started matches are removed automatically, and new priced/model-qualified candidates are replenished during the day. Today’s Best defaults to a balanced 2x target."
+        description="Today’s Best balanced combo targeting 2x now rolls forward to the next playable pre-live events. Started matches are removed automatically, and new priced/model-qualified candidates are replenished during the day."
       />
 
       <ComboBuilder
