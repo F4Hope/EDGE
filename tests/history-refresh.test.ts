@@ -14,8 +14,8 @@ test("history refresh backfills event identities before settling results", async
   assert.doesNotMatch(source, /odds:sync/);
   assert.doesNotMatch(source, /--provider=odds-api/);
 
-  const eventIndex = source.indexOf('run("data:sync"');
-  const resultIndex = source.indexOf('run("results:sync"');
+  const eventIndex = source.indexOf('"data:sync"');
+  const resultIndex = source.indexOf('"results:sync"');
   assert.ok(eventIndex >= 0);
   assert.ok(resultIndex > eventIndex);
 });
@@ -37,7 +37,7 @@ test("history refresh still settles known events when backfill fails", async () 
   assert.match(source, /"results:sync"/);
 
   const backfillIndex = source.indexOf('runBestEffort(\n    "data:sync"');
-  const resultIndex = source.indexOf('run("results:sync"');
+  const resultIndex = source.indexOf('"results:sync"');
   assert.ok(backfillIndex >= 0);
   assert.ok(resultIndex > backfillIndex);
 });
