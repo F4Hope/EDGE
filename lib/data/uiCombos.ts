@@ -56,6 +56,7 @@ export type ComboCandidatePool = {
 };
 
 const MIN_COMBO_ESTIMATED_VALUE = -0.05;
+export const COMBO_MIN_LEAD_MINUTES = 10;
 
 const comboResearchSignalTypes = new Set([
   "INJURY",
@@ -127,12 +128,15 @@ export async function getComboCandidatePool(
 ): Promise<ComboCandidatePool> {
   const db = getDb();
   const now = new Date();
+  const playableFrom = new Date(
+    now.getTime() + COMBO_MIN_LEAD_MINUTES * 60 * 1000,
+  );
   const to = new Date(now.getTime() + Math.min(hours, 24 * 14) * 60 * 60 * 1000);
 
   const rows = await db.prediction.findMany({
     where: {
       event: {
-        startTime: { gt: now, lte: to },
+        startTime: { gt: playableFrom, lte: to },
         status: { notIn: ["CANCELLED", "POSTPONED", "COMPLETED"] },
       },
       market: {

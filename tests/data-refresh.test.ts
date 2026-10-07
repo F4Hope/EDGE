@@ -91,6 +91,7 @@ test("priority soccer worker caps paid pricing to H2H on the once-daily path", a
   assert.match(source, /--event-max-sport-keys=/);
   assert.match(source, /--limit=1000/);
   assert.match(source, /--limit=500/);
+  assert.match(source, /--max-requests=6/);
   assert.match(source, /features:calculate/);
   assert.match(source, /predictions:generate/);
 });

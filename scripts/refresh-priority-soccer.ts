@@ -94,7 +94,7 @@ function main() {
     console.log("Refreshing API-Sports featured markets, prioritizing fixtures with no stored price...");
     runBestEffort(
       "analysis:refresh",
-      ["--max-requests=30", "--hours=48"],
+      ["--max-requests=6", "--hours=48"],
       "API-Sports day-of odds refresh",
     );
   }

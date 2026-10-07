@@ -674,3 +674,27 @@ test("combo page and API both record displayed combo builds", async () => {
   assert.match(route, /comboAuditId/);
   assert.match(route, /EDGE combo audit write failed/);
 });
+
+
+test("combo pool excludes events too close to kickoff and remains rolling", async () => {
+  const loader = await readFile("lib/data/uiCombos.ts", "utf8");
+
+  assert.match(loader, /COMBO_MIN_LEAD_MINUTES = 10/);
+  assert.match(loader, /const playableFrom = new Date/);
+  assert.match(loader, /startTime: \{ gt: playableFrom, lte: to \}/);
+});
+
+test("rolling Combo refresh regenerates the next candidate pool with bounded odds calls", async () => {
+  const [script, pkg] = await Promise.all([
+    readFile("scripts/refresh-combos.ts", "utf8"),
+    readFile("package.json", "utf8"),
+  ]);
+
+  assert.match(script, /COMBO_REFRESH_MAX_ODDS_REQUESTS/);
+  assert.match(script, /analysis:refresh/);
+  assert.match(script, /events:reconcile/);
+  assert.match(script, /features:calculate/);
+  assert.match(script, /predictions:generate/);
+  assert.match(script, /--max-requests=/);
+  assert.match(pkg, /"combo:refresh": "tsx scripts\/refresh-combos\.ts"/);
+});
