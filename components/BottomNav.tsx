@@ -51,7 +51,7 @@ const items: Array<{
   },
   {
     label: "Combos",
-    href: "/combo-pick",
+    href: "/combos",
     icon: "combos",
     matches: (path) =>
       path.startsWith("/combos") || path.startsWith("/combo-pick"),
