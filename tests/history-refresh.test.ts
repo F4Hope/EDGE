@@ -10,7 +10,8 @@ test("history refresh backfills event identities before settling results", async
   assert.match(source, /--provider=api-sports/);
   assert.match(source, /--sports=football,basketball/);
   assert.match(source, /run\("data:sync"/);
-  assert.match(source, /run\("results:sync"/);
+  assert.match(source, /"results:sync"/);
+  assert.match(source, /"results:sync:odds"/);
   assert.doesNotMatch(source, /odds:sync/);
   assert.doesNotMatch(source, /--provider=odds-api/);
 
@@ -25,4 +26,13 @@ test("history refresh requires database and API-Sports credentials", async () =>
 
   assert.match(source, /DATABASE_URL is not configured/);
   assert.match(source, /API_SPORTS_KEY is not configured/);
+});
+
+
+test("history refresh bounds Odds API fallback usage", async () => {
+  const source = await readFile("scripts/refresh-history.ts", "utf8");
+
+  assert.match(source, /fallbackDays = Math\.min\(3/);
+  assert.match(source, /--max-sport-keys=3/);
+  assert.match(source, /falling back to The Odds API/);
 });
