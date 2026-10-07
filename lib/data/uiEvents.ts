@@ -4,6 +4,7 @@ import {
   supportedSports,
   type SupportedSport,
 } from "@/lib/providers/types";
+import type { ParticipantVisual } from "@/lib/ui/participantVisual";
 
 export type UiEventOddsQuote = {
   selectionKey: string;
@@ -24,6 +25,8 @@ export type UiEvent = {
   status: string;
   home: string | null;
   away: string | null;
+  homeParticipant: ParticipantVisual | null;
+  awayParticipant: ParticipantVisual | null;
   h2hOdds: UiEventOddsQuote[];
 };
 
@@ -50,10 +53,10 @@ type EventWithRelations = {
   status: string;
   sport: { key: string };
   league: { name: string; country: string | null };
-  homeTeam: { name: string } | null;
-  awayTeam: { name: string } | null;
-  homePlayer: { fullName: string } | null;
-  awayPlayer: { fullName: string } | null;
+  homeTeam: { name: string; country: string | null; provider: string | null; externalId: string | null } | null;
+  awayTeam: { name: string; country: string | null; provider: string | null; externalId: string | null } | null;
+  homePlayer: { fullName: string; country: string | null; provider: string | null; externalId: string | null } | null;
+  awayPlayer: { fullName: string; country: string | null; provider: string | null; externalId: string | null } | null;
   markets: Array<{
     oddsSnapshots: OddsSnapshotShape[];
   }>;
@@ -175,6 +178,20 @@ function bestH2hOdds(
     .slice(0, 3);
 }
 
+function participantVisual(
+  participant:
+    | EventWithRelations["homeTeam"]
+    | EventWithRelations["homePlayer"],
+): ParticipantVisual | null {
+  if (!participant) return null;
+  return {
+    name: "name" in participant ? participant.name : participant.fullName,
+    country: participant.country,
+    provider: participant.provider,
+    externalId: participant.externalId,
+  };
+}
+
 function toUiEvent(event: EventWithRelations): UiEvent | null {
   if (!supportedSports.includes(event.sport.key as SupportedSport)) {
     return null;
@@ -193,6 +210,8 @@ function toUiEvent(event: EventWithRelations): UiEvent | null {
     status: event.status,
     home,
     away,
+    homeParticipant: participantVisual(event.homeTeam ?? event.homePlayer),
+    awayParticipant: participantVisual(event.awayTeam ?? event.awayPlayer),
     h2hOdds: bestH2hOdds(event, home, away),
   };
 }
@@ -200,10 +219,10 @@ function toUiEvent(event: EventWithRelations): UiEvent | null {
 const relationInclude = {
   sport: { select: { key: true } },
   league: { select: { name: true, country: true } },
-  homeTeam: { select: { name: true } },
-  awayTeam: { select: { name: true } },
-  homePlayer: { select: { fullName: true } },
-  awayPlayer: { select: { fullName: true } },
+  homeTeam: { select: { name: true, country: true, provider: true, externalId: true } },
+  awayTeam: { select: { name: true, country: true, provider: true, externalId: true } },
+  homePlayer: { select: { fullName: true, country: true, provider: true, externalId: true } },
+  awayPlayer: { select: { fullName: true, country: true, provider: true, externalId: true } },
   markets: {
     where: { key: "h2h" as const, status: "OPEN" as const },
     orderBy: { updatedAt: "desc" as const },

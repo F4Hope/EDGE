@@ -3,6 +3,7 @@ import {
   supportedSports,
   type SupportedSport,
 } from "@/lib/providers/types";
+import type { ParticipantVisual } from "@/lib/ui/participantVisual";
 
 export const MIN_MODEL_MARKET_LIFT = 0.0025;
 export const OPPORTUNITY_MARKETS = [
@@ -46,6 +47,8 @@ export type UiOpportunity = {
   country: string | null;
   home: string | null;
   away: string | null;
+  homeParticipant: ParticipantVisual | null;
+  awayParticipant: ParticipantVisual | null;
   startsAt: string;
   marketKey: string;
   point: number | null;
@@ -290,10 +293,10 @@ export async function getUiOpportunities(options?: {
             startTime: true,
             sport: { select: { key: true } },
             league: { select: { name: true, country: true } },
-            homeTeam: { select: { name: true } },
-            awayTeam: { select: { name: true } },
-            homePlayer: { select: { fullName: true } },
-            awayPlayer: { select: { fullName: true } },
+            homeTeam: { select: { name: true, country: true, provider: true, externalId: true } },
+            awayTeam: { select: { name: true, country: true, provider: true, externalId: true } },
+            homePlayer: { select: { fullName: true, country: true, provider: true, externalId: true } },
+            awayPlayer: { select: { fullName: true, country: true, provider: true, externalId: true } },
           },
         },
         market: { select: { id: true, key: true } },
@@ -369,6 +372,36 @@ export async function getUiOpportunities(options?: {
           row.event.homeTeam?.name ?? row.event.homePlayer?.fullName ?? null,
         away:
           row.event.awayTeam?.name ?? row.event.awayPlayer?.fullName ?? null,
+        homeParticipant: row.event.homeTeam
+          ? {
+              name: row.event.homeTeam.name,
+              country: row.event.homeTeam.country,
+              provider: row.event.homeTeam.provider,
+              externalId: row.event.homeTeam.externalId,
+            }
+          : row.event.homePlayer
+            ? {
+                name: row.event.homePlayer.fullName,
+                country: row.event.homePlayer.country,
+                provider: row.event.homePlayer.provider,
+                externalId: row.event.homePlayer.externalId,
+              }
+            : null,
+        awayParticipant: row.event.awayTeam
+          ? {
+              name: row.event.awayTeam.name,
+              country: row.event.awayTeam.country,
+              provider: row.event.awayTeam.provider,
+              externalId: row.event.awayTeam.externalId,
+            }
+          : row.event.awayPlayer
+            ? {
+                name: row.event.awayPlayer.fullName,
+                country: row.event.awayPlayer.country,
+                provider: row.event.awayPlayer.provider,
+                externalId: row.event.awayPlayer.externalId,
+              }
+            : null,
         startsAt: row.event.startTime.toISOString(),
         marketKey: row.market.key,
         point,

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ParticipantBadge } from "@/components/ParticipantBadge";
 import type {
   UiLeagueBestPicks,
   UiOpportunity,
@@ -100,6 +101,10 @@ export function LeagueBestPicks({
                   </div>
 
                   <div className="league-best-pick-main">
+                    <div className="league-best-pick-participants" aria-hidden="true">
+                      <ParticipantBadge participant={pick.homeParticipant} sport={pick.sport} compact />
+                      <ParticipantBadge participant={pick.awayParticipant} sport={pick.sport} compact />
+                    </div>
                     <span>
                       {marketLabel(pick.marketKey)} · {formatStart(pick.startsAt)}
                     </span>

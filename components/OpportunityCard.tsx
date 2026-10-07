@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ParticipantBadge } from "@/components/ParticipantBadge";
 import type { UiOpportunity } from "@/lib/data/uiOpportunities";
 
 const sportCodes: Record<UiOpportunity["sport"], string> = {
@@ -82,10 +83,14 @@ export function OpportunityCard({
 
       <div className="opportunity-match">
         <span>{opportunity.league}</span>
-        <h3>
-          {opportunity.home ?? "Participant"} <i>vs</i>{" "}
-          {opportunity.away ?? "Participant"}
-        </h3>
+        <div className="opportunity-visual-matchup">
+          <ParticipantBadge participant={opportunity.homeParticipant} sport={opportunity.sport} compact />
+          <h3>
+            {opportunity.home ?? "Participant"} <i>vs</i>{" "}
+            {opportunity.away ?? "Participant"}
+          </h3>
+          <ParticipantBadge participant={opportunity.awayParticipant} sport={opportunity.sport} compact />
+        </div>
         <small>{formatStart(opportunity.startsAt)}</small>
       </div>
 

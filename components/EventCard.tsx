@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ParticipantBadge } from "@/components/ParticipantBadge";
 import type { UiEvent } from "@/lib/data/uiEvents";
 
 const sportCodes: Record<UiEvent["sport"], string> = {
@@ -55,10 +56,16 @@ export function EventCard({ event }: { event: UiEvent }) {
         <span className="event-status">{event.status.replaceAll("_", " ")}</span>
       </div>
 
-      <div className="event-card-match">
-        <strong>{event.home ?? "Participant unavailable"}</strong>
+      <div className="event-card-match visual-matchup">
+        <div className="visual-participant">
+          <ParticipantBadge participant={event.homeParticipant} sport={event.sport} />
+          <strong>{event.home ?? "Participant unavailable"}</strong>
+        </div>
         <span>vs</span>
-        <strong>{event.away ?? "Participant unavailable"}</strong>
+        <div className="visual-participant away">
+          <ParticipantBadge participant={event.awayParticipant} sport={event.sport} />
+          <strong>{event.away ?? "Participant unavailable"}</strong>
+        </div>
       </div>
 
       <div className="event-card-meta">
