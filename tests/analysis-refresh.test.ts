@@ -31,3 +31,13 @@ test("package exposes one repository-owned priced analysis refresh command", asy
     "tsx scripts/sync-api-sports-odds.ts --refresh-analysis=true",
   );
 });
+
+
+test("targeted API-Sports odds refresh prioritizes completely unpriced fixtures", async () => {
+  const source = await readFile("scripts/sync-api-sports-odds.ts", "utf8");
+
+  assert.match(source, /apiSportsCoverageRank/);
+  assert.match(source, /const candidatePool = await db\.event\.findMany/);
+  assert.match(source, /priced\.size === 0/);
+  assert.match(source, /slice\(0, maxRequests\)/);
+});
