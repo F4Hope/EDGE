@@ -166,3 +166,18 @@ test("history explains failed Combo legs and market failure patterns", async () 
   assert.match(page, /failedLegs/);
   assert.match(page, /failureByMarket/);
 });
+
+
+test("picks page exposes best picks grouped by league", async () => {
+  const [page, component, data] = await Promise.all([
+    readFile("app/opportunities/page.tsx", "utf8"),
+    readFile("components/LeagueBestPicks.tsx", "utf8"),
+    readFile("lib/data/uiOpportunities.ts", "utf8"),
+  ]);
+
+  assert.match(page, /LeagueBestPicks/);
+  assert.match(component, /Best picks by league/);
+  assert.match(component, /up to three distinct qualified games per league/i);
+  assert.match(data, /rankBestPicksByLeague/);
+  assert.match(data, /cappedPerLeague/);
+});

@@ -69,8 +69,17 @@ export type UiOpportunity = {
   createdAt: string;
 };
 
+export type UiLeagueBestPicks = {
+  key: string;
+  sport: SupportedSport;
+  league: string;
+  country: string | null;
+  picks: UiOpportunity[];
+};
+
 export type UiOpportunityState = {
   opportunities: UiOpportunity[];
+  bestPicksByLeague: UiLeagueBestPicks[];
   available: boolean;
   message: string | null;
   qualifiedPredictions: number;
@@ -174,6 +183,70 @@ export function rankOneOpportunityPerEvent(
   }
 
   return result;
+}
+
+export function rankBestPicksByLeague(
+  candidates: UiOpportunity[],
+  perLeague = 3,
+): UiLeagueBestPicks[] {
+  const cappedPerLeague = Math.min(3, Math.max(1, perLeague));
+  const ranked = [...candidates].sort(compareOpportunityPriority);
+  const groups = new Map<
+    string,
+    {
+      sport: SupportedSport;
+      league: string;
+      country: string | null;
+      picks: UiOpportunity[];
+      eventIds: Set<string>;
+    }
+  >();
+
+  for (const candidate of ranked) {
+    const key = [
+      candidate.sport,
+      candidate.country ?? "",
+      candidate.league,
+    ].join("|");
+
+    const group =
+      groups.get(key) ??
+      {
+        sport: candidate.sport,
+        league: candidate.league,
+        country: candidate.country,
+        picks: [],
+        eventIds: new Set<string>(),
+      };
+
+    if (
+      group.picks.length < cappedPerLeague &&
+      !group.eventIds.has(candidate.eventId)
+    ) {
+      group.picks.push(candidate);
+      group.eventIds.add(candidate.eventId);
+    }
+
+    groups.set(key, group);
+  }
+
+  return [...groups.entries()]
+    .filter(([, group]) => group.picks.length > 0)
+    .map(([key, group]) => ({
+      key,
+      sport: group.sport,
+      league: group.league,
+      country: group.country,
+      picks: group.picks,
+    }))
+    .sort((a, b) => {
+      const aTop = a.picks[0];
+      const bTop = b.picks[0];
+      return (
+        compareOpportunityPriority(aTop, bTop) ||
+        a.league.localeCompare(b.league)
+      );
+    });
 }
 
 export async function getUiOpportunities(options?: {
@@ -322,9 +395,11 @@ export async function getUiOpportunities(options?: {
     }
 
     const opportunities = rankOneOpportunityPerEvent(candidates, limit);
+    const bestPicksByLeague = rankBestPicksByLeague(candidates, 3);
 
     return {
       opportunities,
+      bestPicksByLeague,
       available: true,
       message:
         opportunities.length === 0
@@ -335,6 +410,7 @@ export async function getUiOpportunities(options?: {
   } catch (error) {
     return {
       opportunities: [],
+      bestPicksByLeague: [],
       available: false,
       message:
         error instanceof Error && error.message.includes("DATABASE_URL")

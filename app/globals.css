@@ -3000,3 +3000,152 @@ button {
   font-size: 8px;
   line-height: 1.45;
 }
+
+
+/* Best picks by league */
+
+.best-picks-section {
+  margin-top: 22px;
+}
+
+.best-picks-intro {
+  margin: 10px 0 0;
+  color: #7d7a74;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.league-best-picks-list {
+  margin-top: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.league-best-picks-card {
+  overflow: hidden;
+  border: 1px solid rgba(244, 240, 231, 0.075);
+  border-radius: 20px;
+  background:
+    linear-gradient(135deg, rgba(200, 169, 107, 0.05), transparent 42%),
+    rgba(21, 23, 27, 0.72);
+}
+
+.league-best-picks-head {
+  min-height: 72px;
+  padding: 15px 17px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid rgba(244, 240, 231, 0.055);
+}
+
+.league-best-picks-head span {
+  display: block;
+  color: #716f69;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.11em;
+}
+
+.league-best-picks-head h3 {
+  margin: 6px 0 0;
+  color: var(--ivory);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 18px;
+  font-weight: 400;
+}
+
+.league-best-picks-head > strong {
+  flex: 0 0 auto;
+  color: var(--champagne);
+  font-size: 8px;
+  letter-spacing: 0.1em;
+}
+
+.league-best-picks-rows {
+  padding: 0 16px;
+}
+
+.league-best-pick-row {
+  min-height: 86px;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  color: inherit;
+  text-decoration: none;
+  border-top: 1px solid rgba(244, 240, 231, 0.05);
+}
+
+.league-best-pick-row:first-child {
+  border-top: 0;
+}
+
+.league-best-pick-rank {
+  color: var(--gold);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 14px;
+}
+
+.league-best-pick-main span,
+.league-best-pick-main strong,
+.league-best-pick-main p {
+  display: block;
+}
+
+.league-best-pick-main span {
+  color: #706e68;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.league-best-pick-main strong {
+  margin-top: 5px;
+  color: #d5d0c6;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.league-best-pick-main p {
+  margin: 4px 0 0;
+  color: #85827b;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.league-best-pick-metrics {
+  text-align: right;
+}
+
+.league-best-pick-metrics b,
+.league-best-pick-metrics span {
+  display: block;
+}
+
+.league-best-pick-metrics b {
+  color: var(--champagne);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 20px;
+  font-weight: 400;
+}
+
+.league-best-pick-metrics span {
+  margin-top: 5px;
+  color: #8fc5b6;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+@media (max-width: 380px) {
+  .league-best-pick-row {
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    gap: 9px;
+  }
+
+  .league-best-pick-metrics b {
+    font-size: 17px;
+  }
+}

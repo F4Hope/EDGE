@@ -4,6 +4,7 @@ import {
   compareOpportunityPriority,
   MIN_MODEL_MARKET_LIFT,
   passesIndependentEvidenceGate,
+  rankBestPicksByLeague,
   rankOneOpportunityPerEvent,
   type UiOpportunity,
 } from "../lib/data/uiOpportunities";
@@ -145,5 +146,62 @@ test("independent evidence must create measurable market separation", () => {
       evidenceSupport: 0.05,
     }),
     true,
+  );
+});
+
+
+test("best picks by league returns at most three distinct games per league", () => {
+  const candidates = [
+    candidate({ eventId: "a", selectionName: "A", edgeScore: 90 }),
+    candidate({ eventId: "b", selectionName: "B", edgeScore: 85 }),
+    candidate({ eventId: "c", selectionName: "C", edgeScore: 80 }),
+    candidate({ eventId: "d", selectionName: "D", edgeScore: 75 }),
+    candidate({
+      eventId: "e",
+      selectionName: "E",
+      league: "Other League",
+      edgeScore: 70,
+    }),
+  ];
+
+  const groups = rankBestPicksByLeague(candidates, 3);
+  const primary = groups.find((group) => group.league === "Test League");
+  const other = groups.find((group) => group.league === "Other League");
+
+  assert.equal(primary?.picks.length, 3);
+  assert.deepEqual(
+    primary?.picks.map((pick) => pick.eventId),
+    ["a", "b", "c"],
+  );
+  assert.equal(other?.picks.length, 1);
+});
+
+test("best picks by league never duplicates the same game", () => {
+  const groups = rankBestPicksByLeague(
+    [
+      candidate({
+        eventId: "same",
+        selectionName: "Home",
+        edgeScore: 92,
+      }),
+      candidate({
+        eventId: "same",
+        selectionName: "Over 2.5",
+        marketKey: "totals",
+        point: 2.5,
+        edgeScore: 88,
+      }),
+      candidate({
+        eventId: "other",
+        selectionName: "Away",
+        edgeScore: 80,
+      }),
+    ],
+    3,
+  );
+
+  assert.deepEqual(
+    groups[0]?.picks.map((pick) => pick.eventId),
+    ["same", "other"],
   );
 });

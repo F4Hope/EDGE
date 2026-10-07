@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { EmptyState } from "@/components/EmptyState";
+import { LeagueBestPicks } from "@/components/LeagueBestPicks";
 import { MobileShell } from "@/components/MobileShell";
 import { OpportunityCard } from "@/components/OpportunityCard";
 import { ScreenHeader } from "@/components/ScreenHeader";
@@ -126,6 +127,8 @@ export default async function OpportunitiesPage({
         </div>
       </section>
 
+      <LeagueBestPicks groups={state.bestPicksByLeague} />
+
       <section className="list-section opportunities-list-section">
         <div className="section-heading compact-heading">
           <div>
@@ -138,7 +141,7 @@ export default async function OpportunitiesPage({
           </div>
           <span className="count-badge">
             {state.available
-              ? `${state.opportunities.length} FOUND`
+              ? `${state.opportunities.length} RANKED`
               : "UNAVAILABLE"}
           </span>
         </div>
