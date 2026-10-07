@@ -83,9 +83,11 @@ test("normal refresh broadens soccer fixtures with quota-free Odds API event dis
 test("priority soccer worker caps paid pricing to H2H on the once-daily path", async () => {
   const source = await readFile("scripts/refresh-priority-soccer.ts", "utf8");
 
-  assert.match(source, /dailyPrioritySoccerOddsKeys/);
+  assert.match(source, /prioritySoccerEventKeys/);
   assert.match(source, /--markets=h2h/);
   assert.match(source, /ODDS_PRIORITY_MAX_SPORT_KEYS/);
+  assert.match(source, /"--sport-keys=" \+ prioritySoccerEventKeys\.join/);
+  assert.match(source, /"--max-sport-keys=" \+ String\(maxOddsKeys\)/);
   assert.match(source, /--event-max-sport-keys=/);
   assert.match(source, /--limit=1000/);
   assert.match(source, /--limit=500/);

@@ -53,3 +53,16 @@ test("history refresh falls back to bounded Odds API result settlement", async (
   assert.match(source, /ODDS_API_KEY/);
   assert.match(source, /fallbackDays = Math\.min\(3/);
 });
+
+
+test("history refresh gradually deepens model evidence without one huge provider request", async () => {
+  const source = await readFile("scripts/refresh-history.ts", "utf8");
+
+  assert.match(source, /API_SPORTS_EVIDENCE_LOOKBACK_DAYS/);
+  assert.match(source, /API_SPORTS_EVIDENCE_CHUNK_DAYS/);
+  assert.match(source, /evidence-history-rotation/);
+  assert.match(source, /evidenceWindow/);
+  assert.match(source, /API-Sports evidence event backfill/);
+  assert.match(source, /API-Sports evidence result backfill/);
+  assert.match(source, /nextBucket/);
+});
