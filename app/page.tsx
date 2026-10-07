@@ -1,18 +1,43 @@
 import Link from "next/link";
 import { EdgeScore } from "@/components/EdgeScore";
 import { MobileShell } from "@/components/MobileShell";
+import { getUiOpportunities } from "@/lib/data/uiOpportunities";
 import { getUiPredictionSummary } from "@/lib/data/uiPredictions";
+import type { SupportedSport } from "@/lib/providers/types";
 
-const sports = [
-  { label: "Football", code: "FT", note: "Phase 7 baseline enabled" },
-  { label: "Basketball", code: "BK", note: "Phase 7 baseline enabled" },
-  { label: "Tennis", code: "TN", note: "Phase 7 baseline enabled" },
+const sports: Array<{
+  key: SupportedSport;
+  label: string;
+  code: string;
+}> = [
+  { key: "football", label: "Football", code: "FT" },
+  { key: "basketball", label: "Basketball", code: "BK" },
+  { key: "tennis", label: "Tennis", code: "TN" },
 ];
+
+function marketLabel(key: string): string {
+  if (key === "h2h") return "Match winner";
+  if (key === "totals") return "Total";
+  if (key === "spreads") return "Handicap";
+  if (key === "double_chance") return "Double chance";
+  return key.replaceAll("_", " ");
+}
+
+function matchup(home: string | null, away: string | null): string {
+  return `${home ?? "Participant"} vs ${away ?? "Participant"}`;
+}
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const predictionState = await getUiPredictionSummary();
+  const [predictionState, opportunityState] = await Promise.all([
+    getUiPredictionSummary(),
+    getUiOpportunities({ hours: 168, limit: 50 }),
+  ]);
+
+  const top = opportunityState.opportunities[0] ?? null;
+  const score = top?.edgeScore ?? 0;
+  const status = top?.status ?? "NO BET";
 
   return (
     <MobileShell>
@@ -29,23 +54,46 @@ export default async function HomePage() {
           </div>
 
           <div className="hero-content">
-            <EdgeScore status="NO BET" />
+            <EdgeScore score={score} status={status} />
 
             <div className="hero-copy">
-              <p className="hero-overline">DATA GATE ACTIVE</p>
-              <h1>{predictionState.count > 0 ? "Baseline forecasts are live." : "Prediction engine is connected."}</h1>
+              <p className="hero-overline">
+                {top ? "QUALIFIED EDGE FOUND" : "DATA GATE ACTIVE"}
+              </p>
+              <h1>
+                {top
+                  ? matchup(top.home, top.away)
+                  : predictionState.count > 0
+                    ? "Baseline forecasts are live."
+                    : "Prediction engine is connected."}
+              </h1>
               <p className="hero-description">
-                Phase 7 now generates transparent market-anchored probabilities. BETTABLE status remains validation-gated until settled forward performance supports it.
+                {top
+                  ? `${marketLabel(top.marketKey)} · ${top.selectionName} @ ${top.bestDecimalOdds.toFixed(2)} · ${top.league}. EDGE score is a quality/ranking composite, not a win probability.`
+                  : "No future selection currently passes every opportunity gate. EDGE keeps researching prices and independent evidence instead of manufacturing a pick."}
               </p>
 
               <div className="metric-strip" aria-label="Current analysis state">
-                <div><span>EVENTS</span><strong>READY</strong></div>
-                <div><span>ODDS</span><strong>PENDING</strong></div>
-                <div><span>MODEL</span><strong>{predictionState.count > 0 ? `${predictionState.count} FORECASTS` : "READY"}</strong></div>
+                <div>
+                  <span>EVENTS</span>
+                  <strong>{predictionState.futureEventCount} UPCOMING</strong>
+                </div>
+                <div>
+                  <span>ODDS</span>
+                  <strong>{predictionState.pricedEventCount} PRICED</strong>
+                </div>
+                <div>
+                  <span>MODEL</span>
+                  <strong>
+                    {predictionState.count > 0
+                      ? `${predictionState.count} FORECASTS`
+                      : "READY"}
+                  </strong>
+                </div>
               </div>
 
-              <Link className="primary-link" href="/events">
-                BROWSE EVENTS <span aria-hidden="true">→</span>
+              <Link className="primary-link" href="/opportunities">
+                VIEW OPPORTUNITIES <span aria-hidden="true">→</span>
               </Link>
             </div>
           </div>
@@ -58,21 +106,39 @@ export default async function HomePage() {
             <p className="eyebrow">INTELLIGENCE QUEUE</p>
             <h2 id="top-opportunities-title">Top opportunities</h2>
           </div>
-          <span className="count-badge">NOT SCORED</span>
+          <span className="count-badge">
+            {opportunityState.qualifiedPredictions} QUALIFIED
+          </span>
         </div>
 
         <div className="opportunity-rail">
-          {sports.map((sport) => (
-            <article className="opportunity-card" key={sport.label}>
-              <div className="sport-code">{sport.code}</div>
-              <div className="opportunity-copy">
-                <span>{sport.label}</span>
-                <strong>No qualified opportunity</strong>
-                <p>{sport.note}</p>
-              </div>
-              <div className="card-score">—</div>
-            </article>
-          ))}
+          {sports.map((sport) => {
+            const pick = opportunityState.opportunities.find(
+              (item) => item.sport === sport.key,
+            );
+
+            return (
+              <Link
+                className="opportunity-card"
+                key={sport.key}
+                href={`/opportunities?sport=${sport.key}`}
+              >
+                <div className="sport-code">{sport.code}</div>
+                <div className="opportunity-copy">
+                  <span>{sport.label}</span>
+                  <strong>
+                    {pick ? pick.selectionName : "No qualified opportunity"}
+                  </strong>
+                  <p>
+                    {pick
+                      ? `${matchup(pick.home, pick.away)} · ${marketLabel(pick.marketKey)} @ ${pick.bestDecimalOdds.toFixed(2)}`
+                      : "No selection passes all current gates"}
+                  </p>
+                </div>
+                <div className="card-score">{pick?.edgeScore ?? "—"}</div>
+              </Link>
+            );
+          })}
         </div>
       </section>
 

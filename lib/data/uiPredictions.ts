@@ -210,23 +210,54 @@ export async function getUiPredictionsForEvent(
 export async function getUiPredictionSummary(): Promise<{
   count: number;
   latestAt: string | null;
+  futureEventCount: number;
+  pricedEventCount: number;
   available: boolean;
 }> {
   try {
     const db = getDb();
-    const [count, latest] = await Promise.all([
+    const now = new Date();
+    const to = new Date(now.getTime() + 168 * 60 * 60 * 1000);
+
+    const [count, latest, futureEventCount, pricedEventCount] = await Promise.all([
       db.prediction.count(),
       db.prediction.findFirst({
         orderBy: { createdAt: "desc" },
         select: { createdAt: true },
       }),
+      db.event.count({
+        where: {
+          startTime: { gt: now, lte: to },
+          status: { notIn: ["LIVE", "COMPLETED", "CANCELLED", "POSTPONED"] },
+        },
+      }),
+      db.event.count({
+        where: {
+          startTime: { gt: now, lte: to },
+          status: { notIn: ["LIVE", "COMPLETED", "CANCELLED", "POSTPONED"] },
+          markets: {
+            some: {
+              status: "OPEN",
+              oddsSnapshots: { some: {} },
+            },
+          },
+        },
+      }),
     ]);
     return {
       count,
       latestAt: latest?.createdAt.toISOString() ?? null,
+      futureEventCount,
+      pricedEventCount,
       available: true,
     };
   } catch {
-    return { count: 0, latestAt: null, available: false };
+    return {
+      count: 0,
+      latestAt: null,
+      futureEventCount: 0,
+      pricedEventCount: 0,
+      available: false,
+    };
   }
 }
