@@ -270,3 +270,60 @@ test("tennis discovery honors explicit sport keys before event requests", async 
     globalThis.fetch = originalFetch;
   }
 });
+
+
+test("football discovery preserves explicit competition priority before applying the cap", async () => {
+  const originalFetch = globalThis.fetch;
+  const requestedUrls: string[] = [];
+
+  globalThis.fetch = (async (input: string | URL | Request) => {
+    const url =
+      typeof input === "string"
+        ? new URL(input)
+        : input instanceof URL
+          ? input
+          : new URL(input.url);
+    requestedUrls.push(url.toString());
+
+    if (url.pathname.endsWith("/sports")) {
+      return new Response(
+        JSON.stringify([
+          { key: "soccer_brazil_campeonato", group: "Soccer", title: "Brazil Serie A", active: true },
+          { key: "soccer_epl", group: "Soccer", title: "EPL", active: true },
+          { key: "soccer_spain_la_liga", group: "Soccer", title: "La Liga", active: true },
+        ]),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+    }
+
+    return new Response(JSON.stringify([]), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  }) as typeof fetch;
+
+  try {
+    const provider = new OddsApiProvider("test-key");
+    await provider.getEvents({
+      sport: "football",
+      from: new Date("2026-10-07T00:00:00Z"),
+      to: new Date("2026-10-14T00:00:00Z"),
+      sourceSportKeys: [
+        "soccer_spain_la_liga",
+        "soccer_epl",
+        "soccer_brazil_campeonato",
+      ],
+      maxSourceSportKeys: 2,
+    });
+
+    const eventPaths = requestedUrls
+      .map((value) => new URL(value).pathname)
+      .filter((value) => value.includes("/events"));
+
+    assert.equal(eventPaths.length, 2);
+    assert.match(eventPaths[0], /soccer_spain_la_liga/);
+    assert.match(eventPaths[1], /soccer_epl/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

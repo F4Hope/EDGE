@@ -74,6 +74,7 @@
     "events:reconcile": "tsx scripts/reconcile-event-providers.ts",
     "odds:sync:api-sports": "tsx scripts/sync-api-sports-odds.ts",
     "analysis:refresh": "tsx scripts/sync-api-sports-odds.ts --refresh-analysis=true",
+    "soccer:coverage:refresh": "tsx scripts/refresh-priority-soccer.ts",
     "test:opportunities": "tsx --test tests/opportunities.test.ts",
     "test:analysis-refresh": "tsx --test tests/analysis-refresh.test.ts",
     "history:refresh": "tsx scripts/refresh-history.ts",

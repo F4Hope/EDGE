@@ -301,15 +301,29 @@ export class OddsApiProvider implements DataProvider, OddsProvider, ResultProvid
     }
 
     const catalog = await this.getCatalog();
-    const requestedKeys = new Set(
-      (query.sourceSportKeys ?? []).map((key) => key.trim()).filter(Boolean),
+    const requestedKeyList = [
+      ...new Set(
+        (query.sourceSportKeys ?? []).map((key) => key.trim()).filter(Boolean),
+      ),
+    ];
+    const requestedKeys = new Set(requestedKeyList);
+    const requestedPriority = new Map(
+      requestedKeyList.map((key, index) => [key, index]),
     );
-    const matchingKeys = catalog.filter(
-      (item) =>
-        item.active !== false &&
-        matchesSport(item, query.sport) &&
-        (requestedKeys.size === 0 || requestedKeys.has(item.key)),
-    );
+    const matchingKeys = catalog
+      .filter(
+        (item) =>
+          item.active !== false &&
+          matchesSport(item, query.sport) &&
+          (requestedKeys.size === 0 || requestedKeys.has(item.key)),
+      )
+      .sort((left, right) => {
+        if (requestedKeys.size === 0) return 0;
+        return (
+          (requestedPriority.get(left.key) ?? Number.MAX_SAFE_INTEGER) -
+          (requestedPriority.get(right.key) ?? Number.MAX_SAFE_INTEGER)
+        );
+      });
 
     if (matchingKeys.length === 0) {
       throw new Error(

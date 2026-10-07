@@ -66,3 +66,28 @@ test("data refresh keeps result settlement mandatory after event discovery failu
   assert.ok(eventIndex >= 0);
   assert.ok(resultIndex > eventIndex);
 });
+
+
+test("normal refresh broadens soccer fixtures with quota-free Odds API event discovery", async () => {
+  const source = await readFile("scripts/refresh-data.ts", "utf8");
+
+  assert.match(source, /prioritySoccerEventKeys/);
+  assert.match(source, /ODDS_SOCCER_EVENT_FORWARD_HOURS/);
+  assert.match(source, /The Odds API priority soccer event discovery/);
+  assert.match(source, /events:reconcile/);
+
+  const discoveryIndex = source.indexOf("The Odds API priority soccer event discovery");
+  const includeOddsIndex = source.indexOf("if (includeOdds)");
+  assert.ok(discoveryIndex >= 0);
+  assert.ok(includeOddsIndex > discoveryIndex);
+});
+
+test("priority soccer worker caps paid pricing to H2H on the once-daily path", async () => {
+  const source = await readFile("scripts/refresh-priority-soccer.ts", "utf8");
+
+  assert.match(source, /dailyPrioritySoccerOddsKeys/);
+  assert.match(source, /--markets=h2h/);
+  assert.match(source, /ODDS_PRIORITY_MAX_SPORT_KEYS/);
+  assert.match(source, /features:calculate/);
+  assert.match(source, /predictions:generate/);
+});

@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
 import { spawnSync } from "node:child_process";
+import { prioritySoccerEventKeys } from "../lib/providers/soccerCoverage";
 
 dotenv.config({ path: [".env.local", ".env"], quiet: true });
 
@@ -155,6 +156,44 @@ function main() {
   } else {
     console.log(
       "SKIP API-Sports evidence: API_SPORTS_KEY is not configured.",
+    );
+  }
+
+  if (oddsApi) {
+    const now = new Date();
+    const soccerCoverageHours = positiveHours(
+      "ODDS_SOCCER_EVENT_FORWARD_HOURS",
+      168,
+    );
+    const soccerCoverageTo = isoOffset(now, soccerCoverageHours);
+
+    console.log(
+      "Refreshing priority soccer fixture coverage from The Odds API " +
+        "(quota-free event discovery; " +
+        soccerCoverageHours +
+        "h horizon)...",
+    );
+    runBestEffort(
+      "data:sync",
+      [
+        "--provider=odds-api",
+        "--sports=football",
+        "--to=" + soccerCoverageTo,
+        "--sport-keys=" + prioritySoccerEventKeys.join(","),
+        "--max-sport-keys=" + String(prioritySoccerEventKeys.length),
+      ],
+      "The Odds API priority soccer event discovery",
+    );
+
+    console.log("Reconciling cross-provider soccer event identities...");
+    runBestEffort(
+      "events:reconcile",
+      ["--apply", "--hours=" + String(soccerCoverageHours)],
+      "Cross-provider soccer event reconciliation",
+    );
+  } else {
+    console.log(
+      "SKIP extended soccer fixture coverage: ODDS_API_KEY is not configured.",
     );
   }
 
