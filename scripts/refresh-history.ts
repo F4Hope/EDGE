@@ -1,7 +1,11 @@
 import dotenv from "dotenv";
 import { spawnSync } from "node:child_process";
+import { getDb } from "../lib/prisma";
 
 dotenv.config({ path: [".env.local", ".env"], quiet: true });
+
+const DAY_MS = 86_400_000;
+const EVIDENCE_SCOPE = "evidence-history-rotation";
 
 function run(script: string, args: string[] = []) {
   const result = spawnSync("npm", ["run", script, "--", ...args], {
@@ -51,11 +55,66 @@ function positiveHours(
   return parsed;
 }
 
+function positiveDays(
+  envName: string,
+  fallback: number,
+  max: number,
+): number {
+  const parsed = Number(process.env[envName] ?? fallback);
+  if (!Number.isInteger(parsed) || parsed <= 0 || parsed > max) {
+    throw new Error(
+      envName + " must be a positive integer no greater than " + max + ".",
+    );
+  }
+  return parsed;
+}
+
 function isoOffset(base: Date, hours: number): string {
   return new Date(base.getTime() + hours * 60 * 60 * 1000).toISOString();
 }
 
-function main() {
+function startOfUtcDay(base: Date): Date {
+  return new Date(
+    Date.UTC(
+      base.getUTCFullYear(),
+      base.getUTCMonth(),
+      base.getUTCDate(),
+    ),
+  );
+}
+
+function evidenceWindow(
+  now: Date,
+  lookbackDays: number,
+  chunkDays: number,
+  bucket: number,
+): { from: Date; to: Date; bucketCount: number } {
+  const protectedRecentDays = 3;
+  const historyDays = Math.max(1, lookbackDays - protectedRecentDays);
+  const bucketCount = Math.max(1, Math.ceil(historyDays / chunkDays));
+  const normalizedBucket = ((bucket % bucketCount) + bucketCount) % bucketCount;
+  const endDaysAgo = protectedRecentDays + normalizedBucket * chunkDays;
+  const startDaysAgo = Math.min(
+    lookbackDays,
+    endDaysAgo + chunkDays - 1,
+  );
+  const today = startOfUtcDay(now);
+  const from = new Date(today.getTime() - startDaysAgo * DAY_MS);
+  const to = new Date(
+    today.getTime() - endDaysAgo * DAY_MS + DAY_MS - 1,
+  );
+  return { from, to, bucketCount };
+}
+
+function metadataBucket(value: unknown): number {
+  if (!value || typeof value !== "object") return 0;
+  const bucket = (value as Record<string, unknown>).nextBucket;
+  return typeof bucket === "number" && Number.isInteger(bucket) && bucket >= 0
+    ? bucket
+    : 0;
+}
+
+async function main() {
   if (!process.env.DATABASE_URL) {
     throw new Error(
       "DATABASE_URL is not configured. In Codespaces, run npm run db:local first.",
@@ -73,6 +132,17 @@ function main() {
     48,
     72,
   );
+  const evidenceLookbackDays = positiveDays(
+    "API_SPORTS_EVIDENCE_LOOKBACK_DAYS",
+    60,
+    90,
+  );
+  const evidenceChunkDays = positiveDays(
+    "API_SPORTS_EVIDENCE_CHUNK_DAYS",
+    5,
+    7,
+  );
+
   const now = new Date();
   const from = isoOffset(now, -lookbackHours);
   const to = now.toISOString();
@@ -127,13 +197,102 @@ function main() {
     ]);
   }
 
+  const db = getDb();
+  try {
+    const checkpoint = await db.syncCheckpoint.findUnique({
+      where: {
+        provider_scope: {
+          provider: "api-sports",
+          scope: EVIDENCE_SCOPE,
+        },
+      },
+      select: { metadata: true },
+    });
+    const bucket = metadataBucket(checkpoint?.metadata);
+    const window = evidenceWindow(
+      now,
+      evidenceLookbackDays,
+      evidenceChunkDays,
+      bucket,
+    );
+
+    console.log("Backfilling deeper model evidence.", {
+      bucket: bucket + 1,
+      bucketCount: window.bucketCount,
+      from: window.from.toISOString(),
+      to: window.to.toISOString(),
+      sports: ["football", "basketball"],
+    });
+
+    const eventsOk = runBestEffort(
+      "data:sync",
+      [
+        "--provider=api-sports",
+        "--sports=football,basketball",
+        "--from=" + window.from.toISOString(),
+        "--to=" + window.to.toISOString(),
+      ],
+      "API-Sports evidence event backfill",
+    );
+
+    const resultsOk = runBestEffort(
+      "results:sync",
+      [
+        "--sports=football,basketball",
+        "--from=" + window.from.toISOString(),
+        "--to=" + window.to.toISOString(),
+      ],
+      "API-Sports evidence result backfill",
+    );
+
+    if (eventsOk && resultsOk) {
+      const nextBucket = (bucket + 1) % window.bucketCount;
+      await db.syncCheckpoint.upsert({
+        where: {
+          provider_scope: {
+            provider: "api-sports",
+            scope: EVIDENCE_SCOPE,
+          },
+        },
+        update: {
+          lastStartedAt: now,
+          lastCompletedAt: new Date(),
+          lastStatus: "COMPLETED",
+          metadata: {
+            nextBucket,
+            bucketCount: window.bucketCount,
+            lookbackDays: evidenceLookbackDays,
+            chunkDays: evidenceChunkDays,
+            lastFrom: window.from.toISOString(),
+            lastTo: window.to.toISOString(),
+          },
+        },
+        create: {
+          provider: "api-sports",
+          scope: EVIDENCE_SCOPE,
+          lastStartedAt: now,
+          lastCompletedAt: new Date(),
+          lastStatus: "COMPLETED",
+          metadata: {
+            nextBucket,
+            bucketCount: window.bucketCount,
+            lookbackDays: evidenceLookbackDays,
+            chunkDays: evidenceChunkDays,
+            lastFrom: window.from.toISOString(),
+            lastTo: window.to.toISOString(),
+          },
+        },
+      });
+    }
+  } finally {
+    await db.$disconnect();
+  }
+
   console.log("EDGE rolling history refresh complete.");
 }
 
-try {
-  main();
-} catch (error) {
+main().catch((error) => {
   console.error("EDGE rolling history refresh failed.");
   console.error(error instanceof Error ? error.message : error);
   process.exitCode = 1;
-}
+});

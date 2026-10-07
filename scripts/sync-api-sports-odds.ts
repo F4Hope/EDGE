@@ -55,6 +55,25 @@ function participantNames(event: {
   };
 }
 
+function apiSportsCoverageRank(event: {
+  markets: Array<{
+    key: string;
+    oddsSnapshots: Array<{ id: string }>;
+  }>;
+}): number {
+  const priced = new Set(
+    event.markets
+      .filter((market) => market.oddsSnapshots.length > 0)
+      .map((market) => market.key),
+  );
+
+  if (priced.size === 0) return 0;
+  if (!priced.has("h2h")) return 1;
+  if (!priced.has("double_chance")) return 2;
+  if (!priced.has("totals")) return 3;
+  return 4;
+}
+
 async function ensureMarket(
   db: ReturnType<typeof getDb>,
   eventId: string,
@@ -195,7 +214,7 @@ async function main() {
   try {
     if (client) {
       try {
-        const candidates = await db.event.findMany({
+        const candidatePool = await db.event.findMany({
           where: {
             sport: { key: "football" },
             startTime: { gt: now, lte: to },
@@ -252,10 +271,32 @@ async function main() {
               select: { externalId: true },
               take: 1,
             },
+            markets: {
+              where: {
+                provider: PROVIDER,
+                status: "OPEN",
+                key: { in: ["h2h", "totals", "double_chance"] },
+              },
+              select: {
+                key: true,
+                oddsSnapshots: {
+                  take: 1,
+                  select: { id: true },
+                },
+              },
+            },
           },
           orderBy: { startTime: "asc" },
-          take: maxRequests,
+          take: Math.min(300, maxRequests * 6),
         });
+
+        const candidates = candidatePool
+          .sort(
+            (a, b) =>
+              apiSportsCoverageRank(a) - apiSportsCoverageRank(b) ||
+              a.startTime.getTime() - b.startTime.getTime(),
+          )
+          .slice(0, maxRequests);
 
         for (const event of candidates) {
           const providerId = event.sources[0]?.externalId?.trim();

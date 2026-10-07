@@ -1,9 +1,6 @@
 import dotenv from "dotenv";
 import { spawnSync } from "node:child_process";
-import {
-  dailyPrioritySoccerOddsKeys,
-  prioritySoccerEventKeys,
-} from "../lib/providers/soccerCoverage";
+import { prioritySoccerEventKeys } from "../lib/providers/soccerCoverage";
 
 dotenv.config({ path: [".env.local", ".env"], quiet: true });
 
@@ -64,14 +61,13 @@ function main() {
   const hours = positiveInt(getArg("hours"), 168, 336, "--hours");
   const maxOddsKeys = positiveInt(
     getArg("max-odds-keys") ?? process.env.ODDS_PRIORITY_MAX_SPORT_KEYS,
-    dailyPrioritySoccerOddsKeys.length,
-    dailyPrioritySoccerOddsKeys.length,
+    Math.min(10, prioritySoccerEventKeys.length),
+    prioritySoccerEventKeys.length,
     "ODDS_PRIORITY_MAX_SPORT_KEYS",
   );
 
   const now = new Date();
   const to = new Date(now.getTime() + hours * 60 * 60 * 1000).toISOString();
-  const pricedKeys = dailyPrioritySoccerOddsKeys.slice(0, maxOddsKeys);
 
   console.log("EDGE priority soccer coverage refresh");
   console.log("------------------------------------");
@@ -95,25 +91,25 @@ function main() {
   );
 
   if (process.env.API_SPORTS_KEY) {
-    console.log("Refreshing day-of API-Sports featured football markets...");
+    console.log("Refreshing API-Sports featured markets, prioritizing fixtures with no stored price...");
     runBestEffort(
       "analysis:refresh",
-      ["--max-requests=25", "--hours=24"],
+      ["--max-requests=30", "--hours=48"],
       "API-Sports day-of odds refresh",
     );
   }
 
   console.log(
-    "Refreshing one-region H2H prices for " +
-      pricedKeys.length +
-      " priority soccer competitions...",
+    "Refreshing one-region H2H prices for up to " +
+      maxOddsKeys +
+      " active priority soccer competitions...",
   );
   run("odds:sync", [
     "--sports=football",
     "--markets=h2h",
     "--to=" + to,
-    "--sport-keys=" + pricedKeys.join(","),
-    "--max-sport-keys=" + String(pricedKeys.length),
+    "--sport-keys=" + prioritySoccerEventKeys.join(","),
+    "--max-sport-keys=" + String(maxOddsKeys),
     "--event-max-sport-keys=" + String(prioritySoccerEventKeys.length),
   ]);
 
@@ -135,7 +131,7 @@ function main() {
 
   console.log("EDGE priority soccer coverage refresh complete.", {
     hours,
-    pricedCompetitionKeys: pricedKeys,
+    paidCompetitionCap: maxOddsKeys,
     discoveredCompetitionKeys: prioritySoccerEventKeys.length,
   });
 }
