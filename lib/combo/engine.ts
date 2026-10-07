@@ -1,3 +1,5 @@
+import type { ParticipantVisual } from "@/lib/ui/participantVisual";
+
 export const COMBO_TARGETS = [2, 5, 10, 20, 50, 100, 1000] as const;
 export const COMBO_RISK_MODES = ["LOW", "BALANCED", "AGGRESSIVE"] as const;
 
@@ -10,6 +12,8 @@ export type ComboCandidate = {
   league: string;
   startsAt: string;
   matchup: string;
+  homeParticipant?: ParticipantVisual | null;
+  awayParticipant?: ParticipantVisual | null;
   marketKey: string;
   point: number | null;
   selectionKey: string;

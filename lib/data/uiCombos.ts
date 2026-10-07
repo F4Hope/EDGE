@@ -1,5 +1,6 @@
 import { getDb } from "@/lib/prisma";
 import type { ComboCandidate } from "@/lib/combo/engine";
+import type { ParticipantVisual } from "@/lib/ui/participantVisual";
 import {
   independentEvidenceSupport,
   MIN_MODEL_MARKET_LIFT,
@@ -112,6 +113,21 @@ function selectionLabel(
   return selectionName;
 }
 
+function participantVisual(
+  participant:
+    | { name: string; country: string | null; provider: string | null; externalId: string | null }
+    | { fullName: string; country: string | null; provider: string | null; externalId: string | null }
+    | null,
+): ParticipantVisual | null {
+  if (!participant) return null;
+  return {
+    name: "name" in participant ? participant.name : participant.fullName,
+    country: participant.country,
+    provider: participant.provider,
+    externalId: participant.externalId,
+  };
+}
+
 function participantName(event: {
   homeTeam: { name: string } | null;
   awayTeam: { name: string } | null;
@@ -152,10 +168,10 @@ export async function getComboCandidatePool(
         include: {
           sport: { select: { key: true } },
           league: { select: { name: true } },
-          homeTeam: { select: { name: true } },
-          awayTeam: { select: { name: true } },
-          homePlayer: { select: { fullName: true } },
-          awayPlayer: { select: { fullName: true } },
+          homeTeam: { select: { name: true, country: true, provider: true, externalId: true } },
+          awayTeam: { select: { name: true, country: true, provider: true, externalId: true } },
+          homePlayer: { select: { fullName: true, country: true, provider: true, externalId: true } },
+          awayPlayer: { select: { fullName: true, country: true, provider: true, externalId: true } },
           intelligenceSignals: {
             where: {
               OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
@@ -337,6 +353,8 @@ export async function getComboCandidatePool(
       league: row.event.league.name,
       startsAt: row.event.startTime.toISOString(),
       matchup: participantName(row.event),
+      homeParticipant: participantVisual(row.event.homeTeam ?? row.event.homePlayer),
+      awayParticipant: participantVisual(row.event.awayTeam ?? row.event.awayPlayer),
       marketKey: row.market.key,
       point,
       selectionKey: row.selectionKey,
