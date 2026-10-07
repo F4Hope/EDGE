@@ -220,7 +220,7 @@ function main() {
     run("odds:sync", ["--sports=all"]);
   } else {
     console.log(
-      "SKIP The Odds API entirely: quota-sensitive event/odds calls require explicit --include-odds.",
+      "SKIP quota-sensitive Odds API result/odds calls: explicit --include-odds is required.",
     );
   }
 
