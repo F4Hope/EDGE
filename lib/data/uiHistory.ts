@@ -1,5 +1,10 @@
 import { getDb } from "@/lib/prisma";
 import { calculateModelPerformance } from "@/lib/evaluation/performance";
+import {
+  calculateDisplayedComboPerformance,
+  type DisplayedComboPerformance,
+  type DisplayedComboPerformanceRow,
+} from "@/lib/evaluation/comboPerformance";
 
 export type UiSettledResult = {
   eventId: string;
@@ -19,6 +24,7 @@ export type UiHistoryState = {
   settledEvents: number;
   recentResults: UiSettledResult[];
   performance: Awaited<ReturnType<typeof calculateModelPerformance>>;
+  comboPerformance: DisplayedComboPerformance;
   available: boolean;
   message: string | null;
 };
@@ -75,7 +81,7 @@ function parseResultPayload(payload: unknown): {
 export async function getUiHistory(): Promise<UiHistoryState> {
   try {
     const db = getDb();
-    const [predictionCount, settledEvents, performance, resultRows] =
+    const [predictionCount, settledEvents, performance, resultRows, comboRows] =
       await Promise.all([
         db.prediction.count(),
         db.result.count({ where: { status: "FINAL" } }),
@@ -96,6 +102,49 @@ export async function getUiHistory(): Promise<UiHistoryState> {
           },
           orderBy: { updatedAt: "desc" },
           take: 20,
+        }),
+        db.combo.findMany({
+          where: { status: "READY" },
+          select: {
+            id: true,
+            targetOdds: true,
+            actualOdds: true,
+            riskMode: true,
+            createdAt: true,
+            selections: {
+              orderBy: { position: "asc" },
+              select: {
+                position: true,
+                selection: {
+                  select: {
+                    prediction: {
+                      select: {
+                        selectionKey: true,
+                        explanation: true,
+                        market: { select: { key: true } },
+                        event: {
+                          select: {
+                            homeTeam: { select: { name: true } },
+                            awayTeam: { select: { name: true } },
+                            homePlayer: { select: { fullName: true } },
+                            awayPlayer: { select: { fullName: true } },
+                            result: {
+                              select: {
+                                status: true,
+                                payload: true,
+                              },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+          take: 250,
         }),
       ]);
 
@@ -122,11 +171,21 @@ export async function getUiHistory(): Promise<UiHistoryState> {
       };
     });
 
+    const comboPerformance = calculateDisplayedComboPerformance(
+      comboRows.map((row) => ({
+        ...row,
+        targetOdds: row.targetOdds === null ? null : Number(row.targetOdds),
+        actualOdds: row.actualOdds === null ? null : Number(row.actualOdds),
+        riskMode: String(row.riskMode),
+      })) as DisplayedComboPerformanceRow[],
+    );
+
     return {
       predictionCount,
       settledEvents,
       recentResults,
       performance,
+      comboPerformance,
       available: true,
       message:
         performance.sampleCount === 0
@@ -170,6 +229,16 @@ export async function getUiHistory(): Promise<UiHistoryState> {
         bySport: [],
         byMarket: [],
         byModelVersion: [],
+      },
+      comboPerformance: {
+        displayed: 0,
+        settled: 0,
+        wins: 0,
+        losses: 0,
+        pending: 0,
+        voided: 0,
+        hitRate: null,
+        recent: [],
       },
       available: false,
       message:
