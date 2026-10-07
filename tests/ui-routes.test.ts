@@ -138,3 +138,20 @@ test("combo page preloads a live default and exposes price provenance", async ()
   assert.match(builder, /modelLift/);
   assert.match(data, /independentEvidenceSupport/);
 });
+
+
+test("history shows measured displayed Combo performance", async () => {
+  const [page, data] = await Promise.all([
+    readFile("app/history/page.tsx", "utf8"),
+    readFile("lib/data/uiHistory.ts", "utf8"),
+  ]);
+
+  assert.match(page, /COMBOS SHOWN/);
+  assert.match(page, /COMBO WINS/);
+  assert.match(page, /COMBO LOSSES/);
+  assert.match(page, /COMBO HIT RATE/);
+  assert.match(page, /DISPLAYED COMBO AUDIT/);
+  assert.match(page, /Pending and void recommendations are excluded from/);
+  assert.match(data, /calculateDisplayedComboPerformance/);
+  assert.match(data, /db\.combo\.findMany/);
+});

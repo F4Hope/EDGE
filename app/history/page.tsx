@@ -38,6 +38,43 @@ export default async function HistoryPage() {
 
       <div className="metric-grid">
         <MetricPlaceholder
+          label="COMBOS SHOWN"
+          value={String(state.comboPerformance.displayed)}
+          note="Recorded displayed 2+ leg recommendations"
+          state={state.comboPerformance.displayed > 0 ? "ready" : "pending"}
+        />
+        <MetricPlaceholder
+          label="COMBO WINS"
+          value={String(state.comboPerformance.wins)}
+          note={`${state.comboPerformance.settled} settled recommendations`}
+          state={state.comboPerformance.settled > 0 ? "ready" : "pending"}
+        />
+        <MetricPlaceholder
+          label="COMBO LOSSES"
+          value={String(state.comboPerformance.losses)}
+          note={`${state.comboPerformance.pending} pending · ${state.comboPerformance.voided} void`}
+          state={state.comboPerformance.settled > 0 ? "ready" : "pending"}
+        />
+        <MetricPlaceholder
+          label="COMBO HIT RATE"
+          value={pct(state.comboPerformance.hitRate)}
+          note="Wins / settled displayed Combos"
+          state={state.comboPerformance.settled > 0 ? "ready" : "pending"}
+        />
+      </div>
+
+      <section className="security-note">
+        <span className="empty-status">DISPLAYED COMBO AUDIT</span>
+        <h2>Actual recommendation record</h2>
+        <p>
+          Tracks only Combos EDGE actually displayed and persisted after Combo
+          audit was enabled. Pending and void recommendations are excluded from
+          hit rate.
+        </p>
+      </section>
+
+      <div className="metric-grid">
+        <MetricPlaceholder
           label="PREDICTIONS"
           value={String(state.predictionCount)}
           note="Stored analytical records"
@@ -66,6 +103,45 @@ export default async function HistoryPage() {
           state={evaluation.count > 0 ? "ready" : "pending"}
         />
       </div>
+
+      {state.comboPerformance.recent.length > 0 ? (
+        <section className="history-results-block">
+          <div className="section-heading compact-heading">
+            <div>
+              <p className="eyebrow">DISPLAYED COMBOS</p>
+              <h2>Recent recommendation outcomes</h2>
+            </div>
+            <span className="empty-status">
+              {state.comboPerformance.recent.length} RECENT
+            </span>
+          </div>
+
+          <div className="result-list">
+            {state.comboPerformance.recent.map((combo) => (
+              <article className="result-card" key={combo.id}>
+                <div className="result-meta">
+                  <span>{combo.riskMode}</span>
+                  <span>{combo.legCount} LEGS</span>
+                  <span>{resultTime(combo.createdAt)}</span>
+                </div>
+                <div className="result-match">
+                  <div>
+                    <strong>
+                      {combo.actualOdds === null
+                        ? "—"
+                        : `${combo.actualOdds.toFixed(2)}x`}
+                    </strong>
+                    <span>
+                      TARGET {combo.targetOdds === null ? "—" : `${combo.targetOdds.toFixed(0)}x`}
+                    </span>
+                  </div>
+                  <b className="result-score">{combo.outcome}</b>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {state.recentResults.length > 0 ? (
         <section className="history-results-block">
