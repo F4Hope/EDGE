@@ -106,3 +106,18 @@ test("odds sync separates free event discovery breadth from the paid sport-key c
   assert.match(syncSource, /maxEventSportKeys \?\? options\.maxSportKeys/);
   assert.match(syncSource, /eligibleSportKeys\.slice\(0, options\.maxSportKeys\)/);
 });
+
+
+test("normal refresh replenishes rolling Combo odds with a bounded API-Sports budget", async () => {
+  const source = await readFile("scripts/refresh-data.ts", "utf8");
+
+  assert.match(source, /Rolling Combo odds refresh/);
+  assert.match(source, /analysis:refresh/);
+  assert.match(source, /--max-requests=4/);
+  assert.match(source, /--hours=24/);
+
+  const rollingIndex = source.indexOf("Rolling Combo odds refresh");
+  const featureIndex = source.indexOf("Recalculating transparent feature snapshots");
+  assert.ok(rollingIndex >= 0);
+  assert.ok(featureIndex > rollingIndex);
+});

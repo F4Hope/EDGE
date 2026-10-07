@@ -197,6 +197,17 @@ function main() {
     );
   }
 
+  if (apiSports) {
+    console.log(
+      "Refreshing a bounded rolling set of nearest unpriced football markets for Combo continuity...",
+    );
+    runBestEffort(
+      "analysis:refresh",
+      ["--max-requests=4", "--hours=24"],
+      "Rolling Combo odds refresh",
+    );
+  }
+
   if (includeOdds) {
     if (!oddsApi) {
       throw new Error(
