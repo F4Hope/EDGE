@@ -1,6 +1,10 @@
-import { resolveSelectionOutcome } from "@/lib/results/selectionOutcomes";
+import {
+  predictionSelectionName,
+  resolveSelectionOutcome,
+} from "@/lib/results/selectionOutcomes";
 
 export type DisplayedComboOutcome = "WIN" | "LOSS" | "PENDING" | "VOID";
+export type DisplayedComboLegOutcome = DisplayedComboOutcome;
 
 export type DisplayedComboPerformanceRow = {
   id: string;
@@ -30,6 +34,14 @@ export type DisplayedComboPerformanceRow = {
   }>;
 };
 
+export type DisplayedComboLegPerformance = {
+  position: number;
+  marketKey: string;
+  selectionName: string;
+  matchup: string;
+  outcome: DisplayedComboLegOutcome;
+};
+
 export type DisplayedComboPerformanceItem = {
   id: string;
   targetOdds: number | null;
@@ -38,6 +50,13 @@ export type DisplayedComboPerformanceItem = {
   createdAt: string;
   legCount: number;
   outcome: DisplayedComboOutcome;
+  legs: DisplayedComboLegPerformance[];
+  failedLegs: DisplayedComboLegPerformance[];
+};
+
+export type DisplayedComboMarketFailure = {
+  marketKey: string;
+  losses: number;
 };
 
 export type DisplayedComboPerformance = {
@@ -48,49 +67,69 @@ export type DisplayedComboPerformance = {
   pending: number;
   voided: number;
   hitRate: number | null;
+  failureByMarket: DisplayedComboMarketFailure[];
   recent: DisplayedComboPerformanceItem[];
 };
 
-function comboOutcome(row: DisplayedComboPerformanceRow): DisplayedComboOutcome {
-  if (row.selections.length < 2) return "PENDING";
+function participantNames(
+  row: DisplayedComboPerformanceRow["selections"][number],
+): { home: string | null; away: string | null } {
+  const event = row.selection.prediction.event;
+  return {
+    home: event.homeTeam?.name ?? event.homePlayer?.fullName ?? null,
+    away: event.awayTeam?.name ?? event.awayPlayer?.fullName ?? null,
+  };
+}
 
-  let hasPending = false;
-  let hasVoid = false;
+function matchupLabel(
+  participants: { home: string | null; away: string | null },
+): string {
+  return `${participants.home ?? "Unknown"} vs ${participants.away ?? "Unknown"}`;
+}
 
-  for (const comboSelection of row.selections) {
-    const prediction = comboSelection.selection.prediction;
-    const event = prediction.event;
-    const result = event.result;
+function legOutcome(
+  comboSelection: DisplayedComboPerformanceRow["selections"][number],
+): DisplayedComboLegPerformance {
+  const prediction = comboSelection.selection.prediction;
+  const event = prediction.event;
+  const result = event.result;
+  const participants = participantNames(comboSelection);
+  const selectionName =
+    predictionSelectionName(prediction.explanation) ?? prediction.selectionKey;
 
-    if (!result || result.status === "PENDING") {
-      hasPending = true;
-      continue;
-    }
+  let outcome: DisplayedComboLegOutcome = "PENDING";
 
-    if (result.status === "VOID") {
-      hasVoid = true;
-      continue;
-    }
-
-    const outcome = resolveSelectionOutcome(
+  if (result?.status === "VOID") {
+    outcome = "VOID";
+  } else if (result?.status === "FINAL") {
+    const resolved = resolveSelectionOutcome(
       result.payload,
       {
         selectionKey: prediction.selectionKey,
         explanation: prediction.explanation,
         market: { key: prediction.market.key },
       },
-      {
-        home: event.homeTeam?.name ?? event.homePlayer?.fullName ?? null,
-        away: event.awayTeam?.name ?? event.awayPlayer?.fullName ?? null,
-      },
+      participants,
     );
-
-    if (outcome === 0) return "LOSS";
-    if (outcome === null) hasPending = true;
+    outcome = resolved === 1 ? "WIN" : resolved === 0 ? "LOSS" : "PENDING";
   }
 
-  if (hasPending) return "PENDING";
-  if (hasVoid) return "VOID";
+  return {
+    position: comboSelection.position,
+    marketKey: prediction.market.key,
+    selectionName,
+    matchup: matchupLabel(participants),
+    outcome,
+  };
+}
+
+function comboOutcome(
+  legs: DisplayedComboLegPerformance[],
+): DisplayedComboOutcome {
+  if (legs.length < 2) return "PENDING";
+  if (legs.some((leg) => leg.outcome === "LOSS")) return "LOSS";
+  if (legs.some((leg) => leg.outcome === "PENDING")) return "PENDING";
+  if (legs.some((leg) => leg.outcome === "VOID")) return "VOID";
   return "WIN";
 }
 
@@ -98,21 +137,46 @@ export function calculateDisplayedComboPerformance(
   rows: DisplayedComboPerformanceRow[],
   recentLimit = 10,
 ): DisplayedComboPerformance {
-  const evaluated = rows.map((row) => ({
-    id: row.id,
-    targetOdds: row.targetOdds,
-    actualOdds: row.actualOdds,
-    riskMode: row.riskMode,
-    createdAt: row.createdAt.toISOString(),
-    legCount: row.selections.length,
-    outcome: comboOutcome(row),
-  }));
+  const evaluated = rows.map((row) => {
+    const legs = row.selections.map(legOutcome);
+    return {
+      id: row.id,
+      targetOdds: row.targetOdds,
+      actualOdds: row.actualOdds,
+      riskMode: row.riskMode,
+      createdAt: row.createdAt.toISOString(),
+      legCount: row.selections.length,
+      outcome: comboOutcome(legs),
+      legs,
+      failedLegs: legs.filter((leg) => leg.outcome === "LOSS"),
+    };
+  });
 
   const wins = evaluated.filter((row) => row.outcome === "WIN").length;
   const losses = evaluated.filter((row) => row.outcome === "LOSS").length;
   const pending = evaluated.filter((row) => row.outcome === "PENDING").length;
   const voided = evaluated.filter((row) => row.outcome === "VOID").length;
   const settled = wins + losses;
+
+  const marketLosses = new Map<string, number>();
+  for (const combo of evaluated) {
+    for (const leg of combo.failedLegs) {
+      marketLosses.set(
+        leg.marketKey,
+        (marketLosses.get(leg.marketKey) ?? 0) + 1,
+      );
+    }
+  }
+
+  const failureByMarket = [...marketLosses.entries()]
+    .map(([marketKey, marketLossCount]) => ({
+      marketKey,
+      losses: marketLossCount,
+    }))
+    .sort(
+      (a, b) =>
+        b.losses - a.losses || a.marketKey.localeCompare(b.marketKey),
+    );
 
   return {
     displayed: evaluated.length,
@@ -122,6 +186,7 @@ export function calculateDisplayedComboPerformance(
     pending,
     voided,
     hitRate: settled > 0 ? wins / settled : null,
+    failureByMarket,
     recent: evaluated.slice(0, Math.max(0, recentLimit)),
   };
 }
