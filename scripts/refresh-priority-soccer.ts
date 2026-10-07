@@ -114,13 +114,21 @@ function main() {
     "--to=" + to,
     "--sport-keys=" + pricedKeys.join(","),
     "--max-sport-keys=" + String(pricedKeys.length),
+    "--event-max-sport-keys=" + String(prioritySoccerEventKeys.length),
   ]);
 
   console.log("Recalculating seven-day football features...");
-  run("features:calculate", ["--sports=football", "--hours=" + String(hours)]);
+  run("features:calculate", [
+    "--sports=football",
+    "--hours=" + String(hours),
+    "--limit=1000",
+  ]);
 
   console.log("Regenerating seven-day priced predictions...");
-  run("predictions:generate", ["--hours=" + String(hours)]);
+  run("predictions:generate", [
+    "--hours=" + String(hours),
+    "--limit=500",
+  ]);
 
   console.log("Running readiness check...");
   run("doctor");

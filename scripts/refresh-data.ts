@@ -225,10 +225,10 @@ function main() {
   }
 
   console.log("Recalculating transparent feature snapshots...");
-  run("features:calculate", ["--sports=all"]);
+  run("features:calculate", ["--sports=all", "--limit=1000"]);
 
   console.log("Generating Phase 7 market-evidence predictions...");
-  run("predictions:generate");
+  run("predictions:generate", ["--limit=500"]);
 
   console.log("Running system readiness check...");
   run("doctor");

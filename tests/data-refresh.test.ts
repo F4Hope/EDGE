@@ -86,6 +86,20 @@ test("priority soccer worker caps paid pricing to H2H on the once-daily path", a
   assert.match(source, /dailyPrioritySoccerOddsKeys/);
   assert.match(source, /--markets=h2h/);
   assert.match(source, /ODDS_PRIORITY_MAX_SPORT_KEYS/);
+  assert.match(source, /--event-max-sport-keys=/);
+  assert.match(source, /--limit=1000/);
+  assert.match(source, /--limit=500/);
   assert.match(source, /features:calculate/);
   assert.match(source, /predictions:generate/);
+});
+
+
+test("odds sync separates free event discovery breadth from the paid sport-key cap", async () => {
+  const source = await readFile("scripts/sync-odds.ts", "utf8");
+  const syncSource = await readFile("lib/data/syncOdds.ts", "utf8");
+
+  assert.match(source, /event-max-sport-keys/);
+  assert.match(source, /maxEventSportKeys/);
+  assert.match(syncSource, /maxEventSportKeys \?\? options\.maxSportKeys/);
+  assert.match(syncSource, /eligibleSportKeys\.slice\(0, options\.maxSportKeys\)/);
 });

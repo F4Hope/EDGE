@@ -27,6 +27,7 @@ export type OddsSyncOptions = {
   regions: string[];
   markets: FeaturedMarketKey[];
   maxSportKeys: number;
+  maxEventSportKeys?: number;
   allowedSportKeys?: string[];
 };
 
@@ -175,7 +176,7 @@ export async function syncOddsSnapshots(
     from,
     to,
     sourceSportKeys: options.allowedSportKeys,
-    maxSourceSportKeys: options.maxSportKeys,
+    maxSourceSportKeys: options.maxEventSportKeys ?? options.maxSportKeys,
   });
   const uniqueDiscovered = [
     ...new Map(discovered.map((event) => [event.providerId, event])).values(),
@@ -201,9 +202,10 @@ export async function syncOddsSnapshots(
   const allowed = options.allowedSportKeys?.length
     ? new Set(options.allowedSportKeys)
     : null;
-  const sportKeys = allowed
+  const eligibleSportKeys = allowed
     ? discoveredKeys.filter((key) => allowed.has(key))
     : discoveredKeys;
+  const sportKeys = eligibleSportKeys.slice(0, options.maxSportKeys);
 
   if (sportKeys.length === 0) {
     return {
@@ -219,12 +221,6 @@ export async function syncOddsSnapshots(
       snapshotsInserted: 0,
       snapshotsReused: 0,
     };
-  }
-
-  if (sportKeys.length > options.maxSportKeys) {
-    throw new Error(
-      `Odds sync discovered ${sportKeys.length} active sport keys for ${sport}, above the safety limit of ${options.maxSportKeys}. Narrow --sport-keys, the date window, or raise ODDS_SYNC_MAX_SPORT_KEYS deliberately.`,
-    );
   }
 
   const fetched = await provider.getOdds({

@@ -108,6 +108,9 @@ async function main() {
     getArg("sport-keys") ?? process.env.ODDS_API_SPORT_KEYS,
   );
   const maxSportKeys = parseMaxSportKeys(getArg("max-sport-keys"));
+  const maxEventSportKeys = parseMaxSportKeys(
+    getArg("event-max-sport-keys") ?? String(maxSportKeys),
+  );
 
   if (regions.length === 0) {
     throw new Error("At least one Odds API region is required.");
@@ -132,6 +135,7 @@ async function main() {
               regions,
               markets,
               maxSportKeys,
+              maxEventSportKeys,
               allowedSportKeys:
                 allowedSportKeys.length > 0 ? allowedSportKeys : undefined,
             },
@@ -141,6 +145,8 @@ async function main() {
           snapshotsReused: value.snapshotsReused,
           oddsEvents: value.oddsEvents,
           sportKeys: value.sportKeys,
+          maxSportKeys,
+          maxEventSportKeys,
           quota: value.quota,
         }),
       });
