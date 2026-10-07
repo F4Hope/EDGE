@@ -5,6 +5,38 @@ import {
 } from "@/lib/providers/types";
 
 export const MIN_MODEL_MARKET_LIFT = 0.0025;
+export const OPPORTUNITY_MARKETS = [
+  "h2h",
+  "totals",
+  "spreads",
+  "double_chance",
+] as const;
+
+function clamp01(value: number): number {
+  return Math.max(0, Math.min(1, value));
+}
+
+export function calculateOpportunityScore(input: {
+  dataQuality: number;
+  modelAgreement: number;
+  modelLift: number;
+  estimatedValue: number;
+  evidenceSupport: number;
+}): number {
+  const quality = clamp01(input.dataQuality);
+  const agreement = clamp01(input.modelAgreement);
+  const lift = clamp01(Math.abs(input.modelLift) / 0.08);
+  const value = clamp01(Math.max(0, input.estimatedValue) / 0.15);
+  const evidence = clamp01(input.evidenceSupport / 0.15);
+
+  return Math.round(
+    quality * 30 +
+      agreement * 20 +
+      lift * 20 +
+      value * 20 +
+      evidence * 10,
+  );
+}
 
 export type UiOpportunity = {
   predictionId: string;
@@ -15,12 +47,15 @@ export type UiOpportunity = {
   home: string | null;
   away: string | null;
   startsAt: string;
+  marketKey: string;
+  point: number | null;
   selectionName: string;
   modelVersion: string;
   modelProbability: number;
   marketProbability: number;
   modelLift: number;
   evidenceSupport: number;
+  edgeScore: number;
   bestDecimalOdds: number;
   estimatedEdge: number | null;
   estimatedValue: number;
@@ -112,6 +147,7 @@ export function compareOpportunityPriority(
   return (
     statusRank(b.status) - statusRank(a.status) ||
     riskRank(b.risk) - riskRank(a.risk) ||
+    b.edgeScore - a.edgeScore ||
     Math.abs(b.modelLift) - Math.abs(a.modelLift) ||
     b.estimatedValue - a.estimatedValue ||
     b.modelAgreement - a.modelAgreement ||
@@ -146,7 +182,7 @@ export async function getUiOpportunities(options?: {
   limit?: number;
 }): Promise<UiOpportunityState> {
   const now = new Date();
-  const hours = Math.min(24 * 14, Math.max(1, options?.hours ?? 72));
+  const hours = Math.min(24 * 14, Math.max(1, options?.hours ?? 168));
   const limit = Math.min(50, Math.max(1, options?.limit ?? 20));
   const to = new Date(now.getTime() + hours * 60 * 60 * 1000);
 
@@ -165,7 +201,7 @@ export async function getUiOpportunities(options?: {
           ...(options?.sport ? { sport: { key: options.sport } } : {}),
         },
         market: {
-          key: "h2h",
+          key: { in: [...OPPORTUNITY_MARKETS] },
           status: "OPEN",
         },
         modelRun: {
@@ -187,7 +223,7 @@ export async function getUiOpportunities(options?: {
             awayPlayer: { select: { fullName: true } },
           },
         },
-        market: { select: { id: true } },
+        market: { select: { id: true, key: true } },
         modelRun: { select: { modelVersion: true } },
       },
     });
@@ -211,6 +247,7 @@ export async function getUiOpportunities(options?: {
       const bestDecimalOdds = numberValue(explanation?.bestDecimalOdds);
       const marketProbability = numberValue(explanation?.marketProbability);
       const bookmakerCount = numberValue(explanation?.bookmakerCount);
+      const point = numberValue(explanation?.point);
       const modelProbability = Number(row.modelProbability);
       const estimatedValue =
         row.estimatedValue === null ? null : Number(row.estimatedValue);
@@ -241,6 +278,13 @@ export async function getUiOpportunities(options?: {
       }
 
       const modelLift = modelProbability - marketProbability!;
+      const edgeScore = calculateOpportunityScore({
+        dataQuality,
+        modelAgreement,
+        modelLift,
+        estimatedValue,
+        evidenceSupport,
+      });
 
       candidates.push({
         predictionId: row.id,
@@ -253,12 +297,15 @@ export async function getUiOpportunities(options?: {
         away:
           row.event.awayTeam?.name ?? row.event.awayPlayer?.fullName ?? null,
         startsAt: row.event.startTime.toISOString(),
+        marketKey: row.market.key,
+        point,
         selectionName,
         modelVersion: row.modelRun.modelVersion,
         modelProbability,
         marketProbability: marketProbability!,
         modelLift,
         evidenceSupport,
+        edgeScore,
         bestDecimalOdds,
         estimatedEdge:
           row.estimatedEdge === null ? null : Number(row.estimatedEdge),
@@ -281,7 +328,7 @@ export async function getUiOpportunities(options?: {
       available: true,
       message:
         opportunities.length === 0
-          ? "No future model output currently combines independent historical evidence with sufficient model-market separation and the remaining opportunity gates."
+          ? "No future priced model output currently combines independent historical evidence with sufficient model-market separation and the remaining opportunity gates."
           : null,
       qualifiedPredictions: candidates.length,
     };

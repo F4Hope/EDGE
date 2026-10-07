@@ -37,7 +37,7 @@ export default async function OpportunitiesPage({
   const sport = parseSport(first(params.sport));
   const state = await getUiOpportunities({
     sport,
-    hours: 72,
+    hours: 168,
     limit: 30,
   });
 
@@ -50,7 +50,7 @@ export default async function OpportunitiesPage({
       <ScreenHeader
         eyebrow="RANKED INTELLIGENCE"
         title="Opportunities"
-        description="Future model outputs are ranked only when historical evidence moves EDGE away from the market baseline. Pure market mirrors are excluded from the model watchlist."
+        description="Seven-day priced model outputs are ranked only when independent evidence moves EDGE away from the market baseline. Match winner, totals, handicap and double-chance markets can qualify."
         action={
           <span
             className={
@@ -106,13 +106,13 @@ export default async function OpportunitiesPage({
         <span className="empty-status">OPPORTUNITY GATES</span>
         <div className="data-ladder">
           <div className="ladder-row ready">
-            <span>01</span><strong>EVENT + H2H ODDS</strong><em>REQUIRED</em>
+            <span>01</span><strong>EVENT + PRICED MARKET</strong><em>H2H / TOTAL / DC / SPREAD</em>
           </div>
           <div className="ladder-row ready">
             <span>02</span><strong>FEATURE VECTOR</strong><em>≥ 50% QUALITY</em>
           </div>
           <div className="ladder-row">
-            <span>03</span><strong>HISTORICAL EVIDENCE</strong><em>FORM / H2H / REST</em>
+            <span>03</span><strong>HISTORICAL EVIDENCE</strong><em>FORM / H2H / REST / SCORING</em>
           </div>
           <div className="ladder-row">
             <span>04</span><strong>MODEL VS MARKET</strong><em>≥ 0.25 PP LIFT</em>
@@ -121,7 +121,7 @@ export default async function OpportunitiesPage({
             <span>05</span><strong>ESTIMATED VALUE</strong><em>POSITIVE</em>
           </div>
           <div className="ladder-row">
-            <span>06</span><strong>BETPAWA CHECK</strong><em>UNCONFIRMED</em>
+            <span>06</span><strong>MULTI-BOOK ODDS</strong><em>BEST STORED PRICE</em>
           </div>
         </div>
       </section>
@@ -155,8 +155,9 @@ export default async function OpportunitiesPage({
               ))}
             </div>
             <p className="opportunity-methodology">
-              Ranking requires nonzero historical evidence and measurable model
-              separation from the market. After that gate, order is model status,
+              Ranking requires a real stored price, nonzero independent evidence
+              and measurable model separation from the market across supported
+              featured markets. After that gate, order is model status,
               lower risk, larger model lift, estimated value, agreement, data
               quality, then model probability. One selection is shown per event.
               BETTABLE remains disabled until settled forward validation beats the
@@ -173,7 +174,7 @@ export default async function OpportunitiesPage({
             }
             description={
               state.message ??
-              "EDGE needs future H2H odds plus historical form, H2H, or rest evidence that moves the model away from the market before it will rank an opportunity."
+              "EDGE needs a future priced featured market plus independent form, H2H, rest, or scoring evidence that moves the model away from the market before it will rank an opportunity."
             }
             action={
               <Link className="secondary-link" href="/events">

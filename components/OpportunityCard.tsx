@@ -16,6 +16,29 @@ function signedPercent(value: number): string {
   return `${prefix}${(value * 100).toFixed(1)}%`;
 }
 
+function marketLabel(key: string): string {
+  if (key === "h2h") return "MATCH WINNER";
+  if (key === "totals") return "TOTAL";
+  if (key === "spreads") return "HANDICAP";
+  if (key === "double_chance") return "DOUBLE CHANCE";
+  return key.replaceAll("_", " ").toUpperCase();
+}
+
+function selectionLabel(opportunity: UiOpportunity): string {
+  if (opportunity.point === null || !Number.isFinite(opportunity.point)) {
+    return opportunity.selectionName;
+  }
+  if (opportunity.selectionName.includes(String(opportunity.point))) {
+    return opportunity.selectionName;
+  }
+  if (opportunity.marketKey === "spreads") {
+    const point =
+      opportunity.point > 0 ? `+${opportunity.point}` : String(opportunity.point);
+    return `${opportunity.selectionName} ${point}`;
+  }
+  return `${opportunity.selectionName} ${opportunity.point}`;
+}
+
 function formatStart(iso: string): string {
   return new Intl.DateTimeFormat("en", {
     month: "short",
@@ -67,8 +90,10 @@ export function OpportunityCard({
       </div>
 
       <div className="opportunity-selection">
-        <span>MODEL SELECTION</span>
-        <strong>{opportunity.selectionName}</strong>
+        <span>
+          {marketLabel(opportunity.marketKey)} · EDGE {opportunity.edgeScore}/100
+        </span>
+        <strong>{selectionLabel(opportunity)}</strong>
         <b>{opportunity.bestDecimalOdds.toFixed(2)}</b>
       </div>
 
