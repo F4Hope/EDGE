@@ -288,7 +288,7 @@ export class OddsApiProvider implements DataProvider, OddsProvider, ResultProvid
   }
 
   supportsResults(sport: SupportedSport): boolean {
-    return sport === "tennis";
+    return sport === "football" || sport === "basketball" || sport === "tennis";
   }
 
   async getEvents(query: EventQuery): Promise<ProviderEvent[]> {
@@ -393,7 +393,7 @@ export class OddsApiProvider implements DataProvider, OddsProvider, ResultProvid
   async getResults(query: ResultQuery): Promise<ProviderResult[]> {
     if (!this.supportsResults(query.sport)) {
       throw new Error(
-        "The Odds API result adapter currently supports tennis only.",
+        "The Odds API result adapter does not support this sport.",
       );
     }
 
