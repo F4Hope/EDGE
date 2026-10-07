@@ -198,3 +198,24 @@ test("best picks has a dedicated visible route and remains visible when empty", 
   assert.doesNotMatch(picks, /groups\.length === 0\) return null/);
   assert.match(nav, /path\.startsWith\("\/best-picks"\)/);
 });
+
+
+test("Combo Pick route and visual participant refresh are wired into the app", async () => {
+  const [page, eventCard, opportunityCard, bestPicks, nav, css] = await Promise.all([
+    readFile("app/combo-pick/page.tsx", "utf8"),
+    readFile("components/EventCard.tsx", "utf8"),
+    readFile("components/OpportunityCard.tsx", "utf8"),
+    readFile("components/LeagueBestPicks.tsx", "utf8"),
+    readFile("components/BottomNav.tsx", "utf8"),
+    readFile("app/globals.css", "utf8"),
+  ]);
+
+  assert.match(page, /READY-TO-READ TICKET/);
+  assert.match(eventCard, /ParticipantBadge/);
+  assert.match(opportunityCard, /ParticipantBadge/);
+  assert.match(bestPicks, /ParticipantBadge/);
+  assert.match(nav, /path\.startsWith\("\/combo-pick"\)/);
+  assert.match(css, /EDGE visual refresh/);
+  assert.match(css, /--edge-blue: #2979ff/);
+  assert.match(css, /\.participant-badge/);
+});

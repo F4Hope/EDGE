@@ -706,3 +706,35 @@ test("rolling Combo refresh looks farther ahead while keeping provider calls bou
   assert.match(source, /COMBO_REFRESH_MAX_ODDS_REQUESTS,[\s\S]*3,[\s\S]*12/);
   assert.match(source, /COMBO_REFRESH_ODDS_HOURS,[\s\S]*48,[\s\S]*72/);
 });
+
+
+test("standalone Combo Pick page exposes stake return refresh and participant visuals", async () => {
+  const [page, card, visual] = await Promise.all([
+    readFile("app/combo-pick/page.tsx", "utf8"),
+    readFile("components/ComboPickCard.tsx", "utf8"),
+    readFile("components/ParticipantBadge.tsx", "utf8"),
+  ]);
+
+  assert.match(page, /Today’s Combo Pick/);
+  assert.match(page, /ComboPickCard/);
+  assert.match(card, /BET AMOUNT/);
+  assert.match(card, /POTENTIAL RETURN/);
+  assert.match(card, /REFRESH COMBO/);
+  assert.match(card, /5 \* 60 \* 1000/);
+  assert.match(card, /ParticipantBadge/);
+  assert.match(visual, /participantLogoUrl/);
+  assert.match(visual, /participant-flag/);
+});
+
+test("Combo candidates carry participant provider metadata for logos and flags", async () => {
+  const [loader, engine] = await Promise.all([
+    readFile("lib/data/uiCombos.ts", "utf8"),
+    readFile("lib/combo/engine.ts", "utf8"),
+  ]);
+
+  assert.match(loader, /homeParticipant: participantVisual/);
+  assert.match(loader, /externalId: true/);
+  assert.match(loader, /provider: true/);
+  assert.match(engine, /homeParticipant\?: ParticipantVisual/);
+  assert.match(engine, /awayParticipant\?: ParticipantVisual/);
+});
