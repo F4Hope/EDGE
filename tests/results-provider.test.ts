@@ -164,7 +164,7 @@ test("Odds API score sync accepts bounded football and basketball scopes", async
   const source = await readFile("scripts/sync-odds-results.ts", "utf8");
   assert.match(source, /football/);
   assert.match(source, /basketball/);
-  assert.match(source, /--sports/);
+  assert.match(source, /getArg\("sports"\)/);
   assert.match(source, /sourceSportKey/);
   assert.match(source, /maxSportKeys/);
 });
