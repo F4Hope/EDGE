@@ -47,8 +47,6 @@ export function LeagueBestPicks({
 }: {
   groups: UiLeagueBestPicks[];
 }) {
-  if (groups.length === 0) return null;
-
   return (
     <section
       className="best-picks-section"
@@ -68,7 +66,16 @@ export function LeagueBestPicks({
       </p>
 
       <div className="league-best-picks-list">
-        {groups.map((group) => (
+        {groups.length === 0 ? (
+          <article className="league-best-picks-empty">
+            <strong>No league has a qualified best pick yet.</strong>
+            <p>
+              The section stays visible while EDGE waits for a priced market,
+              sufficient independent evidence, positive estimated value and the
+              remaining opportunity gates.
+            </p>
+          </article>
+        ) : groups.map((group) => (
           <article className="league-best-picks-card" key={group.key}>
             <header className="league-best-picks-head">
               <div>

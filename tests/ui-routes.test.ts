@@ -7,6 +7,7 @@ const requiredRoutes = [
   "app/events/page.tsx",
   "app/analysis/[eventId]/page.tsx",
   "app/opportunities/page.tsx",
+  "app/best-picks/page.tsx",
   "app/combos/page.tsx",
   "app/history/page.tsx",
   "app/model/page.tsx",
@@ -180,4 +181,20 @@ test("picks page exposes best picks grouped by league", async () => {
   assert.match(component, /up to three distinct qualified games per league/i);
   assert.match(data, /rankBestPicksByLeague/);
   assert.match(data, /cappedPerLeague/);
+});
+
+
+test("best picks has a dedicated visible route and remains visible when empty", async () => {
+  const [page, picks, nav] = await Promise.all([
+    readFile("app/best-picks/page.tsx", "utf8"),
+    readFile("components/LeagueBestPicks.tsx", "utf8"),
+    readFile("components/BottomNav.tsx", "utf8"),
+  ]);
+
+  assert.match(page, /Best picks by league/);
+  assert.match(page, /Maximum three per league/);
+  assert.match(page, /href="\/opportunities"/);
+  assert.match(picks, /No league has a qualified best pick yet/);
+  assert.doesNotMatch(picks, /groups\.length === 0\) return null/);
+  assert.match(nav, /path\.startsWith\("\/best-picks"\)/);
 });

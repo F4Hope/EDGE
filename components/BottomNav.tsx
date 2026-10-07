@@ -44,7 +44,10 @@ const items: Array<{
     label: "Picks",
     href: "/opportunities",
     icon: "picks",
-    matches: (path) => path.startsWith("/opportunities") || path.startsWith("/analysis"),
+    matches: (path) =>
+      path.startsWith("/opportunities") ||
+      path.startsWith("/best-picks") ||
+      path.startsWith("/analysis"),
   },
   { label: "Combos", href: "/combos", icon: "combos", matches: (path) => path.startsWith("/combos") },
   { label: "History", href: "/history", icon: "history", matches: (path) => path.startsWith("/history") },

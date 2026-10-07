@@ -68,6 +68,9 @@ export default async function OpportunitiesPage({
       />
 
       <div className="filter-rail" aria-label="Opportunity filters">
+        <Link className="filter-chip" href="/best-picks">
+          BEST PICKS
+        </Link>
         <Link
           className={!sport ? "filter-chip active" : "filter-chip"}
           href={opportunitiesHref()}
