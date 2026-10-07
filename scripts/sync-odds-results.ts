@@ -2,6 +2,7 @@ import dotenv from "dotenv";
 import { getDb } from "../lib/prisma";
 import { syncProviderResults } from "../lib/data/syncResults";
 import { OddsApiProvider } from "../lib/providers/oddsApi";
+import type { SupportedSport } from "../lib/providers/types";
 import {
   checkpointScope,
   withSyncCheckpoint,
@@ -28,14 +29,37 @@ function boundedInt(
   return parsed;
 }
 
+function parseSports(value: string | undefined): SupportedSport[] {
+  const allowed: SupportedSport[] = ["football", "basketball", "tennis"];
+  if (!value || value === "all") return [...allowed];
+
+  const requested = value
+    .split(",")
+    .map((sport) => sport.trim().toLowerCase())
+    .filter(Boolean);
+
+  const invalid = requested.filter(
+    (sport) => !allowed.includes(sport as SupportedSport),
+  );
+  if (invalid.length > 0) {
+    throw new Error(
+      "Odds API result sync supports football,basketball,tennis only. Unsupported: " +
+        invalid.join(", "),
+    );
+  }
+
+  return [...new Set(requested)] as SupportedSport[];
+}
+
 async function main() {
   const apiKey = process.env.ODDS_API_KEY;
   if (!apiKey) {
     throw new Error(
-      "ODDS_API_KEY is not configured. Tennis score synchronization is quota-sensitive and requires explicit configuration.",
+      "ODDS_API_KEY is not configured. Score synchronization is quota-sensitive and requires explicit configuration.",
     );
   }
 
+  const sports = parseSports(getArg("sports"));
   const days = boundedInt(getArg("days"), 3, 1, 3, "--days");
   const maxSportKeys = boundedInt(
     getArg("max-sport-keys") ?? process.env.ODDS_RESULT_MAX_SPORT_KEYS,
@@ -51,72 +75,73 @@ async function main() {
   const provider = new OddsApiProvider(apiKey);
 
   try {
-    const rows = await db.eventSource.findMany({
-      where: {
-        provider: provider.name,
-        sourceSportKey: { not: null },
-        event: {
-          sport: { key: "tennis" },
-          startTime: { gte: from, lte: to },
+    for (const sport of sports) {
+      const rows = await db.eventSource.findMany({
+        where: {
+          provider: provider.name,
+          sourceSportKey: { not: null },
+          event: {
+            sport: { key: sport },
+            startTime: { gte: from, lte: to },
+          },
         },
-      },
-      select: {
-        sourceSportKey: true,
-        updatedAt: true,
-      },
-      orderBy: { updatedAt: "desc" },
-      take: 250,
-    });
+        select: {
+          sourceSportKey: true,
+          updatedAt: true,
+        },
+        orderBy: { updatedAt: "desc" },
+        take: 250,
+      });
 
-    const sourceSportKeys = [
-      ...new Set(
-        rows
-          .map((row) => row.sourceSportKey?.trim())
-          .filter((key): key is string => Boolean(key)),
-      ),
-    ].slice(0, maxSportKeys);
+      const sourceSportKeys = [
+        ...new Set(
+          rows
+            .map((row) => row.sourceSportKey?.trim())
+            .filter((key): key is string => Boolean(key)),
+        ),
+      ].slice(0, maxSportKeys);
 
-    if (sourceSportKeys.length === 0) {
-      console.log(
-        "No recent stored Odds API tennis sport keys are available for score synchronization.",
-      );
-      return;
-    }
+      if (sourceSportKeys.length === 0) {
+        console.log(
+          "No recent stored Odds API " +
+            sport +
+            " sport keys are available for score synchronization.",
+        );
+        continue;
+      }
 
-    console.log(
-      "Refreshing recent tennis scores from The Odds API.",
-      {
+      console.log("Refreshing recent " + sport + " scores from The Odds API.", {
         days,
         sportKeys: sourceSportKeys.length,
         maxSportKeys,
         quotaNote:
-          "Completed-score requests cost provider credits; this command is never run by the default refresh path.",
-      },
-    );
+          "Completed-score requests cost provider credits; keep sport-key scope bounded.",
+      });
 
-    const summary = await withSyncCheckpoint(db, {
-      provider: provider.name,
-      scope: checkpointScope("results", "tennis"),
-      work: () =>
-        syncProviderResults(db, provider, "tennis", from, to, {
+      const summary = await withSyncCheckpoint(db, {
+        provider: provider.name,
+        scope: checkpointScope("results", sport),
+        work: () =>
+          syncProviderResults(db, provider, sport, from, to, {
+            sourceSportKeys,
+            maxSourceSportKeys: maxSportKeys,
+          }),
+        metadata: (value) => ({
+          ...value,
+          days,
           sourceSportKeys,
-          maxSourceSportKeys: maxSportKeys,
         }),
-      metadata: (value) => ({
-        ...value,
-        days,
-        sourceSportKeys,
-      }),
-    });
+      });
 
-    console.log("Tennis score sync complete.", summary);
+      console.log("Odds API score sync complete.", summary);
+    }
   } finally {
     await db.$disconnect();
   }
 }
 
 main().catch((error) => {
-  console.error("EDGE Odds API tennis score synchronization failed.");
+  console.error("EDGE Odds API score synchronization failed.");
   console.error(error instanceof Error ? error.message : error);
   process.exitCode = 1;
 });
