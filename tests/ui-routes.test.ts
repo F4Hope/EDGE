@@ -155,3 +155,14 @@ test("history shows measured displayed Combo performance", async () => {
   assert.match(data, /calculateDisplayedComboPerformance/);
   assert.match(data, /db\.combo\.findMany/);
 });
+
+
+test("history explains failed Combo legs and market failure patterns", async () => {
+  const page = await readFile("app/history/page.tsx", "utf8");
+
+  assert.match(page, /FAILURE PATTERNS/);
+  assert.match(page, /Which markets broke displayed Combos/);
+  assert.match(page, /FAILED ·/);
+  assert.match(page, /failedLegs/);
+  assert.match(page, /failureByMarket/);
+});

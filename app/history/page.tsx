@@ -10,6 +10,10 @@ function pct(value: number | null): string {
   return value === null ? "—" : `${(value * 100).toFixed(1)}%`;
 }
 
+function marketLabel(value: string): string {
+  return value.replaceAll("_", " ").toUpperCase();
+}
+
 function resultTime(value: string): string {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
@@ -137,9 +141,35 @@ export default async function HistoryPage() {
                   </div>
                   <b className="result-score">{combo.outcome}</b>
                 </div>
+
+                {combo.failedLegs.length > 0 ? (
+                  <div className="result-meta">
+                    {combo.failedLegs.map((leg) => (
+                      <span key={`${combo.id}:${leg.position}`}>
+                        FAILED · {marketLabel(leg.marketKey)} · {leg.selectionName} ·{" "}
+                        {leg.matchup}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
               </article>
             ))}
           </div>
+        </section>
+      ) : null}
+
+      {state.comboPerformance.failureByMarket.length > 0 ? (
+        <section className="security-note">
+          <span className="empty-status">FAILURE PATTERNS</span>
+          <h2>Which markets broke displayed Combos</h2>
+          <p>
+            {state.comboPerformance.failureByMarket
+              .map(
+                (row) =>
+                  `${marketLabel(row.marketKey)}: ${row.losses} losing leg${row.losses === 1 ? "" : "s"}`,
+              )
+              .join(" · ")}
+          </p>
         </section>
       ) : null}
 

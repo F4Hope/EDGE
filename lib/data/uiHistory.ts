@@ -238,6 +238,7 @@ export async function getUiHistory(): Promise<UiHistoryState> {
         pending: 0,
         voided: 0,
         hitRate: null,
+        failureByMarket: [],
         recent: [],
       },
       available: false,

@@ -64,6 +64,16 @@ test("displayed combo performance settles wins and losses", () => {
   assert.equal(report.losses, 1);
   assert.equal(report.hitRate, 0.5);
   assert.deepEqual(report.recent.map((row) => row.outcome), ["WIN", "LOSS"]);
+  assert.deepEqual(report.failureByMarket, [{ marketKey: "h2h", losses: 1 }]);
+  assert.deepEqual(report.recent[1]?.failedLegs, [
+    {
+      position: 1,
+      marketKey: "h2h",
+      selectionName: "Home",
+      matchup: "Home vs Away",
+      outcome: "LOSS",
+    },
+  ]);
 });
 
 test("displayed combo performance keeps unresolved recommendations pending", () => {
@@ -105,4 +115,43 @@ test("a settled losing leg makes the displayed combo a loss even with pending le
   assert.equal(report.losses, 1);
   assert.equal(report.pending, 0);
   assert.equal(report.recent[0]?.outcome, "LOSS");
+});
+
+
+test("failure analysis aggregates losing legs by market", () => {
+  const totalsLeg = leg(
+    1,
+    {
+      status: "FINAL",
+      payload: {
+        score: { home: 1, away: 0 },
+        winner: "home",
+      },
+    },
+    "Over",
+  );
+  totalsLeg.selection.prediction.selectionKey = "totals:over:2.5";
+  totalsLeg.selection.prediction.market.key = "totals";
+  totalsLeg.selection.prediction.explanation = {
+    selectionName: "Over",
+    point: 2.5,
+  };
+
+  const report = calculateDisplayedComboPerformance([
+    combo("h2h-loss", [
+      leg(1, { status: "FINAL", payload: { winner: "away" } }),
+      leg(2, { status: "FINAL", payload: { winner: "home" } }),
+    ]),
+    combo("totals-loss", [
+      totalsLeg,
+      leg(2, { status: "FINAL", payload: { winner: "home" } }),
+    ]),
+  ]);
+
+  assert.deepEqual(report.failureByMarket, [
+    { marketKey: "h2h", losses: 1 },
+    { marketKey: "totals", losses: 1 },
+  ]);
+  assert.equal(report.recent[1]?.failedLegs[0]?.marketKey, "totals");
+  assert.equal(report.recent[1]?.failedLegs[0]?.selectionName, "Over");
 });
