@@ -1,6 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { ParticipantBadge } from "@/components/ParticipantBadge";
+import type { SupportedSport } from "@/lib/providers/types";
+import type { ParticipantVisual } from "@/lib/ui/participantVisual";
 
 const targets = [2, 5, 10, 20, 50, 100, 1000] as const;
 const risks = ["LOW", "BALANCED", "AGGRESSIVE"] as const;
@@ -15,6 +18,8 @@ type ComboLeg = {
   league: string;
   startsAt: string;
   matchup: string;
+  homeParticipant?: ParticipantVisual | null;
+  awayParticipant?: ParticipantVisual | null;
   marketKey: string;
   point: number | null;
   selectionKey: string;
@@ -541,6 +546,18 @@ export function ComboBuilder({
                       {String(index + 1).padStart(2, "0")}
                     </div>
                     <div className="combo-leg-copy">
+                      <div className="combo-leg-visuals" aria-hidden="true">
+                        <ParticipantBadge
+                          participant={leg.homeParticipant}
+                          sport={leg.sport as SupportedSport}
+                          compact
+                        />
+                        <ParticipantBadge
+                          participant={leg.awayParticipant}
+                          sport={leg.sport as SupportedSport}
+                          compact
+                        />
+                      </div>
                       <span>
                         {leg.sport.toUpperCase()} · {leg.league} ·{" "}
                         {marketLabel(leg.marketKey)}
