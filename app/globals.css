@@ -3775,3 +3775,11 @@ body {
     border-top: 1px solid rgba(105, 214, 255, 0.09);
   }
 }
+
+
+.combo-leg-visuals {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 7px;
+}
