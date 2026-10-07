@@ -85,6 +85,7 @@
     "test:research-import": "tsx --test tests/research-import.test.ts",
     "combo:research:discover": "tsx scripts/discover-combo-research.ts",
     "combo:refresh": "tsx scripts/refresh-combos.ts",
+    "data:refresh:scheduled": "tsx scripts/refresh-scheduled.ts",
     "test:research-discovery": "tsx --test tests/research-discovery.test.ts"
   },
   "dependencies": {

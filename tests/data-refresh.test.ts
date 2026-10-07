@@ -121,3 +121,17 @@ test("normal refresh replenishes rolling Combo odds with a bounded API-Sports bu
   assert.ok(rollingIndex >= 0);
   assert.ok(featureIndex > rollingIndex);
 });
+
+
+test("scheduled refresh alternates full data work with Combo-only replenishment", async () => {
+  const [source, pkg] = await Promise.all([
+    readFile("scripts/refresh-scheduled.ts", "utf8"),
+    readFile("package.json", "utf8"),
+  ]);
+
+  assert.match(source, /EDGE_FULL_REFRESH_EVERY_HOURS/);
+  assert.match(source, /utcHour % fullRefreshEveryHours === 0/);
+  assert.match(source, /run\("data:refresh"/);
+  assert.match(source, /run\("combo:refresh"\)/);
+  assert.match(pkg, /"data:refresh:scheduled": "tsx scripts\/refresh-scheduled\.ts"/);
+});
