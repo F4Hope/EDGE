@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { ParticipantBadge } from "@/components/ParticipantBadge";
 import type { ComboBuildResult } from "@/lib/combo/engine";
 import type { SupportedSport } from "@/lib/providers/types";
@@ -46,13 +46,9 @@ export function ComboPickCard({
   const [error, setError] = useState<string | null>(null);
 
   const stakeValue = safeStake(stake);
-  const returnValue = useMemo(
-    () =>
-      result?.actualOdds
-        ? Number((stakeValue * result.actualOdds).toFixed(2))
-        : 0,
-    [result?.actualOdds, stakeValue],
-  );
+  const returnValue = result?.actualOdds
+    ? Number((stakeValue * result.actualOdds).toFixed(2))
+    : 0;
   const profit = Math.max(0, returnValue - stakeValue);
 
   async function refreshCombo() {

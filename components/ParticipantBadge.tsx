@@ -27,6 +27,9 @@ export function ParticipantBadge({
   return (
     <span className={classes} title={name} aria-label={name}>
       {logoUrl && !failed ? (
+        // Provider-backed sports marks are remote media assets; the native img
+        // preserves the provider URL without introducing a Next image proxy.
+        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={logoUrl}
           alt=""
