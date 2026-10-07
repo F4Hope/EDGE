@@ -76,11 +76,33 @@ function main() {
   console.log(
     "Settling football/basketball results across the same historical window...",
   );
-  run("results:sync", [
-    "--sports=football,basketball",
-    "--from=" + from,
-    "--to=" + to,
-  ]);
+  const apiSportsResultsOk = runBestEffort(
+    "results:sync",
+    [
+      "--sports=football,basketball",
+      "--from=" + from,
+      "--to=" + to,
+    ],
+    "API-Sports result settlement",
+  );
+
+  if (!apiSportsResultsOk) {
+    if (!process.env.ODDS_API_KEY) {
+      throw new Error(
+        "API-Sports result settlement failed and ODDS_API_KEY is not configured for fallback.",
+      );
+    }
+
+    const fallbackDays = Math.min(3, Math.max(1, Math.ceil(lookbackHours / 24)));
+    console.warn(
+      "WARN API-Sports result settlement failed; falling back to The Odds API for stored football/basketball sport keys.",
+    );
+    run("results:sync:odds", [
+      "--sports=football,basketball",
+      "--days=" + fallbackDays,
+      "--max-sport-keys=3",
+    ]);
+  }
 
   console.log("EDGE rolling history refresh complete.");
 }
