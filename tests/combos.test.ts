@@ -680,7 +680,7 @@ test("combo pool excludes events too close to kickoff and remains rolling", asyn
   const loader = await readFile("lib/data/uiCombos.ts", "utf8");
 
   assert.match(loader, /COMBO_MIN_LEAD_MINUTES = 10/);
-  assert.match(loader, /const playableFrom = new Date/);
+  assert.match(loader, /const minimumPlayableFrom = new Date/);
   assert.match(loader, /startTime: \{ gt: playableFrom, lt: to \}/);
 });
 
