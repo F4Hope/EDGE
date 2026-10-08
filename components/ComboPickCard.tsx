@@ -113,13 +113,18 @@ export function ComboPickCard({
   }
 
   useEffect(() => {
-    void refreshCombo();
+    const initial = window.setTimeout(() => {
+      void refreshCombo();
+    }, 0);
 
     const id = window.setInterval(() => {
       void refreshCombo();
     }, 5 * 60 * 1000);
 
-    return () => window.clearInterval(id);
+    return () => {
+      window.clearTimeout(initial);
+      window.clearInterval(id);
+    };
   }, []);
 
   async function copySelections() {
