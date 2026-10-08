@@ -80,17 +80,18 @@ test("normal refresh broadens soccer fixtures with quota-free Odds API event dis
   assert.ok(includeOddsIndex > discoveryIndex);
 });
 
-test("priority soccer worker caps paid pricing to H2H on the once-daily path", async () => {
+test("daily coverage worker prioritizes today's football basketball and tennis odds", async () => {
   const source = await readFile("scripts/refresh-priority-soccer.ts", "utf8");
 
   assert.match(source, /prioritySoccerEventKeys/);
-  assert.match(source, /--markets=h2h/);
-  assert.match(source, /ODDS_PRIORITY_MAX_SPORT_KEYS/);
-  assert.match(source, /"--sport-keys=" \+ prioritySoccerEventKeys\.join/);
-  assert.match(source, /"--max-sport-keys=" \+ String\(maxOddsKeys\)/);
-  assert.match(source, /--event-max-sport-keys=/);
-  assert.match(source, /--limit=1000/);
-  assert.match(source, /--limit=500/);
+  assert.match(source, /ODDS_TODAY_FOOTBALL_KEYS/);
+  assert.match(source, /ODDS_TODAY_BASKETBALL_KEYS/);
+  assert.match(source, /ODDS_TODAY_TENNIS_KEYS/);
+  assert.match(source, /--sports=football/);
+  assert.match(source, /--markets=h2h,totals/);
+  assert.match(source, /--sports=basketball/);
+  assert.match(source, /--sports=tennis/);
+  assert.match(source, /--hours=24/);
   assert.match(source, /--max-requests=6/);
   assert.match(source, /features:calculate/);
   assert.match(source, /predictions:generate/);
@@ -134,4 +135,14 @@ test("scheduled refresh alternates full data work with Combo-only replenishment"
   assert.match(source, /run\("data:refresh"/);
   assert.match(source, /run\("combo:refresh"\)/);
   assert.match(pkg, /"data:refresh:scheduled": "tsx scripts\/refresh-scheduled\.ts"/);
+});
+
+
+test("odds sync ranks unrestricted sport keys by actual discovered event volume", async () => {
+  const syncSource = await readFile("lib/data/syncOdds.ts", "utf8");
+
+  assert.match(syncSource, /discoveredCounts/);
+  assert.match(syncSource, /rankedSportKeys/);
+  assert.match(syncSource, /discoveredCounts\.get\(right\)/);
+  assert.match(syncSource, /allowed\s*\? eligibleSportKeys/);
 });

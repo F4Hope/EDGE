@@ -205,7 +205,25 @@ export async function syncOddsSnapshots(
   const eligibleSportKeys = allowed
     ? discoveredKeys.filter((key) => allowed.has(key))
     : discoveredKeys;
-  const sportKeys = eligibleSportKeys.slice(0, options.maxSportKeys);
+
+  const discoveredCounts = new Map<string, number>();
+  for (const event of uniqueDiscovered) {
+    if (!event.sourceSportKey) continue;
+    discoveredCounts.set(
+      event.sourceSportKey,
+      (discoveredCounts.get(event.sourceSportKey) ?? 0) + 1,
+    );
+  }
+
+  const rankedSportKeys = allowed
+    ? eligibleSportKeys
+    : [...eligibleSportKeys].sort(
+        (left, right) =>
+          (discoveredCounts.get(right) ?? 0) -
+            (discoveredCounts.get(left) ?? 0) ||
+          left.localeCompare(right),
+      );
+  const sportKeys = rankedSportKeys.slice(0, options.maxSportKeys);
 
   if (sportKeys.length === 0) {
     return {

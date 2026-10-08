@@ -54,23 +54,36 @@ function main() {
   }
   if (!process.env.ODDS_API_KEY) {
     throw new Error(
-      "ODDS_API_KEY is not configured. Priority soccer pricing requires The Odds API.",
+      "ODDS_API_KEY is not configured. Daily Combo coverage requires The Odds API.",
     );
   }
 
   const hours = positiveInt(getArg("hours"), 168, 336, "--hours");
-  const maxOddsKeys = positiveInt(
-    getArg("max-odds-keys") ?? process.env.ODDS_PRIORITY_MAX_SPORT_KEYS,
-    Math.min(10, prioritySoccerEventKeys.length),
-    prioritySoccerEventKeys.length,
-    "ODDS_PRIORITY_MAX_SPORT_KEYS",
+  const footballKeys = positiveInt(
+    getArg("football-keys") ?? process.env.ODDS_TODAY_FOOTBALL_KEYS,
+    4,
+    12,
+    "ODDS_TODAY_FOOTBALL_KEYS",
+  );
+  const basketballKeys = positiveInt(
+    getArg("basketball-keys") ?? process.env.ODDS_TODAY_BASKETBALL_KEYS,
+    2,
+    8,
+    "ODDS_TODAY_BASKETBALL_KEYS",
+  );
+  const tennisKeys = positiveInt(
+    getArg("tennis-keys") ?? process.env.ODDS_TODAY_TENNIS_KEYS,
+    2,
+    8,
+    "ODDS_TODAY_TENNIS_KEYS",
   );
 
   const now = new Date();
   const to = new Date(now.getTime() + hours * 60 * 60 * 1000).toISOString();
+  const todayTo = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
 
-  console.log("EDGE priority soccer coverage refresh");
-  console.log("------------------------------------");
+  console.log("EDGE today-first sports coverage refresh");
+  console.log("---------------------------------------");
   console.log(
     "Discovering major-league and international fixtures for the next " +
       hours +
@@ -100,39 +113,73 @@ function main() {
   }
 
   console.log(
-    "Refreshing one-region H2H prices for up to " +
-      maxOddsKeys +
-      " active priority soccer competitions...",
+    "Pricing today-first football coverage with H2H + totals across up to " +
+      footballKeys +
+      " priority competitions...",
   );
   run("odds:sync", [
     "--sports=football",
-    "--markets=h2h",
-    "--to=" + to,
+    "--markets=h2h,totals",
+    "--to=" + todayTo,
     "--sport-keys=" + prioritySoccerEventKeys.join(","),
-    "--max-sport-keys=" + String(maxOddsKeys),
+    "--max-sport-keys=" + String(footballKeys),
     "--event-max-sport-keys=" + String(prioritySoccerEventKeys.length),
   ]);
 
-  console.log("Recalculating seven-day football features...");
+  console.log(
+    "Pricing today-first basketball H2H coverage across the busiest active competitions...",
+  );
+  runBestEffort(
+    "odds:sync",
+    [
+      "--sports=basketball",
+      "--markets=h2h",
+      "--to=" + todayTo,
+      "--max-sport-keys=" + String(basketballKeys),
+      "--event-max-sport-keys=12",
+    ],
+    "Today basketball odds refresh",
+  );
+
+  console.log(
+    "Pricing today-first tennis H2H coverage across the busiest active competitions...",
+  );
+  runBestEffort(
+    "odds:sync",
+    [
+      "--sports=tennis",
+      "--markets=h2h",
+      "--to=" + todayTo,
+      "--max-sport-keys=" + String(tennisKeys),
+      "--event-max-sport-keys=12",
+    ],
+    "Today tennis odds refresh",
+  );
+
+  console.log("Recalculating today-first features across all supported sports...");
   run("features:calculate", [
-    "--sports=football",
-    "--hours=" + String(hours),
+    "--sports=all",
+    "--hours=24",
     "--limit=1000",
   ]);
 
-  console.log("Regenerating seven-day priced predictions...");
+  console.log("Regenerating today-first priced predictions...");
   run("predictions:generate", [
-    "--hours=" + String(hours),
+    "--hours=24",
     "--limit=500",
   ]);
 
   console.log("Running readiness check...");
   run("doctor");
 
-  console.log("EDGE priority soccer coverage refresh complete.", {
-    hours,
-    paidCompetitionCap: maxOddsKeys,
-    discoveredCompetitionKeys: prioritySoccerEventKeys.length,
+  console.log("EDGE today-first sports coverage refresh complete.", {
+    discoveryHours: hours,
+    paidCompetitionCaps: {
+      football: footballKeys,
+      basketball: basketballKeys,
+      tennis: tennisKeys,
+    },
+    discoveredSoccerCompetitionKeys: prioritySoccerEventKeys.length,
   });
 }
 
