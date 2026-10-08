@@ -342,7 +342,7 @@ export function ComboPickCard({
             disabled={refreshing}
             onClick={() => void refreshCombo()}
           >
-            {refreshing ? "REFRESHING…" : "↻ REFRESH BOTH TICKETS"}
+            {refreshing ? "REFRESHING…" : "↻ REFRESH COMBO PAIR"}
           </button>
           <small>
             Last rebuilt{" "}
