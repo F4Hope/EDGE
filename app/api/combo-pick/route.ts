@@ -72,10 +72,16 @@ function reachedMinimum(
 }
 
 export async function POST(request: NextRequest) {
-  const requestId = getRequestId(request.headers);
+  const requestId = getRequestId(request);
+  const limited = enforcePublicReadRateLimit(
+    request,
+    requestId,
+    "/api/combo-pick",
+    { limit: 30 },
+  );
+  if (limited) return limited;
 
   try {
-    await enforcePublicReadRateLimit(request, "combo-pick");
 
     const body = (await request.json()) as {
       windowStart?: unknown;
@@ -124,6 +130,7 @@ export async function POST(request: NextRequest) {
     ]);
 
     return apiJson(
+      requestId,
       {
         data: {
           minimumCombinedOdds: MINIMUM_COMBINED_ODDS,
@@ -136,9 +143,17 @@ export async function POST(request: NextRequest) {
           windowEnd: window.to.toISOString(),
         },
       },
-      { requestId },
+      {
+        headers: { "Cache-Control": "no-store" },
+      },
     );
   } catch (error) {
-    return apiFailure(error, { requestId });
+    return apiFailure(
+      "/api/combo-pick",
+      requestId,
+      error,
+      "Today’s paired Combo Picks are currently unavailable.",
+      503,
+    );
   }
 }
