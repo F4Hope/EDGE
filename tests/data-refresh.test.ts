@@ -105,7 +105,7 @@ test("odds sync separates free event discovery breadth from the paid sport-key c
   assert.match(source, /event-max-sport-keys/);
   assert.match(source, /maxEventSportKeys/);
   assert.match(syncSource, /maxEventSportKeys \?\? options\.maxSportKeys/);
-  assert.match(syncSource, /eligibleSportKeys\.slice\(0, options\.maxSportKeys\)/);
+  assert.match(syncSource, /rankedSportKeys\.slice\(0, options\.maxSportKeys\)/);
 });
 
 
