@@ -785,3 +785,23 @@ test("Today Combo Pick returns separate LOW and BALANCED tickets at 2.30 minimum
   assert.match(card, /fetch\("\/api\/combo-pick"/);
   assert.match(page, /Two separate tickets at the same time/);
 });
+
+
+test("LOW daily ticket keeps best-effort fallback below 2.30 while preferring target reach", async () => {
+  const [route, card, page] = await Promise.all([
+    readFile("app/api/combo-pick/route.ts", "utf8"),
+    readFile("components/ComboPickCard.tsx", "utf8"),
+    readFile("app/combo-pick/page.tsx", "utf8"),
+  ]);
+
+  assert.match(route, /const lowResult = buildCombo/);
+  assert.match(route, /MINIMUM_COMBINED_ODDS,[\s\S]*"LOW"/);
+  assert.match(route, /lowResult\.status === "NO_QUALIFYING_COMBO"/);
+  assert.doesNotMatch(route, /const low = reachedMinimum\(/);
+
+  assert.match(card, /result\.status === "BEST_EFFORT"/);
+  assert.match(card, /BEST AVAILABLE LOW · BELOW 2\.30 TARGET/);
+  assert.match(card, /LOW targets 2\.30; best qualified fallback shows if needed/);
+  assert.match(card, /BALANCED must reach 2\.30\+/);
+  assert.match(page, /LOW targets 2\.30 but shows the strongest qualified fallback/);
+});

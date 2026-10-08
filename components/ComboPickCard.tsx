@@ -89,11 +89,17 @@ function TicketCard({
   const profit = Math.max(0, returnValue - stakeValue);
   const hasCombo = Boolean(
     result &&
-      result.status === "TARGET_REACHED" &&
       result.actualOdds !== null &&
-      result.actualOdds >= 2.3 &&
-      result.legs.length >= 2,
+      result.legs.length >= 2 &&
+      (tone === "low"
+        ? result.status === "TARGET_REACHED" || result.status === "BEST_EFFORT"
+        : result.status === "TARGET_REACHED" && result.actualOdds >= 2.3),
   );
+  const lowBestEffort =
+    tone === "low" &&
+    hasCombo &&
+    result?.status === "BEST_EFFORT" &&
+    (result.actualOdds ?? 0) < 2.3;
 
   return (
     <div className={`combo-pick-card combo-pick-card-${tone}`}>
@@ -104,6 +110,11 @@ function TicketCard({
           </span>
           <h2>{title}</h2>
           <p>{subtitle}</p>
+          {lowBestEffort ? (
+            <small className="combo-best-effort-note">
+              BEST AVAILABLE LOW · BELOW 2.30 TARGET
+            </small>
+          ) : null}
         </div>
         <span className={`combo-pick-risk combo-pick-risk-${tone}`}>
           {tone === "low" ? "LOW" : "BALANCED"}
@@ -185,11 +196,12 @@ function TicketCard({
       ) : (
         <div className="combo-pick-empty">
           <strong>
-            No qualifying Combo for today — {tone === "low" ? "LOW" : "BALANCED"} ticket does not reach 2.30.
+            No qualifying Combo for today — {tone === "low" ? "no structurally valid LOW ticket is available" : "BALANCED ticket does not reach 2.30"}.
           </strong>
           <p>
             EDGE will not borrow games from tomorrow, Sunday, or another future
-            date, and it will not lower the 2.30 minimum just to create a ticket.
+            date. LOW shows its strongest qualified fallback when 2.30 cannot be
+            reached; BALANCED remains strict at 2.30+.
           </p>
         </div>
       )}
@@ -298,13 +310,13 @@ export function ComboPickCard({
             <span>🏆 TODAY ONLY · {dayLabel.toUpperCase()}</span>
             <strong>Two separate Combo tickets</strong>
           </div>
-          <b>MINIMUM ODDS 2.30</b>
+          <b>LOW TARGET 2.30 · BALANCED MIN 2.30</b>
         </div>
 
         <div className="combo-pick-pair">
           <TicketCard
             title="LOW Combo"
-            subtitle="Strict LOW-risk gates only · minimum combined odds 2.30"
+            subtitle="Strict LOW-risk gates only · target 2.30 · strongest qualified fallback shown if needed"
             result={data?.low ?? null}
             stake={lowStake}
             setStake={setLowStake}
@@ -333,7 +345,7 @@ export function ComboPickCard({
       <aside className="combo-pick-side">
         <div className="combo-control-card">
           <span className="combo-control-label">LIVE CONTROLS</span>
-          <strong>LOW + BALANCED · 2.30+</strong>
+          <strong>LOW TARGET 2.30 · BALANCED 2.30+</strong>
           <p>
             Both tickets rebuild together. The BALANCED ticket is generated only
             after removing every event already used by the LOW ticket.
@@ -361,7 +373,8 @@ export function ComboPickCard({
           <ul>
             <li>✓ Today’s events only</li>
             <li>✓ LOW and BALANCED shown together</li>
-            <li>✓ Minimum combined odds 2.30 each</li>
+            <li>✓ LOW targets 2.30; best qualified fallback shows if needed</li>
+            <li>✓ BALANCED must reach 2.30+</li>
             <li>✓ No event appears in both tickets</li>
             <li>✓ Football, basketball and tennis are eligible</li>
             <li>✓ Real stored bookmaker prices only</li>

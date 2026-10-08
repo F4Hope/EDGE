@@ -91,9 +91,17 @@ export async function POST(request: NextRequest) {
     const window = parseComboWindow(body.windowStart, body.windowEnd);
     const pool = await getComboCandidatePool(168, window);
 
-    const low = reachedMinimum(
-      buildCombo(pool.candidates, MINIMUM_COMBINED_ODDS, "LOW"),
+    const lowResult = buildCombo(
+      pool.candidates,
+      MINIMUM_COMBINED_ODDS,
+      "LOW",
     );
+    const low =
+      lowResult.status === "NO_QUALIFYING_COMBO" ||
+      lowResult.actualOdds === null ||
+      lowResult.legs.length < 2
+        ? null
+        : lowResult;
 
     const lowEventIds = new Set(low?.legs.map((leg) => leg.eventId) ?? []);
     const balancedCandidates = pool.candidates.filter(
