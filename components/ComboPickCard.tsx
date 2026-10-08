@@ -184,7 +184,9 @@ function TicketCard({
         </>
       ) : (
         <div className="combo-pick-empty">
-          <strong>No {tone === "low" ? "LOW" : "BALANCED"} ticket reaches 2.30 today.</strong>
+          <strong>
+            No qualifying Combo for today — {tone === "low" ? "LOW" : "BALANCED"} ticket does not reach 2.30.
+          </strong>
           <p>
             EDGE will not lower the 2.30 minimum or pull games from another day
             just to create a ticket.
@@ -339,10 +341,11 @@ export function ComboPickCard({
           <button
             type="button"
             className="combo-refresh-button"
+            aria-label="REFRESH COMBO"
             disabled={refreshing}
             onClick={() => void refreshCombo()}
           >
-            {refreshing ? "REFRESHING…" : "↻ REFRESH COMBO PAIR"}
+            {refreshing ? "REFRESHING…" : "↻ REFRESH BOTH TICKETS"}
           </button>
           <small>
             Last rebuilt{" "}
