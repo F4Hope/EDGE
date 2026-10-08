@@ -11,7 +11,7 @@ export default function ComboPickPage() {
       <ScreenHeader
         eyebrow="READY-TO-READ TICKET"
         title="Today’s Combo Pick"
-        description="Two separate tickets at the same time: a strict LOW Combo and a BALANCED Combo using different events. Both are today-only and must reach at least 2.30 combined odds."
+        description="Today means today. Two separate tickets at the same time: a strict LOW Combo and a BALANCED Combo using different events. Both are today-only and must reach at least 2.30 combined odds."
         action={
           <Link className="status-pill combo-builder-link" href="/combos">
             ADVANCED BUILDER
