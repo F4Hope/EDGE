@@ -91,11 +91,7 @@ export async function POST(request: NextRequest) {
     const window = parseComboWindow(body.windowStart, body.windowEnd);
     const pool = await getComboCandidatePool(168, window);
 
-    const lowResult = buildCombo(
-      pool.candidates,
-      MINIMUM_COMBINED_ODDS,
-      "LOW",
-    );
+    const lowResult = buildCombo(pool.candidates, MINIMUM_COMBINED_ODDS, "LOW");
     const low =
       lowResult.status === "NO_QUALIFYING_COMBO" ||
       lowResult.actualOdds === null ||
