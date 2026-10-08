@@ -3783,3 +3783,81 @@ body {
   gap: 4px;
   margin-bottom: 7px;
 }
+
+
+/* Paired Today Combo tickets */
+
+.combo-pick-main-paired {
+  display: grid;
+  gap: 12px;
+}
+
+.combo-pick-day-banner {
+  padding: 13px 15px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid rgba(105, 214, 255, 0.14);
+  border-radius: 16px;
+  background:
+    linear-gradient(120deg, rgba(47, 231, 130, 0.09), rgba(41, 121, 255, 0.08)),
+    rgba(13, 25, 43, 0.9);
+}
+
+.combo-pick-day-banner span,
+.combo-pick-day-banner strong {
+  display: block;
+}
+
+.combo-pick-day-banner span {
+  color: #61f39c;
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: 0.09em;
+}
+
+.combo-pick-day-banner strong {
+  margin-top: 4px;
+  color: #f7fbff;
+  font-size: 13px;
+}
+
+.combo-pick-day-banner b {
+  flex: 0 0 auto;
+  color: #69d6ff;
+  font-size: 8px;
+  letter-spacing: 0.07em;
+}
+
+.combo-pick-pair {
+  display: grid;
+  gap: 14px;
+}
+
+.combo-pick-card-low {
+  border-color: rgba(47, 231, 130, 0.22);
+}
+
+.combo-pick-card-balanced {
+  border-color: rgba(105, 214, 255, 0.22);
+}
+
+.combo-pick-risk-low {
+  color: #67f5a1;
+  border-color: rgba(47, 231, 130, 0.25);
+  background: rgba(47, 231, 130, 0.08);
+}
+
+.combo-pick-risk-balanced {
+  color: #69d6ff;
+  border-color: rgba(105, 214, 255, 0.25);
+  background: rgba(105, 214, 255, 0.08);
+}
+
+@media (min-width: 1040px) {
+  .combo-pick-pair {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}

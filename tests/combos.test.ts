@@ -760,3 +760,28 @@ test("standalone Combo Pick is restricted to the browser local calendar day", as
   assert.match(loader, /window\?: ComboCandidateWindow/);
   assert.match(loader, /startTime: \{ gt: playableFrom, lt: to \}/);
 });
+
+
+test("Today Combo Pick returns separate LOW and BALANCED tickets at 2.30 minimum", async () => {
+  const [route, card, page] = await Promise.all([
+    readFile("app/api/combo-pick/route.ts", "utf8"),
+    readFile("components/ComboPickCard.tsx", "utf8"),
+    readFile("app/combo-pick/page.tsx", "utf8"),
+  ]);
+
+  assert.match(route, /MINIMUM_COMBINED_ODDS = 2\.3/);
+  assert.match(route, /buildCombo\(pool\.candidates, MINIMUM_COMBINED_ODDS, "LOW"\)/);
+  assert.match(route, /lowEventIds/);
+  assert.match(route, /!lowEventIds\.has\(candidate\.eventId\)/);
+  assert.match(route, /"BALANCED"/);
+  assert.match(route, /result\.actualOdds < MINIMUM_COMBINED_ODDS/);
+
+  assert.match(card, /LOW Combo/);
+  assert.match(card, /BALANCED Combo/);
+  assert.match(card, /MINIMUM ODDS 2\.30/);
+  assert.match(card, /REFRESH BOTH TICKETS/);
+  assert.match(card, /No event appears in both tickets/);
+  assert.match(card, /Football, basketball and tennis are eligible/);
+  assert.match(card, /fetch\("\/api\/combo-pick"/);
+  assert.match(page, /Two separate tickets at the same time/);
+});
