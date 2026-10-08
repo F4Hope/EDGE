@@ -188,8 +188,8 @@ function TicketCard({
             No qualifying Combo for today — {tone === "low" ? "LOW" : "BALANCED"} ticket does not reach 2.30.
           </strong>
           <p>
-            EDGE will not lower the 2.30 minimum or pull games from another day
-            just to create a ticket.
+            EDGE will not borrow games from tomorrow, Sunday, or another future
+            date, and it will not lower the 2.30 minimum just to create a ticket.
           </p>
         </div>
       )}
