@@ -28,6 +28,28 @@ function formatStart(iso: string): string {
   }).format(new Date(iso));
 }
 
+function localTodayWindow(): {
+  start: string;
+  end: string;
+  label: string;
+} {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+
+  return {
+    start: start.toISOString(),
+    end: end.toISOString(),
+    label: new Intl.DateTimeFormat("en", {
+      weekday: "long",
+      month: "short",
+      day: "numeric",
+    }).format(start),
+  };
+}
+
 function safeStake(value: string): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
@@ -42,6 +64,7 @@ export function ComboPickCard({
   const [stake, setStake] = useState("100");
   const [refreshing, setRefreshing] = useState(false);
   const [updatedAt, setUpdatedAt] = useState(() => new Date());
+  const [dayLabel, setDayLabel] = useState(() => localTodayWindow().label);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,11 +79,19 @@ export function ComboPickCard({
     setError(null);
 
     try {
+      const today = localTodayWindow();
+      setDayLabel(today.label);
+
       const response = await fetch("/api/combos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         cache: "no-store",
-        body: JSON.stringify({ targetOdds: 2, riskMode: "BALANCED" }),
+        body: JSON.stringify({
+          targetOdds: 2,
+          riskMode: "BALANCED",
+          windowStart: today.start,
+          windowEnd: today.end,
+        }),
       });
 
       const payload = (await response.json()) as ApiResponse;
@@ -82,6 +113,8 @@ export function ComboPickCard({
   }
 
   useEffect(() => {
+    void refreshCombo();
+
     const id = window.setInterval(() => {
       void refreshCombo();
     }, 5 * 60 * 1000);
@@ -118,9 +151,9 @@ export function ComboPickCard({
         <div className="combo-pick-card">
           <div className="combo-pick-card-head">
             <div>
-              <span className="combo-pick-kicker">🏆 RECOMMENDED COMBO</span>
+              <span className="combo-pick-kicker">🏆 TODAY ONLY · {dayLabel.toUpperCase()}</span>
               <h2>Today’s Combo Pick</h2>
-              <p>Balanced 2x target · real stored bookmaker prices</p>
+              <p>Balanced 2x target · only games scheduled for today · real stored bookmaker prices</p>
             </div>
             <span className="combo-pick-risk">BALANCED</span>
           </div>
@@ -199,10 +232,11 @@ export function ComboPickCard({
             </>
           ) : (
             <div className="combo-pick-empty">
-              <strong>No qualifying Combo is available right now.</strong>
+              <strong>No qualifying Combo for today.</strong>
               <p>
-                EDGE will not fabricate legs. Refresh to rebuild from the latest
-                future priced selections.
+                EDGE will not borrow games from tomorrow, Sunday, or another
+                future date. If fewer than two qualified priced games remain
+                today, no Combo is shown.
               </p>
             </div>
           )}
@@ -216,8 +250,8 @@ export function ComboPickCard({
           <span className="combo-control-label">LIVE CONTROLS</span>
           <strong>2x · BALANCED</strong>
           <p>
-            Manual refresh plus automatic rebuild every five minutes from stored
-            EDGE data.
+            Manual refresh plus automatic rebuild every five minutes. The ticket
+            is restricted to today’s local calendar date.
           </p>
           <button
             type="button"
@@ -239,6 +273,7 @@ export function ComboPickCard({
         <div className="combo-why-card">
           <span>WHY THIS TICKET</span>
           <ul>
+            <li>✓ Today’s events only</li>
             <li>✓ Future pre-live events only</li>
             <li>✓ Real stored bookmaker prices</li>
             <li>✓ One selection per event</li>

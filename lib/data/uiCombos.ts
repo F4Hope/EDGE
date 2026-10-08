@@ -56,6 +56,11 @@ export type ComboCandidatePool = {
   diagnostics: ComboCandidateDiagnostics;
 };
 
+export type ComboCandidateWindow = {
+  from: Date;
+  to: Date;
+};
+
 const MIN_COMBO_ESTIMATED_VALUE = -0.05;
 export const COMBO_MIN_LEAD_MINUTES = 10;
 
@@ -141,18 +146,25 @@ function participantName(event: {
 
 export async function getComboCandidatePool(
   hours = 168,
+  window?: ComboCandidateWindow,
 ): Promise<ComboCandidatePool> {
   const db = getDb();
   const now = new Date();
-  const playableFrom = new Date(
+  const minimumPlayableFrom = new Date(
     now.getTime() + COMBO_MIN_LEAD_MINUTES * 60 * 1000,
   );
-  const to = new Date(now.getTime() + Math.min(hours, 24 * 14) * 60 * 60 * 1000);
+  const playableFrom =
+    window && window.from > minimumPlayableFrom
+      ? window.from
+      : minimumPlayableFrom;
+  const to =
+    window?.to ??
+    new Date(now.getTime() + Math.min(hours, 24 * 14) * 60 * 60 * 1000);
 
   const rows = await db.prediction.findMany({
     where: {
       event: {
-        startTime: { gt: playableFrom, lte: to },
+        startTime: { gt: playableFrom, lt: to },
         status: { notIn: ["CANCELLED", "POSTPONED", "COMPLETED"] },
       },
       market: {

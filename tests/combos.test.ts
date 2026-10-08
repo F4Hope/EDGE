@@ -681,7 +681,7 @@ test("combo pool excludes events too close to kickoff and remains rolling", asyn
 
   assert.match(loader, /COMBO_MIN_LEAD_MINUTES = 10/);
   assert.match(loader, /const playableFrom = new Date/);
-  assert.match(loader, /startTime: \{ gt: playableFrom, lte: to \}/);
+  assert.match(loader, /startTime: \{ gt: playableFrom, lt: to \}/);
 });
 
 test("rolling Combo refresh regenerates the next candidate pool with bounded odds calls", async () => {
@@ -737,4 +737,26 @@ test("Combo candidates carry participant provider metadata for logos and flags",
   assert.match(loader, /provider: true/);
   assert.match(engine, /homeParticipant\?: ParticipantVisual/);
   assert.match(engine, /awayParticipant\?: ParticipantVisual/);
+});
+
+
+test("standalone Combo Pick is restricted to the browser local calendar day", async () => {
+  const [page, card, route, loader] = await Promise.all([
+    readFile("app/combo-pick/page.tsx", "utf8"),
+    readFile("components/ComboPickCard.tsx", "utf8"),
+    readFile("app/api/combos/route.ts", "utf8"),
+    readFile("lib/data/uiCombos.ts", "utf8"),
+  ]);
+
+  assert.match(page, /Today means today/);
+  assert.match(card, /localTodayWindow/);
+  assert.match(card, /setHours\(0, 0, 0, 0\)/);
+  assert.match(card, /windowStart: today\.start/);
+  assert.match(card, /windowEnd: today\.end/);
+  assert.match(card, /No qualifying Combo for today/);
+  assert.match(card, /will not borrow games from tomorrow, Sunday/);
+  assert.match(route, /parseComboWindow/);
+  assert.match(route, /getComboCandidatePool\(168, window\)/);
+  assert.match(loader, /window\?: ComboCandidateWindow/);
+  assert.match(loader, /startTime: \{ gt: playableFrom, lt: to \}/);
 });

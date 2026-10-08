@@ -29,6 +29,49 @@ function parseTarget(value: unknown): number {
   return target;
 }
 
+function parseComboWindow(
+  startValue: unknown,
+  endValue: unknown,
+): { from: Date; to: Date } | undefined {
+  if (startValue === undefined && endValue === undefined) return undefined;
+
+  if (typeof startValue !== "string" || typeof endValue !== "string") {
+    throw new ApiRequestError(
+      "Combo date window requires valid ISO start and end timestamps.",
+      400,
+    );
+  }
+
+  const from = new Date(startValue);
+  const to = new Date(endValue);
+  const durationMs = to.getTime() - from.getTime();
+
+  if (
+    !Number.isFinite(from.getTime()) ||
+    !Number.isFinite(to.getTime()) ||
+    durationMs <= 0 ||
+    durationMs > 36 * 60 * 60 * 1000
+  ) {
+    throw new ApiRequestError(
+      "Combo date window must be a valid calendar-day range of at most 36 hours.",
+      400,
+    );
+  }
+
+  const now = Date.now();
+  if (
+    from.getTime() < now - 36 * 60 * 60 * 1000 ||
+    to.getTime() > now + 60 * 60 * 60 * 1000
+  ) {
+    throw new ApiRequestError(
+      "Combo date window must refer to the current or next local calendar day.",
+      400,
+    );
+  }
+
+  return { from, to };
+}
+
 function parseRisk(value: unknown): ComboRiskMode {
   if (
     typeof value !== "string" ||
@@ -56,11 +99,14 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as {
       targetOdds?: unknown;
       riskMode?: unknown;
+      windowStart?: unknown;
+      windowEnd?: unknown;
     };
 
     const targetOdds = parseTarget(body.targetOdds);
     const riskMode = parseRisk(body.riskMode);
-    const pool = await getComboCandidatePool();
+    const window = parseComboWindow(body.windowStart, body.windowEnd);
+    const pool = await getComboCandidatePool(168, window);
     const combo = buildCombo(pool.candidates, targetOdds, riskMode);
     const comboAuditId = await recordComboBuild(combo).catch((error) => {
       console.error("EDGE combo audit write failed.", {
@@ -77,6 +123,8 @@ export async function POST(request: NextRequest) {
         meta: {
           source: "edge-phase8-combo-engine",
           candidateCount: pool.candidates.length,
+          windowStart: window?.from.toISOString() ?? null,
+          windowEnd: window?.to.toISOString() ?? null,
           candidateDiagnostics: pool.diagnostics,
           evidenceResearchQueue: pool.evidenceResearchQueue,
           comboAuditId,
