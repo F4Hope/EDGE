@@ -37,11 +37,12 @@ export function PredictionDecisionSummary({
     <section className="decision-summary-card">
       <div className="decision-summary-head">
         <div>
-          <span className="empty-status">LEADING MODEL VIEW</span>
+          <span className="empty-status">LEADING MODEL VIEW · SAFEST PROBABILITY</span>
           <h2>{prediction.selectionName}</h2>
           <p>
-            Ranked by status, risk, estimated value, agreement and data quality;
-            not by favorite probability alone.
+            Ranked primarily by model win probability among usable outputs.
+            Status, risk, agreement, data quality and value act as safeguards
+            and tie-breakers rather than overriding a much safer outcome.
           </p>
         </div>
         <span

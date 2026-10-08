@@ -6,6 +6,8 @@ import {
 import type { ParticipantVisual } from "@/lib/ui/participantVisual";
 
 export const MIN_MODEL_MARKET_LIFT = 0.0025;
+export const MIN_PICK_MODEL_PROBABILITY = 0.6;
+export const MIN_PICK_ESTIMATED_VALUE = -0.05;
 export const OPPORTUNITY_MARKETS = [
   "h2h",
   "totals",
@@ -158,13 +160,13 @@ export function compareOpportunityPriority(
 ): number {
   return (
     statusRank(b.status) - statusRank(a.status) ||
+    b.modelProbability - a.modelProbability ||
     riskRank(b.risk) - riskRank(a.risk) ||
-    b.edgeScore - a.edgeScore ||
-    Math.abs(b.modelLift) - Math.abs(a.modelLift) ||
-    b.estimatedValue - a.estimatedValue ||
     b.modelAgreement - a.modelAgreement ||
     b.dataQuality - a.dataQuality ||
-    b.modelProbability - a.modelProbability ||
+    b.edgeScore - a.edgeScore ||
+    b.estimatedValue - a.estimatedValue ||
+    Math.abs(b.modelLift) - Math.abs(a.modelLift) ||
     a.startsAt.localeCompare(b.startsAt) ||
     a.selectionName.localeCompare(b.selectionName)
   );
@@ -268,7 +270,8 @@ export async function getUiOpportunities(options?: {
       where: {
         status: { in: ["BETTABLE", "WATCH"] },
         risk: { in: ["LOW", "MEDIUM"] },
-        estimatedValue: { gt: 0 },
+        modelProbability: { gte: MIN_PICK_MODEL_PROBABILITY },
+        estimatedValue: { gte: MIN_PICK_ESTIMATED_VALUE },
         dataQuality: { gte: 0.5 },
         modelAgreement: { gte: 0.6 },
         event: {
@@ -336,8 +339,9 @@ export async function getUiOpportunities(options?: {
       if (
         bestDecimalOdds === null ||
         bestDecimalOdds <= 1 ||
+        modelProbability < MIN_PICK_MODEL_PROBABILITY ||
         estimatedValue === null ||
-        estimatedValue <= 0 ||
+        estimatedValue < MIN_PICK_ESTIMATED_VALUE ||
         dataQuality === null ||
         dataQuality < 0.5 ||
         modelAgreement === null ||
@@ -436,7 +440,7 @@ export async function getUiOpportunities(options?: {
       available: true,
       message:
         opportunities.length === 0
-          ? "No future priced model output currently combines independent historical evidence with sufficient model-market separation and the remaining opportunity gates."
+          ? "No future priced model output currently reaches the 60% win-probability floor while also passing the evidence, quality and market checks."
           : null,
       qualifiedPredictions: candidates.length,
     };

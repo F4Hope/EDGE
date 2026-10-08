@@ -205,3 +205,17 @@ test("best picks by league never duplicates the same game", () => {
     ["same", "other"],
   );
 });
+
+
+test("opportunity ranking is probability-first and admits small price drag for safer picks", async () => {
+  const source = await readFile("lib/data/uiOpportunities.ts", "utf8");
+
+  assert.match(source, /MIN_PICK_MODEL_PROBABILITY = 0\.6/);
+  assert.match(source, /MIN_PICK_ESTIMATED_VALUE = -0\.05/);
+  assert.match(source, /modelProbability: \{ gte: MIN_PICK_MODEL_PROBABILITY \}/);
+  assert.match(source, /estimatedValue: \{ gte: MIN_PICK_ESTIMATED_VALUE \}/);
+  assert.match(
+    source,
+    /statusRank\(b\.status\)[\s\S]*b\.modelProbability - a\.modelProbability[\s\S]*riskRank/,
+  );
+});

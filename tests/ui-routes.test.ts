@@ -93,7 +93,7 @@ test("analysis page leads with a guarded decision summary", async () => {
   assert.match(analysis, /pickPrimaryPrediction/);
   assert.match(analysis, /HOME FORM/);
   assert.match(analysis, /HEAD TO HEAD/);
-  assert.match(summary, /LEADING MODEL VIEW/);
+  assert.match(summary, /LEADING MODEL VIEW · SAFEST PROBABILITY/);
   assert.match(summary, /not a bet recommendation or guarantee of outcome/);
   assert.match(summary, /ESTIMATED VALUE/);
   assert.match(summary, /MARKET PROBABILITY/);
@@ -114,7 +114,8 @@ test("opportunities page requires independent evidence and stays validation-gate
   assert.match(card, /INDEPENDENT-EVIDENCE WATCH/);
   assert.match(card, /MODEL LIFT/);
   assert.match(card, /VIEW ANALYSIS/);
-  assert.match(data, /estimatedValue: \{ gt: 0 \}/);
+  assert.match(data, /modelProbability: \{ gte: MIN_PICK_MODEL_PROBABILITY \}/);
+  assert.match(data, /estimatedValue: \{ gte: MIN_PICK_ESTIMATED_VALUE \}/);
   assert.match(data, /dataQuality: \{ gte: 0\.5 \}/);
   assert.match(data, /modelAgreement: \{ gte: 0\.6 \}/);
   assert.match(data, /independentEvidenceSupport/);

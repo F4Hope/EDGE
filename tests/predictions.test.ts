@@ -221,7 +221,7 @@ function uiPrediction(
   };
 }
 
-test("primary UI prediction prioritizes decision quality over favorite probability", () => {
+test("primary UI prediction prioritizes higher win probability among usable outputs", () => {
   const favorite = uiPrediction({
     selectionName: "Favorite",
     modelProbability: 0.7,
@@ -240,7 +240,7 @@ test("primary UI prediction prioritizes decision quality over favorite probabili
 
   assert.equal(
     pickPrimaryPrediction([favorite, valueView])?.selectionName,
-    "Value View",
+    "Favorite",
   );
 });
 
@@ -450,4 +450,15 @@ test("double chance probabilities are derived from overlapping H2H outcomes", ()
     0,
   );
   assert.ok(total > 1.9 && total < 2.1);
+});
+
+
+test("LOW model risk requires at least 60 percent win probability", async () => {
+  const source = await readFile("lib/prediction/model.ts", "utf8");
+
+  assert.match(source, /modelProbability >= 0\.6/);
+  assert.match(
+    source,
+    /candidateRisk\([\s\S]*modelAgreement,[\s\S]*modelProbability/,
+  );
 });

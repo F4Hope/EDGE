@@ -95,6 +95,12 @@ function statusRank(status: UiPrediction["status"]): number {
   return 1;
 }
 
+function selectionEligibilityRank(status: UiPrediction["status"]): number {
+  if (status === "BETTABLE" || status === "WATCH") return 2;
+  if (status === "HIGH_RISK") return 1;
+  return 0;
+}
+
 function riskRank(risk: UiPrediction["risk"]): number {
   if (risk === "LOW") return 3;
   if (risk === "MEDIUM") return 2;
@@ -110,12 +116,13 @@ export function comparePredictionPriority(
   b: UiPrediction,
 ): number {
   return (
+    selectionEligibilityRank(b.status) - selectionEligibilityRank(a.status) ||
+    b.modelProbability - a.modelProbability ||
     statusRank(b.status) - statusRank(a.status) ||
     riskRank(b.risk) - riskRank(a.risk) ||
-    sortableMetric(b.estimatedValue) - sortableMetric(a.estimatedValue) ||
     sortableMetric(b.modelAgreement) - sortableMetric(a.modelAgreement) ||
     sortableMetric(b.dataQuality) - sortableMetric(a.dataQuality) ||
-    b.modelProbability - a.modelProbability ||
+    sortableMetric(b.estimatedValue) - sortableMetric(a.estimatedValue) ||
     a.selectionName.localeCompare(b.selectionName)
   );
 }

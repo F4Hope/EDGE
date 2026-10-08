@@ -324,9 +324,15 @@ function candidateRisk(
   quality: number,
   bookmakerCount: number,
   agreement: number,
+  modelProbability: number,
 ): PredictionRisk {
   if (quality < 0.55 || bookmakerCount < 2) return "HIGH";
-  if (quality >= 0.8 && bookmakerCount >= 3 && agreement >= 0.9) {
+  if (
+    modelProbability >= 0.6 &&
+    quality >= 0.8 &&
+    bookmakerCount >= 3 &&
+    agreement >= 0.9
+  ) {
     return "LOW";
   }
   return "MEDIUM";
@@ -469,6 +475,7 @@ function buildDoubleChancePredictionCandidates(
         quality,
         selection.bookmakerCount,
         modelAgreement,
+        modelProbability,
       );
       const evidence = doubleChanceEvidence(role, reference.evidence);
 
@@ -567,6 +574,7 @@ export function buildMarketPredictionCandidates(
         quality,
         selection.bookmakerCount,
         modelAgreement,
+        modelProbability,
       );
       const evidence = adjusted.adjustments[index];
 
