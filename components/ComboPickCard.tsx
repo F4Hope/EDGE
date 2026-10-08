@@ -310,7 +310,7 @@ export function ComboPickCard({
             <span>🏆 TODAY ONLY · {dayLabel.toUpperCase()}</span>
             <strong>Two separate Combo tickets</strong>
           </div>
-          <b>LOW TARGET 2.30 · BALANCED MIN 2.30</b>
+          <b>LOW TARGET 2.30 · BALANCED MINIMUM ODDS 2.30</b>
         </div>
 
         <div className="combo-pick-pair">
