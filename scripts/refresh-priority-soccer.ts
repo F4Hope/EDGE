@@ -124,7 +124,7 @@ function main() {
   run("odds:sync", [
     "--sports=football",
     "--markets=h2h,totals",
-    "--to=" + todayTo,
+    "--to=" + pricingTo,
     "--sport-keys=" + prioritySoccerEventKeys.join(","),
     "--max-sport-keys=" + String(footballKeys),
     "--event-max-sport-keys=" + String(prioritySoccerEventKeys.length),
