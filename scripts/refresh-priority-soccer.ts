@@ -79,8 +79,12 @@ function main() {
   );
 
   const now = new Date();
+  const isWeeklyBootstrap = now.getUTCDay() === 1;
+  const pricingHours = isWeeklyBootstrap ? hours : 24;
   const to = new Date(now.getTime() + hours * 60 * 60 * 1000).toISOString();
-  const todayTo = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
+  const pricingTo = new Date(
+    now.getTime() + pricingHours * 60 * 60 * 1000,
+  ).toISOString();
 
   console.log("EDGE today-first sports coverage refresh");
   console.log("---------------------------------------");
@@ -134,7 +138,7 @@ function main() {
     [
       "--sports=basketball",
       "--markets=h2h",
-      "--to=" + todayTo,
+      "--to=" + pricingTo,
       "--max-sport-keys=" + String(basketballKeys),
       "--event-max-sport-keys=12",
     ],
@@ -149,23 +153,31 @@ function main() {
     [
       "--sports=tennis",
       "--markets=h2h",
-      "--to=" + todayTo,
+      "--to=" + pricingTo,
       "--max-sport-keys=" + String(tennisKeys),
       "--event-max-sport-keys=12",
     ],
     "Today tennis odds refresh",
   );
 
-  console.log("Recalculating today-first features across all supported sports...");
+  console.log(
+    isWeeklyBootstrap
+      ? "Recalculating full-week features for Weekly Combo bootstrap..."
+      : "Recalculating today-first features across all supported sports...",
+  );
   run("features:calculate", [
     "--sports=all",
-    "--hours=24",
+    "--hours=" + String(pricingHours),
     "--limit=1000",
   ]);
 
-  console.log("Regenerating today-first priced predictions...");
+  console.log(
+    isWeeklyBootstrap
+      ? "Regenerating full-week priced predictions for Weekly Combo..."
+      : "Regenerating today-first priced predictions...",
+  );
   run("predictions:generate", [
-    "--hours=24",
+    "--hours=" + String(pricingHours),
     "--limit=500",
   ]);
 
@@ -174,6 +186,8 @@ function main() {
 
   console.log("EDGE today-first sports coverage refresh complete.", {
     discoveryHours: hours,
+    pricingHours,
+    weeklyBootstrap: isWeeklyBootstrap,
     paidCompetitionCaps: {
       football: footballKeys,
       basketball: basketballKeys,
