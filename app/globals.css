@@ -3875,3 +3875,233 @@ body {
   font-weight: 900;
   letter-spacing: 0.07em;
 }
+
+
+/* Weekly Combo */
+
+.weekly-combo-layout {
+  display: grid;
+  gap: 14px;
+}
+
+.weekly-combo-main,
+.weekly-combo-side {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.weekly-combo-hero {
+  padding: 18px;
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: center;
+  border: 1px solid rgba(105, 214, 255, 0.16);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at top right, rgba(47, 231, 130, 0.12), transparent 36%),
+    rgba(9, 20, 35, 0.94);
+}
+
+.weekly-combo-hero span {
+  color: #61f39c;
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.weekly-combo-hero h2 {
+  margin: 5px 0 3px;
+  color: #f8fbff;
+  font-size: 22px;
+}
+
+.weekly-combo-hero p,
+.weekly-combo-message {
+  margin: 0;
+  color: #8ea1b8;
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+.weekly-combo-badge {
+  min-width: 64px;
+  padding: 10px;
+  text-align: center;
+  border: 1px solid rgba(47, 231, 130, 0.2);
+  border-radius: 14px;
+  background: rgba(47, 231, 130, 0.07);
+}
+
+.weekly-combo-badge strong,
+.weekly-combo-badge span {
+  display: block;
+}
+
+.weekly-combo-badge strong {
+  color: #61f39c;
+  font-size: 24px;
+}
+
+.weekly-combo-badge span {
+  margin-top: 2px;
+  font-size: 7px;
+}
+
+.weekly-combo-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.weekly-combo-stats > div,
+.weekly-stake-card {
+  padding: 12px;
+  border: 1px solid rgba(105, 214, 255, 0.12);
+  border-radius: 14px;
+  background: rgba(11, 23, 40, 0.88);
+}
+
+.weekly-combo-stats span,
+.weekly-stake-card span,
+.weekly-leg-odds span {
+  display: block;
+  color: #71859e;
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+}
+
+.weekly-combo-stats strong {
+  display: block;
+  margin-top: 4px;
+  color: #eef7ff;
+  font-size: 15px;
+}
+
+.weekly-combo-days {
+  display: grid;
+  gap: 10px;
+}
+
+.weekly-day-card {
+  overflow: hidden;
+  border: 1px solid rgba(105, 214, 255, 0.12);
+  border-radius: 16px;
+  background: rgba(8, 18, 32, 0.9);
+}
+
+.weekly-day-head {
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(41, 121, 255, 0.07);
+}
+
+.weekly-day-head strong {
+  color: #f2f8ff;
+  font-size: 10px;
+}
+
+.weekly-day-head span {
+  color: #69d6ff;
+  font-size: 7px;
+  font-weight: 900;
+}
+
+.weekly-leg {
+  padding: 12px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  border-top: 1px solid rgba(105, 214, 255, 0.08);
+}
+
+.weekly-leg-visuals {
+  display: flex;
+  align-items: center;
+}
+
+.weekly-leg-visuals .participant-badge + .participant-badge {
+  margin-left: -8px;
+}
+
+.weekly-leg-copy {
+  min-width: 0;
+}
+
+.weekly-leg-copy span,
+.weekly-leg-copy small {
+  display: block;
+  color: #71859e;
+  font-size: 7px;
+}
+
+.weekly-leg-copy strong {
+  display: block;
+  margin: 3px 0;
+  color: #f5fbff;
+  font-size: 11px;
+}
+
+.weekly-leg-copy p {
+  margin: 0 0 3px;
+  overflow: hidden;
+  color: #9badc2;
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.weekly-leg-odds {
+  text-align: right;
+}
+
+.weekly-leg-odds strong {
+  display: block;
+  margin-top: 3px;
+  color: #61f39c;
+  font-size: 15px;
+}
+
+.weekly-stake-card {
+  display: grid;
+  gap: 10px;
+}
+
+.weekly-stake-card strong {
+  display: block;
+  margin-top: 5px;
+  color: #61f39c;
+  font-size: 18px;
+}
+
+.weekly-stake-card button {
+  width: 100%;
+  padding: 11px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: linear-gradient(90deg, #2fe782, #69d6ff);
+  color: #06101d;
+  font-size: 9px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.weekly-combo-launch {
+  margin-top: -4px;
+}
+
+@media (min-width: 980px) {
+  .weekly-combo-layout {
+    grid-template-columns: minmax(0, 1.8fr) minmax(260px, 0.7fr);
+    align-items: start;
+  }
+
+  .weekly-combo-stats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}

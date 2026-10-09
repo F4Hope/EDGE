@@ -6,6 +6,7 @@ import {
   buildCombo,
   type ComboCandidate,
 } from "../lib/combo/engine";
+import { buildWeeklyCombo } from "../lib/combo/weekly";
 import { recordComboBuild } from "../lib/data/comboAudit";
 
 function candidate(
@@ -804,4 +805,85 @@ test("LOW daily ticket keeps best-effort fallback below 2.30 while preferring ta
   assert.match(card, /LOW targets 2\.30; best qualified fallback shows if needed/);
   assert.match(card, /BALANCED must reach 2\.30\+/);
   assert.match(page, /LOW targets 2\.30 but shows the strongest qualified fallback/);
+});
+
+
+test("weekly combo spreads high-probability selections across the Monday-Sunday window", () => {
+  const weekly = buildWeeklyCombo(
+    [
+      candidate(201, {
+        eventId: "mon-a",
+        sport: "football",
+        startsAt: "2026-10-05T18:00:00.000Z",
+        modelProbability: 0.9,
+      }),
+      candidate(202, {
+        eventId: "mon-b",
+        sport: "basketball",
+        startsAt: "2026-10-05T20:00:00.000Z",
+        modelProbability: 0.85,
+      }),
+      candidate(203, {
+        eventId: "mon-c",
+        sport: "tennis",
+        startsAt: "2026-10-05T21:00:00.000Z",
+        modelProbability: 0.7,
+      }),
+      candidate(204, {
+        eventId: "tue-a",
+        sport: "tennis",
+        startsAt: "2026-10-06T16:00:00.000Z",
+        modelProbability: 0.82,
+      }),
+      candidate(205, {
+        eventId: "wed-a",
+        sport: "football",
+        startsAt: "2026-10-07T16:00:00.000Z",
+        modelProbability: 0.78,
+      }),
+      candidate(206, {
+        eventId: "wed-weak",
+        startsAt: "2026-10-07T18:00:00.000Z",
+        modelProbability: 0.59,
+      }),
+    ],
+    {
+      weekStart: "2026-10-05T00:00:00.000Z",
+      weekEnd: "2026-10-12T00:00:00.000Z",
+      timeZone: "UTC",
+    },
+  );
+
+  assert.equal(weekly.status, "READY");
+  assert.equal(weekly.legs.length, 4);
+  assert.equal(weekly.distinctDays, 3);
+  assert.equal(weekly.distinctSports, 3);
+  assert.ok(weekly.legs.every((leg) => leg.modelProbability >= 0.6));
+  assert.ok(!weekly.legs.some((leg) => leg.eventId === "mon-c"));
+  assert.ok(!weekly.legs.some((leg) => leg.eventId === "wed-weak"));
+});
+
+test("weekly Combo route and page use the current local Monday-Sunday week", async () => {
+  const [page, card, route, weekly, combosPage] = await Promise.all([
+    readFile("app/combos/weekly/page.tsx", "utf8"),
+    readFile("components/WeeklyComboCard.tsx", "utf8"),
+    readFile("app/api/combos/weekly/route.ts", "utf8"),
+    readFile("lib/combo/weekly.ts", "utf8"),
+    readFile("app/combos/page.tsx", "utf8"),
+  ]);
+
+  assert.match(page, /Weekly Combo/);
+  assert.match(page, /Monday-to-Sunday cumulative ticket/);
+  assert.match(card, /daysSinceMonday/);
+  assert.match(card, /30 \* 60 \* 1000/);
+  assert.match(card, /scheduleNextMonday/);
+  assert.match(card, /REFRESH WEEKLY TICKET/);
+  assert.match(route, /getComboCandidatePool\(168, window\)/);
+  assert.match(route, /buildWeeklyCombo/);
+  assert.match(weekly, /WEEKLY_MIN_PROBABILITY = 0\.6/);
+  assert.match(weekly, /WEEKLY_MAX_LEGS = 10/);
+  assert.match(weekly, /WEEKLY_MAX_LEGS_PER_DAY = 2/);
+  assert.match(weekly, /b\.modelProbability - a\.modelProbability/);
+  assert.match(combosPage, /href="\/combos\/weekly"/);
+  assert.match(combosPage, /OPEN WEEKLY COMBO/);
 });

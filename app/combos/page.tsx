@@ -46,6 +46,14 @@ export default async function CombosPage() {
         </Link>
       </div>
 
+      <div className="combo-pick-launch weekly-combo-launch">
+        <Link href="/combos/weekly" className="combo-pick-launch-link">
+          <span>📅</span>
+          <strong>OPEN WEEKLY COMBO</strong>
+          <b>Monday → Sunday · long cumulative ticket →</b>
+        </Link>
+      </div>
+
       <ComboBuilder
         initialResult={initialResult}
         initialDiagnostics={initialDiagnostics}

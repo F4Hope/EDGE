@@ -9,6 +9,7 @@ const requiredRoutes = [
   "app/opportunities/page.tsx",
   "app/best-picks/page.tsx",
   "app/combos/page.tsx",
+  "app/combos/weekly/page.tsx",
   "app/history/page.tsx",
   "app/model/page.tsx",
   "app/settings/page.tsx",
@@ -219,4 +220,18 @@ test("Combo Pick route and visual participant refresh are wired into the app", a
   assert.match(css, /EDGE visual refresh/);
   assert.match(css, /--edge-blue: #2979ff/);
   assert.match(css, /\.participant-badge/);
+});
+
+
+test("weekly Combo is a visible child of Combos and uses participant visuals", async () => {
+  const [page, card, nav] = await Promise.all([
+    readFile("app/combos/weekly/page.tsx", "utf8"),
+    readFile("components/WeeklyComboCard.tsx", "utf8"),
+    readFile("components/BottomNav.tsx", "utf8"),
+  ]);
+
+  assert.match(page, /WeeklyComboCard/);
+  assert.match(card, /ParticipantBadge/);
+  assert.match(card, /Football, basketball and tennis eligible/);
+  assert.match(nav, /path\.startsWith\("\/combos"\)/);
 });
