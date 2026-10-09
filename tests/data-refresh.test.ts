@@ -91,10 +91,23 @@ test("daily coverage worker prioritizes today's football basketball and tennis o
   assert.match(source, /--markets=h2h,totals/);
   assert.match(source, /--sports=basketball/);
   assert.match(source, /--sports=tennis/);
-  assert.match(source, /--hours=24/);
+  assert.match(source, /pricingHours/);
   assert.match(source, /--max-requests=6/);
   assert.match(source, /features:calculate/);
   assert.match(source, /predictions:generate/);
+});
+
+test("Monday coverage bootstraps the full week for Weekly Combo without increasing competition caps", async () => {
+  const source = await readFile("scripts/refresh-priority-soccer.ts", "utf8");
+
+  assert.match(source, /now\.getUTCDay\(\) === 1/);
+  assert.match(source, /const pricingHours = isWeeklyBootstrap \? hours : 24/);
+  assert.match(source, /"--to=" \+ pricingTo/);
+  assert.match(source, /"--hours=" \+ String\(pricingHours\)/);
+  assert.match(source, /weeklyBootstrap: isWeeklyBootstrap/);
+  assert.match(source, /footballKeys/);
+  assert.match(source, /basketballKeys/);
+  assert.match(source, /tennisKeys/);
 });
 
 
