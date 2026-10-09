@@ -808,7 +808,7 @@ test("LOW daily ticket keeps best-effort fallback below 2.30 while preferring ta
 });
 
 
-test("weekly combo spreads high-probability selections across the Monday-Sunday window", () => {
+test("weekly combo includes every qualified event without a per-day cap", () => {
   const weekly = buildWeeklyCombo(
     [
       candidate(201, {
@@ -855,12 +855,39 @@ test("weekly combo spreads high-probability selections across the Monday-Sunday 
   );
 
   assert.equal(weekly.status, "READY");
-  assert.equal(weekly.legs.length, 4);
+  assert.equal(weekly.legs.length, 5);
   assert.equal(weekly.distinctDays, 3);
   assert.equal(weekly.distinctSports, 3);
   assert.ok(weekly.legs.every((leg) => leg.modelProbability >= 0.6));
-  assert.ok(!weekly.legs.some((leg) => leg.eventId === "mon-c"));
+  assert.ok(weekly.legs.some((leg) => leg.eventId === "mon-c"));
   assert.ok(!weekly.legs.some((leg) => leg.eventId === "wed-weak"));
+});
+
+test("weekly combo has no artificial daily or total leg cap", () => {
+  const sameDay = Array.from({ length: 12 }, (_, index) =>
+    candidate(300 + index, {
+      eventId: `same-day-${index}`,
+      startsAt: `2026-10-10T${String(8 + index).padStart(2, "0")}:00:00.000Z`,
+      modelProbability: 0.72 + index * 0.005,
+      dataQuality: 0.85,
+      modelAgreement: 0.9,
+      estimatedValue: 0.03,
+    }),
+  );
+
+  const weekly = buildWeeklyCombo(sameDay, {
+    weekStart: "2026-10-05T00:00:00.000Z",
+    weekEnd: "2026-10-12T00:00:00.000Z",
+    timeZone: "UTC",
+  });
+
+  assert.equal(weekly.status, "READY");
+  assert.equal(weekly.legs.length, 12);
+  assert.equal(weekly.distinctDays, 1);
+  assert.deepEqual(
+    new Set(weekly.legs.map((leg) => leg.eventId)).size,
+    12,
+  );
 });
 
 test("weekly Combo route and page use the current local Monday-Sunday week", async () => {
@@ -881,9 +908,12 @@ test("weekly Combo route and page use the current local Monday-Sunday week", asy
   assert.match(route, /getComboCandidatePool\(168, window\)/);
   assert.match(route, /buildWeeklyCombo/);
   assert.match(weekly, /WEEKLY_MIN_PROBABILITY = 0\.6/);
-  assert.match(weekly, /WEEKLY_MAX_LEGS = 10/);
-  assert.match(weekly, /WEEKLY_MAX_LEGS_PER_DAY = 2/);
+  assert.doesNotMatch(weekly, /WEEKLY_MAX_LEGS/);
+  assert.doesNotMatch(weekly, /WEEKLY_MAX_LEGS_PER_DAY/);
   assert.match(weekly, /b\.modelProbability - a\.modelProbability/);
+  assert.match(card, /No fixed daily leg limit/);
+  assert.match(card, /No fixed weekly leg limit/);
+  assert.match(card, /Every qualified event is included/);
   assert.match(combosPage, /href="\/combos\/weekly"/);
   assert.match(combosPage, /OPEN WEEKLY COMBO/);
 });

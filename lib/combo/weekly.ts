@@ -4,8 +4,6 @@ export const WEEKLY_MIN_PROBABILITY = 0.6;
 export const WEEKLY_MIN_DATA_QUALITY = 0.55;
 export const WEEKLY_MIN_AGREEMENT = 0.6;
 export const WEEKLY_MIN_ESTIMATED_VALUE = -0.05;
-export const WEEKLY_MAX_LEGS = 10;
-export const WEEKLY_MAX_LEGS_PER_DAY = 2;
 
 export type WeeklyComboStatus =
   | "READY"
@@ -97,43 +95,9 @@ export function buildWeeklyCombo(
     uniqueEvents.push(candidate);
   }
 
-  const byDay = new Map<string, ComboCandidate[]>();
-  for (const candidate of uniqueEvents) {
-    const key = dateKey(candidate.startsAt, options.timeZone);
-    const group = byDay.get(key) ?? [];
-    group.push(candidate);
-    byDay.set(key, group);
-  }
-
-  const selected: ComboCandidate[] = [];
-  const selectedIds = new Set<string>();
-  const countByDay = new Map<string, number>();
-
-  const dayKeys = [...byDay.keys()].sort();
-
-  // First cover as many remaining days in the Monday-Sunday window as possible.
-  for (const key of dayKeys) {
-    const candidate = byDay.get(key)?.[0];
-    if (!candidate || selected.length >= WEEKLY_MAX_LEGS) continue;
-    selected.push(candidate);
-    selectedIds.add(candidate.predictionId);
-    countByDay.set(key, 1);
-  }
-
-  // Then lengthen the accumulator with the next safest choices, capped per day.
-  for (const candidate of uniqueEvents) {
-    if (selected.length >= WEEKLY_MAX_LEGS) break;
-    if (selectedIds.has(candidate.predictionId)) continue;
-
-    const key = dateKey(candidate.startsAt, options.timeZone);
-    if ((countByDay.get(key) ?? 0) >= WEEKLY_MAX_LEGS_PER_DAY) continue;
-
-    selected.push(candidate);
-    selectedIds.add(candidate.predictionId);
-    countByDay.set(key, (countByDay.get(key) ?? 0) + 1);
-  }
-
-  selected.sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+  const selected = [...uniqueEvents].sort((a, b) =>
+    a.startsAt.localeCompare(b.startsAt),
+  );
 
   if (selected.length < 2) {
     return {
@@ -145,13 +109,15 @@ export function buildWeeklyCombo(
       estimatedProbability: null,
       legs: [],
       candidateCount: uniqueEvents.length,
-      distinctDays: selected.length,
+      distinctDays: new Set(
+        selected.map((leg) => dateKey(leg.startsAt, options.timeZone)),
+      ).size,
       distinctSports: new Set(selected.map((leg) => leg.sport)).size,
       minProbability: WEEKLY_MIN_PROBABILITY,
       message:
         "Fewer than two future selections in this week pass the high-probability and quality gates.",
       methodology:
-        "Current Monday-Sunday window only. Future pre-live priced selections require at least 60% model probability, usable risk status, model quality and agreement. Weak legs are never added just to make the ticket longer.",
+        "Current Monday-Sunday window only. Future pre-live priced selections require at least 60% model probability, usable risk status, model quality and agreement. There is no fixed daily or weekly leg cap; one strongest qualified selection is kept per event.",
     };
   }
 
@@ -167,9 +133,7 @@ export function buildWeeklyCombo(
     selected.map((leg) => dateKey(leg.startsAt, options.timeZone)),
   ).size;
   const distinctSports = new Set(selected.map((leg) => leg.sport)).size;
-  const readyFloor = Math.min(6, Math.max(2, byDay.size));
-  const status: WeeklyComboStatus =
-    selected.length >= readyFloor ? "READY" : "BEST_AVAILABLE";
+  const status: WeeklyComboStatus = "READY";
 
   return {
     status,
@@ -183,11 +147,8 @@ export function buildWeeklyCombo(
     distinctDays,
     distinctSports,
     minProbability: WEEKLY_MIN_PROBABILITY,
-    message:
-      status === "READY"
-        ? `EDGE assembled ${selected.length} high-probability legs across ${distinctDays} remaining day(s) of this week.`
-        : `Only ${selected.length} qualified future legs are available in the current week. Showing the strongest available weekly ticket without adding weaker selections.`,
+    message: `EDGE found ${selected.length} qualified future event(s) across ${distinctDays} remaining day(s) of this week and included every one of them.`,
     methodology:
-      "Probability first: EDGE covers as many remaining calendar days as possible, then adds the next safest selections up to two per day and ten total. One selection per event. Football, basketball and tennis are all eligible. Combined probability multiplies leg probabilities and assumes independence; it is not a guarantee.",
+      "Probability first: every future event that passes the weekly probability, risk, data-quality, agreement and value gates is included. There is no fixed daily or weekly leg cap. Only the strongest qualified selection is kept per event. Football, basketball and tennis are all eligible. Combined probability multiplies leg probabilities and assumes independence; it is not a guarantee.",
   };
 }

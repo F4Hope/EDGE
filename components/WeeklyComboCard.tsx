@@ -50,6 +50,12 @@ function percent(value: number): string {
   return `${(value * 100).toFixed(1)}%`;
 }
 
+function combinedProbabilityLabel(value: number | null): string {
+  if (value === null || value <= 0) return "—";
+  if (value < 0.001) return "<0.1%";
+  return percent(value);
+}
+
 function formatStart(iso: string): string {
   return new Intl.DateTimeFormat("en", {
     weekday: "short",
@@ -205,6 +211,10 @@ export function WeeklyComboCard() {
                 <strong>{result.actualOdds?.toFixed(2) ?? "—"}</strong>
               </div>
               <div>
+                <span>EST. TICKET PROB.</span>
+                <strong>{combinedProbabilityLabel(result.estimatedProbability)}</strong>
+              </div>
+              <div>
                 <span>DAYS COVERED</span>
                 <strong>{result.distinctDays}</strong>
               </div>
@@ -332,9 +342,10 @@ export function WeeklyComboCard() {
             <li>✓ Future pre-live games only</li>
             <li>✓ 60%+ model probability per leg</li>
             <li>✓ Probability outranks nominal value</li>
-            <li>✓ Maximum two picks per calendar day</li>
-            <li>✓ Maximum ten legs</li>
-            <li>✓ One selection per event</li>
+            <li>✓ No fixed daily leg limit</li>
+            <li>✓ No fixed weekly leg limit</li>
+            <li>✓ Every qualified event is included</li>
+            <li>✓ One strongest selection per event</li>
             <li>✓ Football, basketball and tennis eligible</li>
           </ul>
         </div>

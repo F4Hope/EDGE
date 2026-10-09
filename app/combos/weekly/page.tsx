@@ -23,11 +23,11 @@ export default function WeeklyCombosPage() {
 
       <section className="principle-card compact-principle">
         <span className="principle-index">WEEKLY RULE</span>
-        <p>LONGER DOES NOT MEAN WEAKER.</p>
+        <p>QUALIFY FIRST. COUNT SECOND.</p>
         <span className="principle-note">
-          EDGE will leave a day uncovered rather than insert a low-probability
-          leg. Cumulative tickets multiply risk across legs; no weekly ticket is
-          guaranteed to win.
+          EDGE does not impose a daily or weekly leg quota. Every event that
+          independently passes the weekly gates is included, while cumulative
+          ticket probability still falls as more legs must all win.
         </span>
       </section>
     </MobileShell>
