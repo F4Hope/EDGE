@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "EDGE BetPawa Cameroon Bridge (Deprecated)",
+  "version": "0.1.1",
+  "description": "Deprecated. Use EDGE guided manual load mode instead.",
+  "permissions": [],
+  "host_permissions": [],
+  "action": {
+    "default_title": "EDGE BetPawa Bridge is deprecated"
+  }
+}

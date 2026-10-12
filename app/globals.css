@@ -4219,3 +4219,128 @@ body {
     width: 100%;
   }
 }
+
+
+/* BetPawa Cameroon guided manual load */
+.betpawa-manual-head,
+.betpawa-manual-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.betpawa-manual-head {
+  margin-top: 14px;
+}
+
+.betpawa-manual-head > div {
+  display: grid;
+  gap: 3px;
+}
+
+.betpawa-manual-head span,
+.betpawa-manual-pick > span {
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  opacity: 0.72;
+}
+
+.betpawa-manual-head button,
+.betpawa-manual-nav button {
+  border: 1px solid rgba(105, 214, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(41, 121, 255, 0.12);
+  color: inherit;
+  padding: 9px 12px;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.betpawa-manual-head button {
+  white-space: nowrap;
+}
+
+.betpawa-manual-pick {
+  margin-top: 12px;
+  padding: 14px;
+  display: grid;
+  gap: 6px;
+  border: 1px solid rgba(47, 231, 130, 0.22);
+  border-radius: 14px;
+  background: rgba(47, 231, 130, 0.06);
+}
+
+.betpawa-manual-pick strong {
+  font-size: 1.12rem;
+}
+
+.betpawa-manual-pick p {
+  margin: 0;
+  opacity: 0.9;
+}
+
+.betpawa-manual-pick small {
+  opacity: 0.72;
+}
+
+.betpawa-manual-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.betpawa-manual-actions a,
+.betpawa-manual-actions button {
+  text-align: center;
+}
+
+.betpawa-manual-nav {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+
+.betpawa-manual-nav > div {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.betpawa-manual-nav > div span {
+  font-size: 1.2rem;
+  font-weight: 900;
+}
+
+.betpawa-manual-nav > div i {
+  opacity: 0.45;
+  font-style: normal;
+}
+
+.betpawa-manual-nav button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .betpawa-manual-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .betpawa-manual-nav {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .betpawa-manual-nav > div {
+    order: -1;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .betpawa-manual-nav button {
+    flex: 1 1 140px;
+  }
+}

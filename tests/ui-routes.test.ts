@@ -267,3 +267,15 @@ test("Daily and Weekly Combo expose BetPawa booking-code copy surfaces", async (
   assert.match(panel, /OPEN BETPAWA/);
   assert.match(panel, /unmatchedLegs/);
 });
+
+
+test("BetPawa no-connector state provides a guided Cameroon manual loader instead of a dead end", async () => {
+  const panel = await readFile("components/BetPawaBookingPanel.tsx", "utf8");
+  assert.match(panel, /MANUAL LOAD MODE/);
+  assert.match(panel, /OPEN THIS MATCH ON BETPAWA/);
+  assert.match(panel, /COPY THIS PICK/);
+  assert.match(panel, /COPY ALL PICKS/);
+  assert.match(panel, /I ADDED IT · NEXT/);
+  assert.match(panel, /search\?searchQuery=/);
+  assert.match(panel, /BetPawa&apos;s own Booking Code \/ Share Betslip/);
+});
