@@ -77,11 +77,16 @@ function stringList(value: unknown): string[] {
     .filter((item): item is string => Boolean(item));
 }
 
-function loadUrlForSite(siteUrl: string | null): string | null {
+function loadUrlForSite(
+  siteUrl: string | null,
+  bookingCode?: string | null,
+): string | null {
   if (!siteUrl) return null;
 
   try {
-    return new URL("/search", siteUrl).toString();
+    const url = new URL(bookingCode ? "/" : "/search", siteUrl);
+    if (bookingCode) url.searchParams.set("bookingCode", bookingCode);
+    return url.toString();
   } catch {
     return null;
   }
@@ -122,7 +127,8 @@ export function parseBetPawaBookingResponse(
     httpsUrl(payload?.load_url) ??
     httpsUrl(data?.loadUrl) ??
     httpsUrl(data?.load_url);
-  const loadUrl = providerLoadUrl ?? loadUrlForSite(configuredSiteUrl);
+  const loadUrl =
+    providerLoadUrl ?? loadUrlForSite(configuredSiteUrl, code);
 
   if (!code) {
     return {
@@ -178,7 +184,7 @@ export async function createBetPawaBookingCode(options: {
       matchedLegCount: 0,
       unmatchedLegs: [],
       message:
-        "The BetPawa booking-code connector is not configured on this deployment.",
+        "BetPawa Cameroon is selected, but the authenticated booking-code bridge is not configured yet.",
     };
   }
 

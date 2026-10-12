@@ -988,3 +988,22 @@ test("daily and weekly Combo tickets render the shared BetPawa booking-code pane
   assert.match(env, /BETPAWA_BOOKING_API_TOKEN/);
   assert.match(env, /BETPAWA_SITE_URL/);
 });
+
+
+test("BetPawa Cameroon booking codes deep-link directly into the Cameroon site", () => {
+  const ready = parseBetPawaBookingResponse(
+    {
+      bookingCode: "ABC1234",
+      matchedLegCount: 2,
+      unmatchedLegs: [],
+    },
+    2,
+    "https://www.betpawa.cm",
+  );
+
+  assert.equal(ready.status, "READY");
+  assert.equal(
+    ready.loadUrl,
+    "https://www.betpawa.cm/?bookingCode=ABC1234",
+  );
+});
