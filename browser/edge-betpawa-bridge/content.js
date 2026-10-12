@@ -189,12 +189,28 @@
     if (bestScore >= 10) return best;
 
     if (leg.marketKey === "h2h") {
-      const h2h = [...document.querySelectorAll(".event-bet")].filter(visible);
-      const key = String(leg.selectionKey).toLowerCase();
-      if (h2h.length >= 3) {
-        if (key === "home") return h2h[0];
-        if (key === "draw") return h2h[1];
-        if (key === "away") return h2h[2];
+      const headings = [...document.querySelectorAll("h1, h2, h3, h4, h5, strong, span, div")]
+        .filter(visible)
+        .filter((element) => {
+          const text = normalize(element.textContent);
+          return (
+            text === "1x2 full time" ||
+            text.includes("1x2 full time") ||
+            text.includes("match result full time")
+          );
+        });
+
+      for (const heading of headings) {
+        let scope = heading.parentElement;
+        for (let depth = 0; scope && depth < 4; depth += 1, scope = scope.parentElement) {
+          const options = [...scope.querySelectorAll(".event-bet")].filter(visible);
+          if (options.length >= 3) {
+            const key = String(leg.selectionKey).toLowerCase();
+            if (key === "home") return options[0];
+            if (key === "draw") return options[1];
+            if (key === "away") return options[2];
+          }
+        }
       }
     }
 
