@@ -12,6 +12,27 @@ type ApiResponse = {
   error?: string;
 };
 
+function bridgeUrl(legs: ComboCandidate[]): string | null {
+  if (legs.length < 2) return null;
+
+  const compact = legs.map((leg) => ({
+    matchup: leg.matchup,
+    marketKey: leg.marketKey,
+    point: leg.point,
+    selectionKey: leg.selectionKey,
+    selectionName: leg.selectionName,
+  }));
+  const bytes = new TextEncoder().encode(JSON.stringify({ version: 1, legs: compact }));
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  const encoded = btoa(binary)
+    .replaceAll("+", "-")
+    .replaceAll("/", "_")
+    .replaceAll("=", "");
+
+  return `https://www.betpawa.cm/#edgeTicket=${encoded}`;
+}
+
 function bookingPayload(
   ticketKind: BetPawaTicketKind,
   legs: ComboCandidate[],
@@ -46,6 +67,7 @@ export function BetPawaBookingPanel({
     () => bookingPayload(ticketKind, legs),
     [ticketKind, legs],
   );
+  const handoffUrl = useMemo(() => bridgeUrl(legs), [legs]);
   const [result, setResult] = useState<BetPawaBookingResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -172,12 +194,19 @@ export function BetPawaBookingPanel({
           ) : null}
           {!loading ? (
             <div className="betpawa-booking-actions">
-              {result?.loadUrl ? (
-                <a href={result.loadUrl} target="_blank" rel="noreferrer">
-                  {result.status === "NOT_CONFIGURED"
-                    ? "OPEN BETPAWA CAMEROON →"
-                    : "OPEN BETPAWA →"}
+              {result?.status === "NOT_CONFIGURED" && handoffUrl ? (
+                <a href={handoffUrl} target="_blank" rel="noreferrer">
+                  OPEN BETPAWA WITH PICKS →
                 </a>
+              ) : result?.loadUrl ? (
+                <a href={result.loadUrl} target="_blank" rel="noreferrer">
+                  OPEN BETPAWA →
+                </a>
+              ) : null}
+              {result?.status === "NOT_CONFIGURED" ? (
+                <small className="betpawa-bridge-note">
+                  Requires the one-time EDGE BetPawa Cameroon browser bridge.
+                </small>
               ) : null}
               {result?.status === "UNAVAILABLE" ? (
                 <button
