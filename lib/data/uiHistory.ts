@@ -206,6 +206,7 @@ export async function getUiHistory(): Promise<UiHistoryState> {
           calibrationError: null,
           buckets: [],
         },
+        confidenceThresholds: [],
         marketBenchmark: {
           count: 0,
           model: {

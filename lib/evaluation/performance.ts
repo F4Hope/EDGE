@@ -14,6 +14,15 @@ export type ModelPerformanceSegment = {
   evaluation: BinaryEvaluation;
 };
 
+export type ConfidenceThresholdPerformance = {
+  minProbability: number;
+  count: number;
+  averageProbability: number | null;
+  observedRate: number | null;
+  calibrationGap: number | null;
+  evaluation: BinaryEvaluation;
+};
+
 export type MarketBenchmark = {
   count: number;
   model: BinaryEvaluation;
@@ -26,6 +35,7 @@ export type MarketBenchmark = {
 export type ModelPerformanceReport = {
   sampleCount: number;
   evaluation: BinaryEvaluation;
+  confidenceThresholds: ConfidenceThresholdPerformance[];
   marketBenchmark: MarketBenchmark;
   bySport: ModelPerformanceSegment[];
   byMarket: ModelPerformanceSegment[];
@@ -50,6 +60,41 @@ function segment(
       evaluation: evaluateBinaryProbabilities(values),
     }))
     .sort((a, b) => b.count - a.count || a.key.localeCompare(b.key));
+}
+
+function confidenceThresholdPerformance(
+  rows: BinaryEvaluationRow[],
+  thresholds = [0.6, 0.7, 0.8],
+): ConfidenceThresholdPerformance[] {
+  return thresholds.map((minProbability) => {
+    const members = rows.filter((row) => row.probability >= minProbability);
+    const evaluation = evaluateBinaryProbabilities(members);
+
+    if (members.length === 0) {
+      return {
+        minProbability,
+        count: 0,
+        averageProbability: null,
+        observedRate: null,
+        calibrationGap: null,
+        evaluation,
+      };
+    }
+
+    const averageProbability =
+      members.reduce((sum, row) => sum + row.probability, 0) / members.length;
+    const observedRate =
+      members.reduce((sum, row) => sum + row.outcome, 0) / members.length;
+
+    return {
+      minProbability,
+      count: members.length,
+      averageProbability: Number(averageProbability.toFixed(6)),
+      observedRate: Number(observedRate.toFixed(6)),
+      calibrationGap: Number((observedRate - averageProbability).toFixed(6)),
+      evaluation,
+    };
+  });
 }
 
 function marketProbability(value: unknown): number | null {
@@ -196,6 +241,7 @@ export async function calculateModelPerformance(
   return {
     sampleCount: rows.length,
     evaluation,
+    confidenceThresholds: confidenceThresholdPerformance(rows),
     marketBenchmark: {
       count: pairedModelRows.length,
       model: pairedModel,

@@ -235,3 +235,19 @@ test("weekly Combo is a visible child of Combos and uses participant visuals", a
   assert.match(card, /Football, basketball and tennis eligible/);
   assert.match(nav, /path\.startsWith\("\/combos"\)/);
 });
+
+
+test("model page audits the high-confidence probability tiers used by picks", async () => {
+  const [page, performance] = await Promise.all([
+    readFile("app/model/page.tsx", "utf8"),
+    readFile("lib/evaluation/performance.ts", "utf8"),
+  ]);
+
+  assert.match(page, /HIGH-CONFIDENCE AUDIT/);
+  assert.match(page, /60%\+ HIT RATE/);
+  assert.match(page, /70%\+ TIER/);
+  assert.match(page, /80%\+ TIER/);
+  assert.match(performance, /confidenceThresholdPerformance/);
+  assert.match(performance, /\[0\.6, 0\.7, 0\.8\]/);
+  assert.match(performance, /observedRate - averageProbability/);
+});

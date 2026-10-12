@@ -249,6 +249,13 @@ test("model performance derives legacy outcomes and deduplicates prediction revi
   assert.equal(report.evaluation.count, 2);
   assert.equal(report.evaluation.accuracyAtHalf, 1);
   assert.equal(report.evaluation.brierScore, 0.16);
+  assert.equal(report.confidenceThresholds[0]?.minProbability, 0.6);
+  assert.equal(report.confidenceThresholds[0]?.count, 1);
+  assert.equal(report.confidenceThresholds[0]?.averageProbability, 0.6);
+  assert.equal(report.confidenceThresholds[0]?.observedRate, 1);
+  assert.equal(report.confidenceThresholds[0]?.calibrationGap, 0.4);
+  assert.equal(report.confidenceThresholds[1]?.minProbability, 0.7);
+  assert.equal(report.confidenceThresholds[1]?.count, 0);
   assert.equal(report.marketBenchmark.count, 2);
   assert.equal(report.marketBenchmark.model.brierScore, 0.16);
   assert.equal(report.marketBenchmark.market.brierScore, 0.1764);

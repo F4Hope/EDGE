@@ -16,9 +16,27 @@ function signed(value: number | null, digits = 3): string {
   return `${prefix}${value.toFixed(digits)}`;
 }
 
+function signedPct(value: number | null): string {
+  if (value === null) return "—";
+  const prefix = value > 0 ? "+" : "";
+  return `${prefix}${(value * 100).toFixed(1)}%`;
+}
+
 export default async function ModelPage() {
   const state = await getUiHistory();
   const report = state.performance;
+  const confidence60 =
+    report.confidenceThresholds.find(
+      (row) => Math.abs(row.minProbability - 0.6) < 1e-9,
+    ) ?? null;
+  const confidence70 =
+    report.confidenceThresholds.find(
+      (row) => Math.abs(row.minProbability - 0.7) < 1e-9,
+    ) ?? null;
+  const confidence80 =
+    report.confidenceThresholds.find(
+      (row) => Math.abs(row.minProbability - 0.8) < 1e-9,
+    ) ?? null;
 
   return (
     <MobileShell>
@@ -58,6 +76,64 @@ export default async function ModelPage() {
           state={report.sampleCount > 0 ? "ready" : "pending"}
         />
       </div>
+
+      <section className="security-note">
+        <span className="empty-status">HIGH-CONFIDENCE AUDIT</span>
+        <h2>Do 60%+ forecasts win like 60%+ forecasts?</h2>
+        <p>
+          EDGE separately audits the probability tiers used by Picks and Weekly
+          Combo. Observed win rate should converge toward the average forecast as
+          the settled sample grows.
+        </p>
+      </section>
+
+      <div className="metric-grid">
+        <MetricPlaceholder
+          label="60%+ SAMPLE"
+          value={String(confidence60?.count ?? 0)}
+          note="Settled predictions at or above 60%"
+          state={(confidence60?.count ?? 0) > 0 ? "ready" : "pending"}
+        />
+        <MetricPlaceholder
+          label="60%+ HIT RATE"
+          value={pct(confidence60?.observedRate ?? null)}
+          note="Observed wins in the 60%+ tier"
+          state={(confidence60?.count ?? 0) > 0 ? "ready" : "pending"}
+        />
+        <MetricPlaceholder
+          label="60%+ AVG FORECAST"
+          value={pct(confidence60?.averageProbability ?? null)}
+          note="Mean model probability in the tier"
+          state={(confidence60?.count ?? 0) > 0 ? "ready" : "pending"}
+        />
+        <MetricPlaceholder
+          label="60%+ CALIBRATION GAP"
+          value={signedPct(confidence60?.calibrationGap ?? null)}
+          note="Observed win rate minus average forecast"
+          state={(confidence60?.count ?? 0) > 0 ? "ready" : "pending"}
+        />
+      </div>
+
+      <section className="split-card">
+        <div>
+          <span className="empty-status">70%+ TIER</span>
+          <strong>{confidence70?.count ?? 0} settled</strong>
+          <p>
+            Hit rate {pct(confidence70?.observedRate ?? null)} · forecast{" "}
+            {pct(confidence70?.averageProbability ?? null)} · gap{" "}
+            {signedPct(confidence70?.calibrationGap ?? null)}
+          </p>
+        </div>
+        <div>
+          <span className="empty-status">80%+ TIER</span>
+          <strong>{confidence80?.count ?? 0} settled</strong>
+          <p>
+            Hit rate {pct(confidence80?.observedRate ?? null)} · forecast{" "}
+            {pct(confidence80?.averageProbability ?? null)} · gap{" "}
+            {signedPct(confidence80?.calibrationGap ?? null)}
+          </p>
+        </div>
+      </section>
 
       <div className="metric-grid">
         <MetricPlaceholder
