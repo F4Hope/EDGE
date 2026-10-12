@@ -168,7 +168,6 @@ function main() {
   run("features:calculate", [
     "--sports=all",
     "--hours=" + String(pricingHours),
-    "--limit=1000",
   ]);
 
   console.log(
@@ -178,7 +177,6 @@ function main() {
   );
   run("predictions:generate", [
     "--hours=" + String(pricingHours),
-    "--limit=500",
   ]);
 
   console.log("Running readiness check...");

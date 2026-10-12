@@ -26,7 +26,9 @@ async function main() {
   const db = getDb();
   const eventId = getArg("event-id");
   const hours = Math.min(24 * 14, positiveInt(getArg("hours"), 168, "--hours"));
-  const limit = Math.min(500, positiveInt(getArg("limit"), 250, "--limit"));
+  const limitArg = getArg("limit");
+  const limit =
+    limitArg === undefined ? null : positiveInt(limitArg, 250, "--limit");
   const asOf = new Date();
 
   try {
@@ -53,8 +55,8 @@ async function main() {
               },
             },
           },
-          orderBy: { startTime: "asc" },
-          take: limit,
+          orderBy: [{ startTime: "asc" }, { id: "asc" }],
+          ...(limit === null ? {} : { take: limit }),
           select: { id: true },
         });
 
@@ -88,6 +90,7 @@ async function main() {
       modelVersion: PREDICTION_MODEL_VERSION,
       validationState: "UNVALIDATED_BASELINE",
       markets: ["h2h", "totals", "spreads", "double_chance"],
+      processingLimit: limit ?? "ALL_ELIGIBLE_EVENTS",
     });
   } finally {
     await db.$disconnect();

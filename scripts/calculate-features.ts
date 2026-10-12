@@ -54,10 +54,11 @@ async function main() {
   const eventId = getArg("event-id");
   const sports = parseSports(getArg("sports"));
   const hours = parsePositiveInt(getArg("hours"), 168, "--hours");
-  const limit = Math.min(
-    1000,
-    parsePositiveInt(getArg("limit"), 250, "--limit"),
-  );
+  const limitArg = getArg("limit");
+  const limit =
+    limitArg === undefined
+      ? null
+      : parsePositiveInt(limitArg, 250, "--limit");
   const asOf = new Date();
 
   try {
@@ -75,8 +76,8 @@ async function main() {
             sport: { key: { in: sports } },
             status: { notIn: ["CANCELLED", "POSTPONED"] },
           },
-          orderBy: { startTime: "asc" },
-          take: limit,
+          orderBy: [{ startTime: "asc" }, { id: "asc" }],
+          ...(limit === null ? {} : { take: limit }),
           select: { id: true, sport: { select: { key: true } } },
         });
 
@@ -114,6 +115,7 @@ async function main() {
         (qualityTotal / events.length).toFixed(5),
       ),
       schemaVersion: FEATURE_SCHEMA_VERSION,
+      processingLimit: limit ?? "ALL_ELIGIBLE_EVENTS",
     });
   } finally {
     await db.$disconnect();

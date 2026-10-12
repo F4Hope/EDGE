@@ -103,13 +103,11 @@ function main() {
   run("features:calculate", [
     "--sports=all",
     "--hours=" + String(modelHours),
-    "--limit=1000",
   ]);
 
   console.log("Regenerating rolling priced predictions...");
   run("predictions:generate", [
     "--hours=" + String(modelHours),
-    "--limit=500",
   ]);
 
   console.log("EDGE rolling Combo refresh complete.");

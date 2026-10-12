@@ -159,3 +159,24 @@ test("odds sync ranks unrestricted sport keys by actual discovered event volume"
   assert.match(syncSource, /discoveredCounts\.get\(right\)/);
   assert.match(syncSource, /allowed\s*\? eligibleSportKeys/);
 });
+
+
+test("automated refresh processes every eligible feature and prediction event without fixed ceilings", async () => {
+  const [features, predictions, refresh, combos, priority] = await Promise.all([
+    readFile("scripts/calculate-features.ts", "utf8"),
+    readFile("scripts/generate-predictions.ts", "utf8"),
+    readFile("scripts/refresh-data.ts", "utf8"),
+    readFile("scripts/refresh-combos.ts", "utf8"),
+    readFile("scripts/refresh-priority-soccer.ts", "utf8"),
+  ]);
+
+  assert.match(features, /limitArg === undefined[\s\S]*?\? null/);
+  assert.match(features, /limit === null \? \{\} : \{ take: limit \}/);
+  assert.match(predictions, /limitArg === undefined \? null/);
+  assert.match(predictions, /limit === null \? \{\} : \{ take: limit \}/);
+
+  for (const source of [refresh, combos, priority]) {
+    assert.doesNotMatch(source, /--limit=1000/);
+    assert.doesNotMatch(source, /--limit=500/);
+  }
+});
