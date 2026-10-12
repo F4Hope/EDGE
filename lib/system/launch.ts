@@ -19,6 +19,14 @@ function readinessCheck(readiness: SystemReadiness, key: string): boolean {
   );
 }
 
+function readinessDetail(
+  readiness: SystemReadiness,
+  key: string,
+  fallback: string,
+): string {
+  return readiness.checks.find((check) => check.key === key)?.detail ?? fallback;
+}
+
 export function buildLaunchGate(
   readiness: SystemReadiness,
   apiSports: ProviderCredentialCheck,
@@ -68,32 +76,32 @@ export function buildLaunchGate(
     {
       key: "events",
       label: "Event dataset",
-      passed: (readiness.counts?.events ?? 0) > 0,
-      detail:
-        (readiness.counts?.events ?? 0) > 0
-          ? String(readiness.counts?.events ?? 0) +
-            " normalized events are stored."
-          : "No normalized event data is stored.",
+      passed: readinessCheck(readiness, "event-data"),
+      detail: readinessDetail(
+        readiness,
+        "event-data",
+        "Event dataset is unavailable or stale.",
+      ),
     },
     {
       key: "odds",
       label: "Odds snapshots",
-      passed: (readiness.counts?.oddsSnapshots ?? 0) > 0,
-      detail:
-        (readiness.counts?.oddsSnapshots ?? 0) > 0
-          ? String(readiness.counts?.oddsSnapshots ?? 0) +
-            " bookmaker snapshots are stored."
-          : "No bookmaker odds snapshots are stored.",
+      passed: readinessCheck(readiness, "odds-data"),
+      detail: readinessDetail(
+        readiness,
+        "odds-data",
+        "Odds history is unavailable or stale.",
+      ),
     },
     {
       key: "features",
       label: "Feature snapshots",
-      passed: (readiness.counts?.features ?? 0) > 0,
-      detail:
-        (readiness.counts?.features ?? 0) > 0
-          ? String(readiness.counts?.features ?? 0) +
-            " transparent feature snapshots are stored."
-          : "No feature snapshots are stored.",
+      passed: readinessCheck(readiness, "feature-data"),
+      detail: readinessDetail(
+        readiness,
+        "feature-data",
+        "Feature snapshots are unavailable or stale.",
+      ),
     },
   ];
 

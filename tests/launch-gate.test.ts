@@ -52,6 +52,24 @@ function readiness(
         level: "READY",
         detail: "Configured",
       },
+      {
+        key: "event-data",
+        label: "Event dataset",
+        level: counts.events > 0 ? "READY" : "WARNING",
+        detail: counts.events > 0 ? "Fresh events" : "No events",
+      },
+      {
+        key: "odds-data",
+        label: "Odds history",
+        level: counts.oddsSnapshots > 0 ? "READY" : "WARNING",
+        detail: counts.oddsSnapshots > 0 ? "Fresh odds" : "No odds",
+      },
+      {
+        key: "feature-data",
+        label: "Feature snapshots",
+        level: counts.features > 0 ? "READY" : "WARNING",
+        detail: counts.features > 0 ? "Fresh features" : "No features",
+      },
     ],
     counts: {
       sports: 3,
@@ -126,5 +144,34 @@ test("launch gate blocks an unsupported Node major even when data is ready", () 
   assert.equal(
     gate.checks.find((check) => check.key === "runtime")?.passed,
     false,
+  );
+});
+
+
+test("launch gate blocks stale analytical evidence even when historical rows exist", () => {
+  const state = readiness({ events: 25, oddsSnapshots: 100, features: 25 });
+  state.overall = "DEGRADED";
+  state.checks = state.checks.map((check) =>
+    check.key === "odds-data"
+      ? {
+          ...check,
+          level: "WARNING",
+          detail: "Latest odds observation is beyond the readiness limit.",
+        }
+      : check,
+  );
+
+  const gate = buildLaunchGate(
+    state,
+    provider("api-sports", true),
+    provider("odds-api", true),
+    22,
+  );
+
+  assert.equal(gate.ready, false);
+  assert.equal(gate.checks.find((check) => check.key === "odds")?.passed, false);
+  assert.match(
+    gate.checks.find((check) => check.key === "odds")?.detail ?? "",
+    /beyond the readiness limit/,
   );
 });
