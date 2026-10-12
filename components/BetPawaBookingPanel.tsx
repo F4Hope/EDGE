@@ -174,12 +174,19 @@ export function BetPawaBookingPanel({
             <div className="betpawa-booking-actions">
               {result?.loadUrl ? (
                 <a href={result.loadUrl} target="_blank" rel="noreferrer">
-                  OPEN BETPAWA →
+                  {result.status === "NOT_CONFIGURED"
+                    ? "OPEN BETPAWA CAMEROON →"
+                    : "OPEN BETPAWA →"}
                 </a>
               ) : null}
-              <button type="button" onClick={() => setRetryNonce((value) => value + 1)}>
-                ↻ RETRY CODE
-              </button>
+              {result?.status === "UNAVAILABLE" ? (
+                <button
+                  type="button"
+                  onClick={() => setRetryNonce((value) => value + 1)}
+                >
+                  ↻ RETRY CODE
+                </button>
+              ) : null}
             </div>
           ) : null}
         </>
