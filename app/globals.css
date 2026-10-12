@@ -4105,3 +4105,117 @@ body {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
+
+
+/* BetPawa booking-code export */
+.betpawa-booking-card {
+  margin-top: 16px;
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  background: rgba(8, 13, 25, 0.82);
+}
+
+.betpawa-booking-head,
+.betpawa-code-box,
+.betpawa-booking-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.betpawa-booking-head > div {
+  display: grid;
+  gap: 4px;
+}
+
+.betpawa-booking-head span,
+.betpawa-unmatched > span {
+  font-size: 0.72rem;
+  letter-spacing: 0.11em;
+  font-weight: 800;
+  opacity: 0.72;
+}
+
+.betpawa-booking-head strong {
+  font-size: 1.05rem;
+}
+
+.betpawa-booking-head b {
+  white-space: nowrap;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+}
+
+.betpawa-code-box {
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.betpawa-code-box code {
+  font-size: clamp(1.25rem, 4vw, 1.8rem);
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  overflow-wrap: anywhere;
+}
+
+.betpawa-code-box button,
+.betpawa-booking-actions button,
+.betpawa-booking-actions a {
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.betpawa-code-box button {
+  background: #ffffff;
+  color: #090d18;
+}
+
+.betpawa-booking-actions {
+  margin-top: 12px;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.betpawa-booking-actions button,
+.betpawa-booking-actions a {
+  background: rgba(41, 121, 255, 0.14);
+  color: inherit;
+  border: 1px solid rgba(41, 121, 255, 0.3);
+}
+
+.betpawa-booking-card p,
+.betpawa-booking-message {
+  margin: 12px 0 0;
+  opacity: 0.78;
+  line-height: 1.5;
+}
+
+.betpawa-unmatched {
+  margin-top: 12px;
+}
+
+.betpawa-unmatched ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+}
+
+@media (max-width: 640px) {
+  .betpawa-code-box {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .betpawa-code-box button {
+    width: 100%;
+  }
+}

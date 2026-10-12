@@ -251,3 +251,19 @@ test("model page audits the high-confidence probability tiers used by picks", as
   assert.match(performance, /\[0\.6, 0\.7, 0\.8\]/);
   assert.match(performance, /observedRate - averageProbability/);
 });
+
+
+test("Daily and Weekly Combo expose BetPawa booking-code copy surfaces", async () => {
+  const [daily, weekly, panel] = await Promise.all([
+    readFile("components/ComboPickCard.tsx", "utf8"),
+    readFile("components/WeeklyComboCard.tsx", "utf8"),
+    readFile("components/BetPawaBookingPanel.tsx", "utf8"),
+  ]);
+
+  assert.match(daily, /BetPawaBookingPanel/);
+  assert.match(weekly, /BetPawaBookingPanel/);
+  assert.match(panel, /BETPAWA BOOKING CODE/);
+  assert.match(panel, /COPY CODE/);
+  assert.match(panel, /OPEN BETPAWA/);
+  assert.match(panel, /unmatchedLegs/);
+});

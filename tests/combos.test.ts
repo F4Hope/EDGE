@@ -8,6 +8,7 @@ import {
 } from "../lib/combo/engine";
 import { buildWeeklyCombo } from "../lib/combo/weekly";
 import { recordComboBuild } from "../lib/data/comboAudit";
+import { parseBetPawaBookingResponse } from "../lib/integrations/betPawaBooking";
 
 function candidate(
   index: number,
@@ -934,4 +935,56 @@ test("weekly candidate loading has no silent 1,000-prediction ceiling and expose
   assert.match(card, /MODELED EVENTS/);
   assert.match(card, /CANDIDATE EVENTS/);
   assert.match(card, /no 1,000-prediction ceiling/);
+});
+
+
+test("BetPawa booking response exposes only complete real booking codes", () => {
+  const ready = parseBetPawaBookingResponse(
+    {
+      bookingCode: "6BMIX27",
+      matchedLegCount: 3,
+      unmatchedLegs: [],
+      loadUrl: "https://www.betpawa.co.ke/search",
+    },
+    3,
+    null,
+  );
+
+  assert.equal(ready.status, "READY");
+  assert.equal(ready.bookingCode, "6BMIX27");
+  assert.equal(ready.matchedLegCount, 3);
+
+  const partial = parseBetPawaBookingResponse(
+    {
+      bookingCode: "PART123",
+      matchedLegCount: 2,
+      unmatchedLegs: ["Team A vs Team B"],
+    },
+    3,
+    null,
+  );
+
+  assert.equal(partial.status, "UNAVAILABLE");
+  assert.equal(partial.bookingCode, null);
+  assert.equal(partial.unmatchedLegs.length, 1);
+});
+
+test("daily and weekly Combo tickets render the shared BetPawa booking-code panel", async () => {
+  const [dailyCard, weeklyCard, panel, route, env] = await Promise.all([
+    readFile("components/ComboPickCard.tsx", "utf8"),
+    readFile("components/WeeklyComboCard.tsx", "utf8"),
+    readFile("components/BetPawaBookingPanel.tsx", "utf8"),
+    readFile("app/api/betpawa/booking/route.ts", "utf8"),
+    readFile(".env.example", "utf8"),
+  ]);
+
+  assert.match(dailyCard, /ticketKind=\{tone === "low" \? "daily-low" : "daily-balanced"\}/);
+  assert.match(weeklyCard, /ticketKind="weekly"/);
+  assert.match(panel, /COPY CODE/);
+  assert.match(panel, /\/api\/betpawa\/booking/);
+  assert.match(panel, /Generating real BetPawa code/);
+  assert.match(route, /createBetPawaBookingCode/);
+  assert.match(env, /BETPAWA_BOOKING_API_URL/);
+  assert.match(env, /BETPAWA_BOOKING_API_TOKEN/);
+  assert.match(env, /BETPAWA_SITE_URL/);
 });

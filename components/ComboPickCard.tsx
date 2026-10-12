@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ParticipantBadge } from "@/components/ParticipantBadge";
+import { BetPawaBookingPanel } from "@/components/BetPawaBookingPanel";
 import type { ComboBuildResult } from "@/lib/combo/engine";
 import type { SupportedSport } from "@/lib/providers/types";
 
@@ -192,6 +193,11 @@ function TicketCard({
           >
             {copied ? "✓ COPIED" : "⚡ COPY TICKET"}
           </button>
+
+          <BetPawaBookingPanel
+            ticketKind={tone === "low" ? "daily-low" : "daily-balanced"}
+            legs={result.legs}
+          />
         </>
       ) : (
         <div className="combo-pick-empty">

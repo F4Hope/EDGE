@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ParticipantBadge } from "@/components/ParticipantBadge";
+import { BetPawaBookingPanel } from "@/components/BetPawaBookingPanel";
 import type { WeeklyComboResult } from "@/lib/combo/weekly";
 import type { ComboCandidateDiagnostics } from "@/lib/data/uiCombos";
 import type { SupportedSport } from "@/lib/providers/types";
@@ -313,6 +314,8 @@ export function WeeklyComboCard() {
                 {copied ? "✓ COPIED" : "⚡ COPY WEEKLY TICKET"}
               </button>
             </div>
+
+            <BetPawaBookingPanel ticketKind="weekly" legs={result.legs} />
           </>
         ) : (
           <div className="combo-pick-empty">
