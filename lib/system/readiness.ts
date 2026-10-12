@@ -1,4 +1,8 @@
 import { getDb } from "@/lib/prisma";
+import {
+  describeFreshness,
+  type FreshnessDescriptor,
+} from "@/lib/system/freshness";
 
 export type ReadinessLevel = "READY" | "WARNING" | "BLOCKED" | "INFO";
 
@@ -36,12 +40,25 @@ export type SystemSyncState = {
   lastCompletedAt: string | null;
 };
 
+export type CoreDataFreshness = {
+  events: FreshnessDescriptor;
+  odds: FreshnessDescriptor;
+  features: FreshnessDescriptor;
+};
+
+export const READINESS_FRESHNESS_LIMITS = {
+  events: { freshMinutes: 180, staleMinutes: 1440 },
+  odds: { freshMinutes: 90, staleMinutes: 360 },
+  features: { freshMinutes: 360, staleMinutes: 1440 },
+} as const;
+
 export type SystemReadiness = {
   generatedAt: string;
   overall: "READY" | "DEGRADED";
   checks: ReadinessCheck[];
   counts: SystemCounts | null;
   freshness: SystemFreshness | null;
+  coreDataFreshness: CoreDataFreshness | null;
   syncs: SystemSyncState[];
   capabilities: {
     eventIngestion: boolean;
@@ -55,6 +72,52 @@ export type SystemReadiness = {
     automatedWagering: false;
   };
 };
+
+function usableFreshness(descriptor: FreshnessDescriptor): boolean {
+  return descriptor.state === "FRESH" || descriptor.state === "AGING";
+}
+
+function freshnessDetail(
+  label: string,
+  descriptor: FreshnessDescriptor,
+  staleMinutes: number,
+): string {
+  if (descriptor.state === "EMPTY" || descriptor.ageMinutes === null) {
+    return `${label} has no stored observation.`;
+  }
+
+  if (descriptor.state === "STALE") {
+    return `${label} is ${descriptor.ageMinutes} minutes old, beyond the ${staleMinutes}-minute readiness limit.`;
+  }
+
+  return `${label} is ${descriptor.ageMinutes} minutes old and within the ${staleMinutes}-minute readiness limit.`;
+}
+
+export function assessCoreDataFreshness(
+  freshness: Pick<SystemFreshness, "events" | "odds" | "features">,
+  now = new Date(),
+): CoreDataFreshness {
+  return {
+    events: describeFreshness(
+      freshness.events,
+      now,
+      READINESS_FRESHNESS_LIMITS.events.freshMinutes,
+      READINESS_FRESHNESS_LIMITS.events.staleMinutes,
+    ),
+    odds: describeFreshness(
+      freshness.odds,
+      now,
+      READINESS_FRESHNESS_LIMITS.odds.freshMinutes,
+      READINESS_FRESHNESS_LIMITS.odds.staleMinutes,
+    ),
+    features: describeFreshness(
+      freshness.features,
+      now,
+      READINESS_FRESHNESS_LIMITS.features.freshMinutes,
+      READINESS_FRESHNESS_LIMITS.features.staleMinutes,
+    ),
+  };
+}
 
 function envCheck(
   key: string,
@@ -114,6 +177,7 @@ export async function getSystemReadiness(): Promise<SystemReadiness> {
       checks,
       counts: null,
       freshness: null,
+      coreDataFreshness: null,
       syncs: [],
       capabilities: {
         eventIngestion: apiSportsConfigured || oddsApiConfigured,
@@ -214,6 +278,14 @@ export async function getSystemReadiness(): Promise<SystemReadiness> {
       intelligence: latestIntelligence?.occurredAt.toISOString() ?? null,
       injurySync: injuryCheckpoint?.lastCompletedAt?.toISOString() ?? null,
     };
+    const coreDataFreshness = assessCoreDataFreshness(freshness);
+    const coreDataReady =
+      events > 0 &&
+      oddsSnapshots > 0 &&
+      features > 0 &&
+      usableFreshness(coreDataFreshness.events) &&
+      usableFreshness(coreDataFreshness.odds) &&
+      usableFreshness(coreDataFreshness.features);
 
     const syncs: SystemSyncState[] = syncRows.map((row) => ({
       provider: row.provider,
@@ -233,39 +305,61 @@ export async function getSystemReadiness(): Promise<SystemReadiness> {
     checks.push({
       key: "event-data",
       label: "Event dataset",
-      level: events > 0 ? "READY" : "WARNING",
+      level:
+        events > 0 && usableFreshness(coreDataFreshness.events)
+          ? "READY"
+          : "WARNING",
       detail:
         events > 0
-          ? `${events} normalized events are stored.`
+          ? `${events} normalized events are stored. ${freshnessDetail(
+              "Latest event observation",
+              coreDataFreshness.events,
+              READINESS_FRESHNESS_LIMITS.events.staleMinutes,
+            )}`
           : "Database is reachable but no normalized events are stored yet.",
     });
 
     checks.push({
       key: "odds-data",
       label: "Odds history",
-      level: oddsSnapshots > 0 ? "READY" : "WARNING",
+      level:
+        oddsSnapshots > 0 && usableFreshness(coreDataFreshness.odds)
+          ? "READY"
+          : "WARNING",
       detail:
         oddsSnapshots > 0
-          ? `${oddsSnapshots} bookmaker snapshots are stored.`
+          ? `${oddsSnapshots} bookmaker snapshots are stored. ${freshnessDetail(
+              "Latest odds observation",
+              coreDataFreshness.odds,
+              READINESS_FRESHNESS_LIMITS.odds.staleMinutes,
+            )}`
           : "No bookmaker snapshots are stored yet.",
     });
 
     checks.push({
       key: "feature-data",
       label: "Feature snapshots",
-      level: features > 0 ? "READY" : "WARNING",
+      level:
+        features > 0 && usableFreshness(coreDataFreshness.features)
+          ? "READY"
+          : "WARNING",
       detail:
         features > 0
-          ? `${features} feature snapshots are stored.`
+          ? `${features} feature snapshots are stored. ${freshnessDetail(
+              "Latest feature observation",
+              coreDataFreshness.features,
+              READINESS_FRESHNESS_LIMITS.features.staleMinutes,
+            )}`
           : "No Phase 6 feature snapshots have been calculated yet.",
     });
 
     return {
       generatedAt: new Date().toISOString(),
-      overall: "READY",
+      overall: coreDataReady ? "READY" : "DEGRADED",
       checks,
       counts,
       freshness,
+      coreDataFreshness,
       syncs,
       capabilities: {
         eventIngestion: apiSportsConfigured || oddsApiConfigured,
@@ -294,6 +388,7 @@ export async function getSystemReadiness(): Promise<SystemReadiness> {
       checks,
       counts: null,
       freshness: null,
+      coreDataFreshness: null,
       syncs: [],
       capabilities: {
         eventIngestion: apiSportsConfigured || oddsApiConfigured,
