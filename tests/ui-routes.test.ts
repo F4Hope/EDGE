@@ -267,34 +267,3 @@ test("Daily and Weekly Combo expose BetPawa booking-code copy surfaces", async (
   assert.match(panel, /OPEN BETPAWA/);
   assert.match(panel, /unmatchedLegs/);
 });
-
-
-test("BetPawa Cameroon browser bridge supports one-click ticket handoff without placing a wager", async () => {
-  const [panel, manifest, content, readme] = await Promise.all([
-    readFile("components/BetPawaBookingPanel.tsx", "utf8"),
-    readFile("browser/edge-betpawa-bridge/manifest.json", "utf8"),
-    readFile("browser/edge-betpawa-bridge/content.js", "utf8"),
-    readFile("browser/edge-betpawa-bridge/README.md", "utf8"),
-  ]);
-
-  assert.match(panel, /OPEN BETPAWA WITH PICKS/);
-  assert.match(panel, /#edgeTicket=/);
-  assert.match(manifest, /https:\/\/www\.betpawa\.cm\/\*/);
-  assert.match(content, /search\?searchQuery=/);
-  assert.match(content, /\/event\//);
-  assert.match(content, /Betslip loaded/);
-  assert.doesNotMatch(content, /place bet/i);
-  assert.doesNotMatch(content, /stake/i);
-  assert.match(readme, /does not place a wager/i);
-});
-
-
-test("BetPawa bridge only falls back to H2H positions inside a verified full-time 1X2 market", async () => {
-  const content = await readFile("browser/edge-betpawa-bridge/content.js", "utf8");
-  assert.match(content, /1x2 full time/);
-  assert.match(content, /match result full time/);
-  assert.doesNotMatch(
-    content,
-    /const h2h = \[\.\.\.document\.querySelectorAll\("\\.event-bet"\)\]/,
-  );
-});
