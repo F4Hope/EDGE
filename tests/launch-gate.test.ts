@@ -63,6 +63,7 @@ function readiness(
       intelligenceSignals: 0,
     },
     freshness: null,
+    coreDataFreshness: null,
     syncs: [],
     capabilities: {
       eventIngestion: true,

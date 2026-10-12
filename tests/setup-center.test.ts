@@ -10,6 +10,7 @@ function readiness(overrides: Partial<SystemReadiness> = {}): SystemReadiness {
     checks: [],
     counts: null,
     freshness: null,
+    coreDataFreshness: null,
     syncs: [],
     capabilities: {
       eventIngestion: false,
