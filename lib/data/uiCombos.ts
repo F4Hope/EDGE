@@ -222,6 +222,7 @@ export async function getComboCandidatePool(
           },
         },
       },
+    },
     }),
     db.event.count({
       where: {
