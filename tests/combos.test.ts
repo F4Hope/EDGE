@@ -1009,9 +1009,12 @@ test("BetPawa Cameroon booking codes deep-link directly into the Cameroon site",
 });
 
 
-test("BetPawa panel does not offer a meaningless retry when the bridge is not configured", async () => {
+test("BetPawa panel replaces the no-connector dead end with guided Cameroon loading", async () => {
   const panel = await readFile("components/BetPawaBookingPanel.tsx", "utf8");
-  assert.match(panel, /result\.status === "NOT_CONFIGURED"/);
-  assert.match(panel, /OPEN BETPAWA CAMEROON/);
+  assert.match(panel, /result\?\.status === "NOT_CONFIGURED"/);
+  assert.match(panel, /MANUAL LOAD MODE/);
+  assert.match(panel, /OPEN THIS MATCH ON BETPAWA/);
+  assert.match(panel, /COPY ALL PICKS/);
+  assert.match(panel, /I ADDED IT · NEXT/);
   assert.match(panel, /result\?\.status === "UNAVAILABLE"/);
 });
