@@ -36,6 +36,9 @@ export type ComboEvidenceResearchCandidate = {
 };
 
 export type ComboCandidateDiagnostics = {
+  windowEvents: number;
+  eventsWithPredictions: number;
+  eventsWithQualifiedCandidates: number;
   queriedPredictions: number;
   latestPredictions: number;
   duplicatesCollapsed: number;
@@ -161,21 +164,22 @@ export async function getComboCandidatePool(
     window?.to ??
     new Date(now.getTime() + Math.min(hours, 24 * 14) * 60 * 60 * 1000);
 
-  const rows = await db.prediction.findMany({
-    where: {
-      event: {
-        startTime: { gt: playableFrom, lt: to },
-        status: { notIn: ["CANCELLED", "POSTPONED", "COMPLETED"] },
+  const [rows, windowEvents] = await Promise.all([
+    db.prediction.findMany({
+      where: {
+        event: {
+          startTime: { gt: playableFrom, lt: to },
+          status: { notIn: ["CANCELLED", "POSTPONED", "COMPLETED"] },
+          sport: { key: { in: ["football", "basketball", "tennis"] } },
+        },
+        market: {
+          key: { in: ["h2h", "totals", "spreads", "double_chance"] },
+          status: "OPEN",
+        },
+        status: { in: ["BETTABLE", "WATCH"] },
       },
-      market: {
-        key: { in: ["h2h", "totals", "spreads", "double_chance"] },
-        status: "OPEN",
-      },
-      status: { in: ["BETTABLE", "WATCH"] },
-    },
-    orderBy: { createdAt: "desc" },
-    take: 1000,
-    include: {
+      orderBy: { createdAt: "desc" },
+      include: {
       event: {
         include: {
           sport: { select: { key: true } },
@@ -218,8 +222,15 @@ export async function getComboCandidatePool(
           },
         },
       },
-    },
-  });
+    }),
+    db.event.count({
+      where: {
+        startTime: { gt: playableFrom, lt: to },
+        status: { notIn: ["CANCELLED", "POSTPONED", "COMPLETED"] },
+        sport: { key: { in: ["football", "basketball", "tennis"] } },
+      },
+    }),
+  ]);
 
   const latestPrediction = new Map<string, (typeof rows)[number]>();
   for (const row of rows) {
@@ -227,7 +238,14 @@ export async function getComboCandidatePool(
     if (!latestPrediction.has(key)) latestPrediction.set(key, row);
   }
 
+  const eventsWithPredictions = new Set(
+    [...latestPrediction.values()].map((row) => row.eventId),
+  ).size;
+
   const diagnostics: ComboCandidateDiagnostics = {
+    windowEvents,
+    eventsWithPredictions,
+    eventsWithQualifiedCandidates: 0,
     queriedPredictions: rows.length,
     latestPredictions: latestPrediction.size,
     duplicatesCollapsed: rows.length - latestPrediction.size,
@@ -389,6 +407,9 @@ export async function getComboCandidatePool(
   }
 
   diagnostics.qualifiedCandidates = candidates.length;
+  diagnostics.eventsWithQualifiedCandidates = new Set(
+    candidates.map((candidate) => candidate.eventId),
+  ).size;
 
   evidenceResearchQueue.sort(
     (a, b) =>

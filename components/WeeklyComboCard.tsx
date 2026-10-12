@@ -3,10 +3,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { ParticipantBadge } from "@/components/ParticipantBadge";
 import type { WeeklyComboResult } from "@/lib/combo/weekly";
+import type { ComboCandidateDiagnostics } from "@/lib/data/uiCombos";
 import type { SupportedSport } from "@/lib/providers/types";
 
 type ApiResponse = {
   data?: WeeklyComboResult;
+  meta?: {
+    candidateDiagnostics?: ComboCandidateDiagnostics;
+  };
   error?: string;
 };
 
@@ -74,6 +78,8 @@ function marketLabel(key: string): string {
 
 export function WeeklyComboCard() {
   const [result, setResult] = useState<WeeklyComboResult | null>(null);
+  const [diagnostics, setDiagnostics] =
+    useState<ComboCandidateDiagnostics | null>(null);
   const [stake, setStake] = useState("100");
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -129,9 +135,11 @@ export function WeeklyComboCard() {
       }
 
       setResult(payload.data);
+      setDiagnostics(payload.meta?.candidateDiagnostics ?? null);
       setUpdatedAt(new Date());
     } catch (caught) {
       setResult(null);
+      setDiagnostics(null);
       setError(
         caught instanceof Error
           ? caught.message
@@ -221,6 +229,18 @@ export function WeeklyComboCard() {
               <div>
                 <span>SPORTS</span>
                 <strong>{result.distinctSports}</strong>
+              </div>
+              <div>
+                <span>FUTURE EVENTS</span>
+                <strong>{diagnostics?.windowEvents ?? "—"}</strong>
+              </div>
+              <div>
+                <span>MODELED EVENTS</span>
+                <strong>{diagnostics?.eventsWithPredictions ?? "—"}</strong>
+              </div>
+              <div>
+                <span>CANDIDATE EVENTS</span>
+                <strong>{diagnostics?.eventsWithQualifiedCandidates ?? "—"}</strong>
               </div>
               <div>
                 <span>MIN LEG PROBABILITY</span>
@@ -345,6 +365,8 @@ export function WeeklyComboCard() {
             <li>✓ No fixed daily leg limit</li>
             <li>✓ No fixed weekly leg limit</li>
             <li>✓ Every qualified event is included</li>
+            <li>✓ Candidate scan has no 1,000-prediction ceiling</li>
+            <li>✓ Coverage counts show discovered → modeled → candidate events</li>
             <li>✓ One strongest selection per event</li>
             <li>✓ Football, basketball and tennis eligible</li>
           </ul>

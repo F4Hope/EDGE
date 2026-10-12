@@ -917,3 +917,21 @@ test("weekly Combo route and page use the current local Monday-Sunday week", asy
   assert.match(combosPage, /href="\/combos\/weekly"/);
   assert.match(combosPage, /OPEN WEEKLY COMBO/);
 });
+
+
+test("weekly candidate loading has no silent 1,000-prediction ceiling and exposes coverage", async () => {
+  const [loader, card] = await Promise.all([
+    readFile("lib/data/uiCombos.ts", "utf8"),
+    readFile("components/WeeklyComboCard.tsx", "utf8"),
+  ]);
+
+  assert.doesNotMatch(loader, /take:\s*1000/);
+  assert.match(loader, /windowEvents/);
+  assert.match(loader, /eventsWithPredictions/);
+  assert.match(loader, /eventsWithQualifiedCandidates/);
+  assert.match(loader, /sport: \{ key: \{ in: \["football", "basketball", "tennis"\] \} \}/);
+  assert.match(card, /FUTURE EVENTS/);
+  assert.match(card, /MODELED EVENTS/);
+  assert.match(card, /CANDIDATE EVENTS/);
+  assert.match(card, /no 1,000-prediction ceiling/);
+});
