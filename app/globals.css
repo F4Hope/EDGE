@@ -4344,3 +4344,59 @@ body {
     flex: 1 1 140px;
   }
 }
+
+
+/* Weekly ODD 10 */
+.weekly-odd10-launch .combo-pick-launch-link {
+  border-color: rgba(255, 208, 75, 0.28);
+  background:
+    linear-gradient(120deg, rgba(255, 208, 75, 0.12), rgba(47, 231, 130, 0.08)),
+    rgba(13, 25, 43, 0.92);
+}
+
+.weekly-odd10-launch .combo-pick-launch-link span {
+  color: #ffd04b;
+}
+
+.weekly-odd10-hero {
+  border-color: rgba(255, 208, 75, 0.25);
+  background:
+    radial-gradient(circle at top right, rgba(255, 208, 75, 0.15), transparent 38%),
+    linear-gradient(135deg, rgba(47, 231, 130, 0.07), transparent 45%),
+    rgba(9, 20, 35, 0.96);
+}
+
+.weekly-odd10-hero > div > span {
+  color: #ffd04b;
+}
+
+.weekly-odd10-badge {
+  border-color: rgba(255, 208, 75, 0.28);
+  background: rgba(255, 208, 75, 0.08);
+}
+
+.weekly-odd10-badge strong,
+.weekly-odd10-badge span {
+  color: #ffd04b;
+}
+
+.weekly-odd10-warning {
+  padding: 13px 14px;
+  display: grid;
+  gap: 5px;
+  border: 1px solid rgba(255, 208, 75, 0.2);
+  border-radius: 13px;
+  background: rgba(255, 208, 75, 0.06);
+}
+
+.weekly-odd10-warning strong {
+  color: #ffd04b;
+  font-size: 8px;
+  letter-spacing: 0.08em;
+}
+
+.weekly-odd10-warning span {
+  color: #aab5c5;
+  font-size: 8px;
+  line-height: 1.55;
+}
