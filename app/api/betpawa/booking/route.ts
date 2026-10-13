@@ -16,6 +16,7 @@ const ticketKinds = new Set<BetPawaTicketKind>([
   "daily-low",
   "daily-balanced",
   "weekly",
+  "weekly-odd10",
 ]);
 
 function boundedText(

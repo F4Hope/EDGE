@@ -1,6 +1,10 @@
 import type { ComboCandidate } from "@/lib/combo/engine";
 
-export type BetPawaTicketKind = "daily-low" | "daily-balanced" | "weekly";
+export type BetPawaTicketKind =
+  | "daily-low"
+  | "daily-balanced"
+  | "weekly"
+  | "weekly-odd10";
 
 export type BetPawaBookingLeg = Pick<
   ComboCandidate,
