@@ -292,7 +292,7 @@ test("Weekly ODD 10 is visible from Combos and exposes the 75% probability floor
 
   assert.match(combos, /OPEN WEEKLY ODD 10 · 75%\+/);
   assert.match(weekly, /WEEKLY ODD 10 · 75%\+/);
-  assert.match(page, /target combined decimal odds around 10\.00/);
+  assert.match(page, /targets combined decimal odds around 10\.00/);
   assert.match(card, /≥75% per leg/);
   assert.match(card, /80%\+ data quality/);
   assert.match(card, /82%\+ model agreement/);
