@@ -7,6 +7,7 @@ import {
   type ComboCandidate,
 } from "../lib/combo/engine";
 import { buildWeeklyCombo } from "../lib/combo/weekly";
+import { buildWeeklyOdd10 } from "../lib/combo/weeklyOdd10";
 import { recordComboBuild } from "../lib/data/comboAudit";
 import { parseBetPawaBookingResponse } from "../lib/integrations/betPawaBooking";
 
@@ -1028,4 +1029,91 @@ test("Combo candidate loading deduplicates lightweight prediction refs before hy
   assert.match(source, /hydrationBatchSize = 200/);
   assert.match(source, /rows\.push\(\.\.\.\(await loadPredictionBatch\(batch\)\)\)/);
   assert.match(source, /queriedPredictions: predictionRefs\.length/);
+});
+
+
+test("Weekly ODD 10 uses only 75%+ legs and reaches the 10x target when qualified games allow it", () => {
+  const rows = Array.from({ length: 12 }, (_, index) =>
+    candidate(700 + index, {
+      eventId: `odd10-${index}`,
+      decimalOdds: 1.35,
+      modelProbability: 0.78 + (index % 4) * 0.02,
+      dataQuality: 0.9,
+      modelAgreement: 0.9,
+      estimatedValue: 0.02,
+      risk: index % 3 === 0 ? "MEDIUM" : "LOW",
+    }),
+  );
+
+  const ticket = buildWeeklyOdd10(rows, {
+    weekStart: "2026-10-12T00:00:00.000Z",
+    weekEnd: "2026-10-19T00:00:00.000Z",
+    timeZone: "UTC",
+  });
+
+  assert.equal(ticket.status, "TARGET_REACHED");
+  assert.ok((ticket.actualOdds ?? 0) >= 10);
+  assert.ok(ticket.legs.length >= 2);
+  assert.ok(ticket.legs.every((leg) => leg.modelProbability >= 0.75));
+  assert.ok(ticket.legs.every((leg) => (leg.dataQuality ?? 0) >= 0.8));
+  assert.ok(ticket.legs.every((leg) => (leg.modelAgreement ?? 0) >= 0.82));
+});
+
+test("Weekly ODD 10 never lowers the 75% floor to manufacture the target", () => {
+  const ticket = buildWeeklyOdd10(
+    [
+      candidate(801, {
+        decimalOdds: 2.2,
+        modelProbability: 0.74,
+        dataQuality: 0.95,
+        modelAgreement: 0.95,
+      }),
+      candidate(802, {
+        decimalOdds: 1.5,
+        modelProbability: 0.82,
+        dataQuality: 0.91,
+        modelAgreement: 0.92,
+      }),
+      candidate(803, {
+        decimalOdds: 1.45,
+        modelProbability: 0.8,
+        dataQuality: 0.9,
+        modelAgreement: 0.9,
+      }),
+    ],
+    {
+      weekStart: "2026-10-12T00:00:00.000Z",
+      weekEnd: "2026-10-19T00:00:00.000Z",
+      timeZone: "UTC",
+    },
+  );
+
+  assert.equal(ticket.status, "BEST_AVAILABLE");
+  assert.ok((ticket.actualOdds ?? 0) < 10);
+  assert.ok(ticket.legs.every((leg) => leg.modelProbability >= 0.75));
+  assert.ok(!ticket.legs.some((leg) => leg.predictionId === "prediction-801"));
+});
+
+test("Weekly ODD 10 is a distinct route with explicit no-guarantee language and BetPawa handoff", async () => {
+  const [page, card, route, engine, combosPage, betpawaRoute] = await Promise.all([
+    readFile("app/combos/weekly-odd10/page.tsx", "utf8"),
+    readFile("components/WeeklyOdd10Card.tsx", "utf8"),
+    readFile("app/api/combos/weekly-odd10/route.ts", "utf8"),
+    readFile("lib/combo/weeklyOdd10.ts", "utf8"),
+    readFile("app/combos/page.tsx", "utf8"),
+    readFile("app/api/betpawa/booking/route.ts", "utf8"),
+  ]);
+
+  assert.match(page, /Weekly ODD 10/);
+  assert.match(page, /75% FLOOR\. QUALITY BEFORE PRICE/);
+  assert.match(card, /WEEKLY ODD 10 · 75%\+ LEGS ONLY/);
+  assert.match(card, /HIGH CONFIDENCE IS NOT A GUARANTEE/);
+  assert.match(card, /ticketKind="weekly-odd10"/);
+  assert.match(route, /buildWeeklyOdd10/);
+  assert.match(route, /getComboCandidatePool\(168, window\)/);
+  assert.match(engine, /WEEKLY_ODD10_MIN_PROBABILITY = 0\.75/);
+  assert.match(engine, /WEEKLY_ODD10_TARGET = 10/);
+  assert.match(engine, /does not lower the 75% leg threshold/);
+  assert.match(combosPage, /href="\/combos\/weekly-odd10"/);
+  assert.match(betpawaRoute, /"weekly-odd10"/);
 });

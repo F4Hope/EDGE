@@ -10,6 +10,7 @@ const requiredRoutes = [
   "app/best-picks/page.tsx",
   "app/combos/page.tsx",
   "app/combos/weekly/page.tsx",
+  "app/combos/weekly-odd10/page.tsx",
   "app/history/page.tsx",
   "app/model/page.tsx",
   "app/settings/page.tsx",
@@ -278,4 +279,22 @@ test("BetPawa no-connector state provides a guided Cameroon manual loader instea
   assert.match(panel, /I ADDED IT · NEXT/);
   assert.match(panel, /search\?searchQuery=/);
   assert.match(panel, /BetPawa&apos;s own Booking Code \/ Share Betslip/);
+});
+
+
+test("Weekly ODD 10 is visible from Combos and exposes the 75% probability floor", async () => {
+  const [combos, weekly, page, card] = await Promise.all([
+    readFile("app/combos/page.tsx", "utf8"),
+    readFile("app/combos/weekly/page.tsx", "utf8"),
+    readFile("app/combos/weekly-odd10/page.tsx", "utf8"),
+    readFile("components/WeeklyOdd10Card.tsx", "utf8"),
+  ]);
+
+  assert.match(combos, /OPEN WEEKLY ODD 10 · 75%\+/);
+  assert.match(weekly, /WEEKLY ODD 10 · 75%\+/);
+  assert.match(page, /target combined decimal odds around 10\.00/);
+  assert.match(card, /≥75% per leg/);
+  assert.match(card, /80%\+ data quality/);
+  assert.match(card, /82%\+ model agreement/);
+  assert.match(card, /No promise or guarantee of a win/);
 });
