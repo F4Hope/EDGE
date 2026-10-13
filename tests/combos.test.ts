@@ -1018,3 +1018,14 @@ test("BetPawa panel replaces the no-connector dead end with guided Cameroon load
   assert.match(panel, /I ADDED IT · NEXT/);
   assert.match(panel, /result\?\.status === "UNAVAILABLE"/);
 });
+
+
+test("Combo candidate loading deduplicates lightweight prediction refs before hydrating rich rows", async () => {
+  const source = await readFile("lib/data/uiCombos.ts", "utf8");
+  assert.match(source, /const \[predictionRefs, windowEvents\]/);
+  assert.match(source, /select:\s*\{\s*id: true,\s*eventId: true,\s*marketId: true,\s*selectionKey: true/);
+  assert.match(source, /latestPredictionIds/);
+  assert.match(source, /hydrationBatchSize = 200/);
+  assert.match(source, /rows\.push\(\.\.\.\(await loadPredictionBatch\(batch\)\)\)/);
+  assert.match(source, /queriedPredictions: predictionRefs\.length/);
+});

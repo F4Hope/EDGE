@@ -164,65 +164,29 @@ export async function getComboCandidatePool(
     window?.to ??
     new Date(now.getTime() + Math.min(hours, 24 * 14) * 60 * 60 * 1000);
 
-  const [rows, windowEvents] = await Promise.all([
-    db.prediction.findMany({
-      where: {
-        event: {
-          startTime: { gt: playableFrom, lt: to },
-          status: { notIn: ["CANCELLED", "POSTPONED", "COMPLETED"] },
-          sport: { key: { in: ["football", "basketball", "tennis"] } },
-        },
-        market: {
-          key: { in: ["h2h", "totals", "spreads", "double_chance"] },
-          status: "OPEN",
-        },
-        status: { in: ["BETTABLE", "WATCH"] },
-      },
-      orderBy: { createdAt: "desc" },
-      include: {
-      event: {
-        include: {
-          sport: { select: { key: true } },
-          league: { select: { name: true } },
-          homeTeam: { select: { name: true, country: true, provider: true, externalId: true } },
-          awayTeam: { select: { name: true, country: true, provider: true, externalId: true } },
-          homePlayer: { select: { fullName: true, country: true, provider: true, externalId: true } },
-          awayPlayer: { select: { fullName: true, country: true, provider: true, externalId: true } },
-          intelligenceSignals: {
-            where: {
-              OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
-            },
-            orderBy: { occurredAt: "desc" },
-            take: 20,
-            select: {
-              type: true,
-              severity: true,
-              source: true,
-              headline: true,
-              affectsHome: true,
-              affectsAway: true,
-              participant: true,
-            },
-          },
-        },
-      },
-      market: {
-        include: {
-          oddsSnapshots: {
-            orderBy: { capturedAt: "desc" },
-            take: 80,
-            select: {
-              provider: true,
-              bookmakerKey: true,
-              bookmakerName: true,
-              selectionKey: true,
-              decimalOdds: true,
-              capturedAt: true,
-            },
-          },
-        },
-      },
+  const predictionWhere = {
+    event: {
+      startTime: { gt: playableFrom, lt: to },
+      status: { notIn: ["CANCELLED", "POSTPONED", "COMPLETED"] },
+      sport: { key: { in: ["football", "basketball", "tennis"] } },
     },
+    market: {
+      key: { in: ["h2h", "totals", "spreads", "double_chance"] },
+      status: "OPEN",
+    },
+    status: { in: ["BETTABLE", "WATCH"] },
+  } as const;
+
+  const [predictionRefs, windowEvents] = await Promise.all([
+    db.prediction.findMany({
+      where: predictionWhere,
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        eventId: true,
+        marketId: true,
+        selectionKey: true,
+      },
     }),
     db.event.count({
       where: {
@@ -233,23 +197,120 @@ export async function getComboCandidatePool(
     }),
   ]);
 
-  const latestPrediction = new Map<string, (typeof rows)[number]>();
-  for (const row of rows) {
+  const latestPrediction = new Map<
+    string,
+    (typeof predictionRefs)[number]
+  >();
+  for (const row of predictionRefs) {
     const key = [row.eventId, row.marketId, row.selectionKey].join("|");
     if (!latestPrediction.has(key)) latestPrediction.set(key, row);
   }
 
+  const latestPredictionIds = [...latestPrediction.values()].map(
+    (row) => row.id,
+  );
   const eventsWithPredictions = new Set(
     [...latestPrediction.values()].map((row) => row.eventId),
   ).size;
+
+  const loadPredictionBatch = (ids: string[]) =>
+    db.prediction.findMany({
+      where: { id: { in: ids } },
+      include: {
+        event: {
+          include: {
+            sport: { select: { key: true } },
+            league: { select: { name: true } },
+            homeTeam: {
+              select: {
+                name: true,
+                country: true,
+                provider: true,
+                externalId: true,
+              },
+            },
+            awayTeam: {
+              select: {
+                name: true,
+                country: true,
+                provider: true,
+                externalId: true,
+              },
+            },
+            homePlayer: {
+              select: {
+                fullName: true,
+                country: true,
+                provider: true,
+                externalId: true,
+              },
+            },
+            awayPlayer: {
+              select: {
+                fullName: true,
+                country: true,
+                provider: true,
+                externalId: true,
+              },
+            },
+            intelligenceSignals: {
+              where: {
+                OR: [{ expiresAt: null }, { expiresAt: { gt: now } }],
+              },
+              orderBy: { occurredAt: "desc" },
+              take: 20,
+              select: {
+                type: true,
+                severity: true,
+                source: true,
+                headline: true,
+                affectsHome: true,
+                affectsAway: true,
+                participant: true,
+              },
+            },
+          },
+        },
+        market: {
+          include: {
+            oddsSnapshots: {
+              orderBy: { capturedAt: "desc" },
+              take: 80,
+              select: {
+                provider: true,
+                bookmakerKey: true,
+                bookmakerName: true,
+                selectionKey: true,
+                decimalOdds: true,
+                capturedAt: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+  const rows: Awaited<ReturnType<typeof loadPredictionBatch>> = [];
+  const hydrationBatchSize = 200;
+  for (
+    let offset = 0;
+    offset < latestPredictionIds.length;
+    offset += hydrationBatchSize
+  ) {
+    const batch = latestPredictionIds.slice(
+      offset,
+      offset + hydrationBatchSize,
+    );
+    rows.push(...(await loadPredictionBatch(batch)));
+  }
 
   const diagnostics: ComboCandidateDiagnostics = {
     windowEvents,
     eventsWithPredictions,
     eventsWithQualifiedCandidates: 0,
-    queriedPredictions: rows.length,
+    queriedPredictions: predictionRefs.length,
     latestPredictions: latestPrediction.size,
-    duplicatesCollapsed: rows.length - latestPrediction.size,
+    duplicatesCollapsed: predictionRefs.length - latestPrediction.size,
     missingStoredOdds: 0,
     nonPositiveEstimatedValue: 0,
     belowEstimatedValueFloor: 0,
@@ -264,7 +325,7 @@ export async function getComboCandidatePool(
   const candidates: ComboCandidate[] = [];
   const evidenceResearchQueue: ComboEvidenceResearchCandidate[] = [];
 
-  for (const row of latestPrediction.values()) {
+  for (const row of rows) {
     const latestByBookmaker = new Map<
       string,
       (typeof row.market.oddsSnapshots)[number]
