@@ -19,6 +19,14 @@ export default function WeeklyCombosPage() {
         }
       />
 
+      <div className="combo-pick-launch weekly-odd10-launch">
+        <Link href="/combos/weekly-odd10" className="combo-pick-launch-link">
+          <span>🎯</span>
+          <strong>WEEKLY ODD 10 · 75%+</strong>
+          <b>Stricter high-confidence ticket targeting 10.00 →</b>
+        </Link>
+      </div>
+
       <WeeklyComboCard />
 
       <section className="principle-card compact-principle">

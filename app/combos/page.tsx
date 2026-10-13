@@ -54,6 +54,14 @@ export default async function CombosPage() {
         </Link>
       </div>
 
+      <div className="combo-pick-launch weekly-odd10-launch">
+        <Link href="/combos/weekly-odd10" className="combo-pick-launch-link">
+          <span>🎯</span>
+          <strong>OPEN WEEKLY ODD 10 · 75%+</strong>
+          <b>High-confidence legs · target combined odds 10.00 →</b>
+        </Link>
+      </div>
+
       <ComboBuilder
         initialResult={initialResult}
         initialDiagnostics={initialDiagnostics}
