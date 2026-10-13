@@ -164,22 +164,20 @@ export async function getComboCandidatePool(
     window?.to ??
     new Date(now.getTime() + Math.min(hours, 24 * 14) * 60 * 60 * 1000);
 
-  const predictionWhere = {
-    event: {
-      startTime: { gt: playableFrom, lt: to },
-      status: { notIn: ["CANCELLED", "POSTPONED", "COMPLETED"] },
-      sport: { key: { in: ["football", "basketball", "tennis"] } },
-    },
-    market: {
-      key: { in: ["h2h", "totals", "spreads", "double_chance"] },
-      status: "OPEN",
-    },
-    status: { in: ["BETTABLE", "WATCH"] },
-  } as const;
-
   const [predictionRefs, windowEvents] = await Promise.all([
     db.prediction.findMany({
-      where: predictionWhere,
+      where: {
+        event: {
+          startTime: { gt: playableFrom, lt: to },
+          status: { notIn: ["CANCELLED", "POSTPONED", "COMPLETED"] },
+          sport: { key: { in: ["football", "basketball", "tennis"] } },
+        },
+        market: {
+          key: { in: ["h2h", "totals", "spreads", "double_chance"] },
+          status: "OPEN",
+        },
+        status: { in: ["BETTABLE", "WATCH"] },
+      },
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
