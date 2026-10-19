@@ -22,9 +22,9 @@ async function main() {
     );
     const relations = await db.$queryRawUnsafe<Row[]>(`
       SELECT
-        c.oid,
+        c.oid::bigint AS oid,
         c.relname,
-        c.relkind,
+        c.relkind::text AS relkind,
         pg_relation_filepath(c.oid) AS filepath,
         pg_relation_size(c.oid) AS relation_bytes,
         pg_total_relation_size(c.oid) AS total_bytes
