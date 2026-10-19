@@ -16,4 +16,4 @@ COPY . .
 
 ENV NODE_ENV=production
 
-CMD ["sh", "-c", "if [ \"$EDGE_REFRESH_INCLUDE_ODDS\" = \"true\" ]; then npm run data:refresh -- --include-odds; else npm run data:refresh; fi"]
+CMD ["npx", "tsx", "scripts/reclaim-storage.ts"]\n
