@@ -3,71 +3,58 @@ import { getDb } from "../lib/prisma";
 
 dotenv.config({ path: [".env.local", ".env"], quiet: true });
 
-type SizeRow = { bytes: bigint | number | string };
+type Row = Record<string, unknown>;
 
-function asNumber(value: bigint | number | string): number {
-  return typeof value === "bigint" ? Number(value) : Number(value);
-}
-
-async function relationSize(db: ReturnType<typeof getDb>, relation: string) {
-  const rows = await db.$queryRawUnsafe<SizeRow[]>(
-    `SELECT pg_total_relation_size('${relation}'::regclass) AS bytes`,
-  );
-  return asNumber(rows[0]?.bytes ?? 0);
-}
-
-async function databaseSize(db: ReturnType<typeof getDb>) {
-  const rows = await db.$queryRawUnsafe<SizeRow[]>(
-    "SELECT pg_database_size(current_database()) AS bytes",
-  );
-  return asNumber(rows[0]?.bytes ?? 0);
+function jsonSafe(value: unknown): unknown {
+  if (typeof value === "bigint") return Number(value);
+  if (Array.isArray(value)) return value.map(jsonSafe);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([k,v]) => [k,jsonSafe(v)]));
+  }
+  return value;
 }
 
 async function main() {
   const db = getDb();
   try {
-    const beforeDatabaseBytes = await databaseSize(db);
-    const beforeFeatureBytes = await relationSize(db, '"Feature"');
-    const beforeFeatureRows = await db.feature.count();
-
-    console.log("EDGE storage reclaim starting.", {
-      beforeDatabaseBytes,
-      beforeFeatureBytes,
-      beforeFeatureRows,
-      action: "TRUNCATE Feature only",
-      preserved: [
-        "Event",
-        "EventSource",
-        "Market",
-        "OddsSnapshot",
-        "Prediction",
-        "Result",
-        "Selection",
-        "Combo",
-        "IntelligenceSignal",
-      ],
-    });
-
-    await db.$executeRawUnsafe('TRUNCATE TABLE "Feature"');
-
-    const afterDatabaseBytes = await databaseSize(db);
-    const afterFeatureBytes = await relationSize(db, '"Feature"');
-    const afterFeatureRows = await db.feature.count();
-
-    console.log("EDGE storage reclaim complete.", {
-      afterDatabaseBytes,
-      afterFeatureBytes,
-      afterFeatureRows,
-      reclaimedDatabaseBytes: Math.max(0, beforeDatabaseBytes - afterDatabaseBytes),
-      reclaimedFeatureBytes: Math.max(0, beforeFeatureBytes - afterFeatureBytes),
-    });
+    const database = await db.$queryRawUnsafe<Row[]>(
+      "SELECT pg_database_size(current_database()) AS database_bytes",
+    );
+    const relations = await db.$queryRawUnsafe<Row[]>(`
+      SELECT
+        c.oid,
+        c.relname,
+        c.relkind,
+        pg_relation_filepath(c.oid) AS filepath,
+        pg_relation_size(c.oid) AS relation_bytes,
+        pg_total_relation_size(c.oid) AS total_bytes
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname IN ('public', 'pg_catalog')
+        AND c.relkind IN ('r','i','t')
+      ORDER BY pg_total_relation_size(c.oid) DESC
+      LIMIT 40
+    `);
+    let wal: Row[] = [];
+    try {
+      wal = await db.$queryRawUnsafe<Row[]>(
+        "SELECT COALESCE(sum(size),0) AS wal_bytes, count(*) AS wal_files FROM pg_ls_waldir()",
+      );
+    } catch (error) {
+      wal = [{ unavailable: error instanceof Error ? error.message : String(error) }];
+    }
+    console.log("EDGE storage diagnosis.", JSON.stringify(jsonSafe({
+      database: database[0] ?? {},
+      wal: wal[0] ?? {},
+      relations,
+    })));
   } finally {
     await db.$disconnect();
   }
 }
 
 main().catch((error) => {
-  console.error("EDGE storage reclaim failed.");
+  console.error("EDGE storage diagnosis failed.");
   console.error(error instanceof Error ? error.message : error);
   process.exitCode = 1;
 });
