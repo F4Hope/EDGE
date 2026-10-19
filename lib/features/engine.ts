@@ -29,6 +29,7 @@ const DAY_MS = 86_400_000;
 const HISTORY_WINDOW_MS = 60 * DAY_MS;
 const HEAD_TO_HEAD_WINDOW_MS = 730 * DAY_MS;
 const SHORT_WINDOW_MS = 7 * DAY_MS;
+const MAX_FEATURE_SNAPSHOTS_PER_EVENT_MODEL = 8;
 
 function round(value: number, digits = 4): number {
   return Number(value.toFixed(digits));
@@ -404,6 +405,22 @@ export async function calculateEventFeatures(
     },
     select: { id: true },
   });
+
+  const expiredSnapshots = await db.feature.findMany({
+    where: {
+      eventId: event.id,
+      modelVersion: FEATURE_SCHEMA_VERSION,
+    },
+    orderBy: [{ computedAt: "desc" }, { id: "desc" }],
+    skip: MAX_FEATURE_SNAPSHOTS_PER_EVENT_MODEL,
+    select: { id: true },
+  });
+
+  if (expiredSnapshots.length > 0) {
+    await db.feature.deleteMany({
+      where: { id: { in: expiredSnapshots.map((snapshot) => snapshot.id) } },
+    });
+  }
 
   return {
     featureId: saved.id,
